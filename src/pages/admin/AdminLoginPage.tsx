@@ -1,10 +1,7 @@
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
 
-/**
- * Admin login page stub.
- * Protected — will require authentication before accessing /admin.
- */
 export function AdminLoginPage() {
   const { t } = useTranslation();
   const { tokens } = useTheme();
@@ -28,8 +25,8 @@ export function AdminLoginPage() {
         style={{
           padding: "2rem",
           background: tokens.colorBgCard,
-          borderRadius: tokens.radiusLg,
-          boxShadow: tokens.shadowLg,
+          borderRadius: "16px",
+          boxShadow: tokens.shadowCard,
           border: `1px solid ${tokens.colorBorder}`,
           width: "100%",
           maxWidth: "24rem",
@@ -37,7 +34,7 @@ export function AdminLoginPage() {
         }}
       >
         <p style={{ color: tokens.colorTextSecondary }}>
-          Login form placeholder
+          {t("admin.loginPlaceholder")}
         </p>
       </div>
     </section>

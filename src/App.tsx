@@ -5,7 +5,7 @@ import "@/i18n";
 
 export function App() {
   return (
-    <ThemeProvider>
+    <ThemeProvider defaultMode="light">
       <RouterProvider router={router} />
     </ThemeProvider>
   );

@@ -1,92 +1,140 @@
 /**
- * BusNet Design Tokens — light / dark themes
+ * BusNet Design Tokens — Premium Dark Tech & Premium Daylight Tech
  *
- * Usage: apply `data-theme="light"` or `data-theme="dark"` on <html>.
- * Default follows `prefers-color-scheme`.
+ * Rules:
+ * - NO turquoise/cyan (#00D4FF or greenish cyans are excluded)
+ * - Pure shades of blue & sky blue: #087DFF, #168BFF, #38BDF8, #60A5FA, #009DFF
+ * - Consistent Geist typography, layout structure and spatial depth across themes
  */
 
 export interface ThemeTokens {
-  /* surfaces */
+  /* Surfaces */
   colorBg: string;
-  colorBgSecondary: string;
+  colorBgDeep: string;
   colorBgCard: string;
+  colorBgCardGlass: string;
+  colorBgSecondary: string;
+  colorBgInput: string;
 
-  /* text */
+  /* Typography */
   colorText: string;
   colorTextSecondary: string;
+  colorTextTertiary: string;
   colorTextInverse: string;
 
-  /* brand */
+  /* Brand & Accents (strictly blue & sky-blue shades, no turquoise) */
   colorPrimary: string;
   colorPrimaryHover: string;
-  colorAccent: string;
+  colorAccentBlue: string;
+  colorSkyBlue: string;
+  gradientHighlight: string;
+  gradientButton: string;
 
-  /* borders */
+  /* Borders & Dividers */
   colorBorder: string;
+  colorBorderSubtle: string;
+  colorDivider: string;
 
-  /* feedback */
+  /* Feedback */
   colorSuccess: string;
   colorError: string;
   colorWarning: string;
 
-  /* shadows */
-  shadow: string;
-  shadowLg: string;
+  /* Shadows & Glows */
+  shadowCard: string;
+  shadowButton: string;
+  glowSubtle: string;
 
-  /* radii */
-  radius: string;
-  radiusLg: string;
+  /* Assets & atmospheric filters */
+  bgImage: string;
+  mapLineColor: string;
+  mapNodeGlow: string;
 }
 
-export const lightTokens: ThemeTokens = {
-  colorBg: "#ffffff",
-  colorBgSecondary: "#f5f7fa",
-  colorBgCard: "#ffffff",
-
-  colorText: "#1a1a2e",
-  colorTextSecondary: "#64748b",
-  colorTextInverse: "#ffffff",
-
-  colorPrimary: "#2563eb",
-  colorPrimaryHover: "#1d4ed8",
-  colorAccent: "#f59e0b",
-
-  colorBorder: "#e2e8f0",
-
-  colorSuccess: "#16a34a",
-  colorError: "#dc2626",
-  colorWarning: "#f59e0b",
-
-  shadow: "0 1px 3px rgba(0,0,0,0.1)",
-  shadowLg: "0 10px 25px rgba(0,0,0,0.1)",
-
-  radius: "0.5rem",
-  radiusLg: "1rem",
-};
-
 export const darkTokens: ThemeTokens = {
-  colorBg: "#0f172a",
-  colorBgSecondary: "#1e293b",
-  colorBgCard: "#1e293b",
+  /* Surfaces */
+  colorBg: "#050912",
+  colorBgDeep: "#071426",
+  colorBgCard: "#0B1422",
+  colorBgCardGlass: "rgba(7, 15, 27, 0.88)",
+  colorBgSecondary: "#101D2B",
+  colorBgInput: "rgba(11, 20, 34, 0.6)",
 
-  colorText: "#f1f5f9",
-  colorTextSecondary: "#94a3b8",
-  colorTextInverse: "#0f172a",
+  /* Typography */
+  colorText: "#F4F7FB",
+  colorTextSecondary: "#8B9AAF",
+  colorTextTertiary: "#64748B",
+  colorTextInverse: "#050912",
 
-  colorPrimary: "#3b82f6",
-  colorPrimaryHover: "#60a5fa",
-  colorAccent: "#fbbf24",
+  /* Brand & Accents */
+  colorPrimary: "#087DFF",
+  colorPrimaryHover: "#006EE6",
+  colorAccentBlue: "#168BFF",
+  colorSkyBlue: "#38BDF8",
+  gradientHighlight: "linear-gradient(90deg, #38BDF8, #168BFF)",
+  gradientButton: "linear-gradient(135deg, #168BFF, #0875F9)",
 
-  colorBorder: "#334155",
+  /* Borders & Dividers */
+  colorBorder: "rgba(255, 255, 255, 0.10)",
+  colorBorderSubtle: "rgba(255, 255, 255, 0.07)",
+  colorDivider: "rgba(255, 255, 255, 0.09)",
 
-  colorSuccess: "#22c55e",
-  colorError: "#ef4444",
-  colorWarning: "#fbbf24",
+  /* Feedback */
+  colorSuccess: "#10B981",
+  colorError: "#EF4444",
+  colorWarning: "#F59E0B",
 
-  shadow: "0 1px 3px rgba(0,0,0,0.4)",
-  shadowLg: "0 10px 25px rgba(0,0,0,0.5)",
+  /* Shadows & Glows */
+  shadowCard: "0 20px 50px rgba(0, 0, 0, 0.6)",
+  shadowButton: "0 4px 16px rgba(8, 125, 255, 0.35)",
+  glowSubtle: "0 0 20px rgba(22, 139, 255, 0.25)",
 
-  radius: "0.5rem",
-  radiusLg: "1rem",
+  /* Assets */
+  bgImage: "/images/busnet-kyiv-background-night.png",
+  mapLineColor: "rgba(56, 189, 248, 0.45)",
+  mapNodeGlow: "rgba(56, 189, 248, 0.35)",
 };
 
+export const lightTokens: ThemeTokens = {
+  /* Surfaces */
+  colorBg: "#F4F7FB",
+  colorBgDeep: "#EDF2F8",
+  colorBgCard: "#FFFFFF",
+  colorBgCardGlass: "rgba(255, 255, 255, 0.88)",
+  colorBgSecondary: "#F8FAFD",
+  colorBgInput: "rgba(248, 250, 253, 0.8)",
+
+  /* Typography */
+  colorText: "#101828",
+  colorTextSecondary: "#66758A",
+  colorTextTertiary: "#8A98A9",
+  colorTextInverse: "#FFFFFF",
+
+  /* Brand & Accents */
+  colorPrimary: "#087DFF",
+  colorPrimaryHover: "#006EE6",
+  colorAccentBlue: "#168BFF",
+  colorSkyBlue: "#38BDF8",
+  gradientHighlight: "linear-gradient(90deg, #087DFF, #38BDF8)",
+  gradientButton: "linear-gradient(135deg, #168BFF, #0875F9)",
+
+  /* Borders & Dividers */
+  colorBorder: "rgba(16, 24, 40, 0.08)",
+  colorBorderSubtle: "rgba(16, 24, 40, 0.06)",
+  colorDivider: "rgba(16, 24, 40, 0.07)",
+
+  /* Feedback */
+  colorSuccess: "#059669",
+  colorError: "#DC2626",
+  colorWarning: "#D97706",
+
+  /* Shadows & Glows */
+  shadowCard: "0 8px 30px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.03)",
+  shadowButton: "0 4px 14px rgba(8, 125, 255, 0.22)",
+  glowSubtle: "0 0 12px rgba(8, 125, 255, 0.12)",
+
+  /* Assets */
+  bgImage: "/images/busnet-kyiv-background-day.png",
+  mapLineColor: "rgba(8, 125, 255, 0.32)",
+  mapNodeGlow: "rgba(8, 125, 255, 0.18)",
+};

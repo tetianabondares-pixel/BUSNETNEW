@@ -1,10 +1,7 @@
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
 
-/**
- * Admin dashboard page stub.
- * Separate and protected section of the application.
- */
 export function AdminDashboardPage() {
   const { t } = useTranslation();
   const { tokens } = useTheme();
@@ -26,12 +23,12 @@ export function AdminDashboardPage() {
         style={{
           padding: "2rem",
           background: tokens.colorBgCard,
-          borderRadius: tokens.radiusLg,
+          borderRadius: "16px",
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
         <p style={{ color: tokens.colorTextSecondary }}>
-          Dashboard content placeholder
+          {t("admin.dashboardPlaceholder")}
         </p>
       </div>
     </section>

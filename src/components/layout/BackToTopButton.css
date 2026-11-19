@@ -1,0 +1,59 @@
+.back-to-top {
+  position: fixed;
+  right: max(1.25rem, env(safe-area-inset-right));
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  z-index: 50;
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid #1064fd;
+  border-radius: 50%;
+  background: #1064fd;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgb(3 19 39 / 22%);
+  animation: back-to-top-appear 180ms ease-out both;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.back-to-top[data-theme="dark"] {
+  border-color: #5b91ff;
+  background: #1064fd;
+}
+
+.back-to-top:hover {
+  transform: translateY(-2px);
+  background: #0754df;
+  box-shadow: 0 6px 16px rgb(3 19 39 / 30%);
+}
+
+.back-to-top:focus-visible {
+  outline: 3px solid #1064fd;
+  outline-offset: 4px;
+}
+
+@keyframes back-to-top-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top {
+    animation: none;
+    transition: none;
+  }
+
+  .back-to-top:hover {
+    transform: none;
+  }
+}

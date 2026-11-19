@@ -1,29 +1,161 @@
 {
   "app": {
-    "name": "BusNet",
-    "tagline": "Search and book bus tickets"
+    "name": "BUSNET",
+    "nameSuffix": "UA",
+    "tagline": "More than travel",
+    "heroKicker": "EUROPEAN BUS MOBILITY",
+    "heroTitle1": "Europe is",
+    "heroTitleAccent": "closer,",
+    "heroTitle2": "than it seems",
+    "heroSubtitle": "Find trips · Book online · Pay upon boarding"
+  },
+  "backToTop": {
+    "label": "Back to top"
   },
   "nav": {
-    "home": "Home",
-    "search": "Search",
-    "booking": "Booking",
-    "login": "Sign in"
+    "routes": "Routes",
+    "partners": "Partners",
+    "faq": "FAQ",
+    "login": "Sign in",
+    "passengerLogin": "Passenger sign in"
   },
   "search": {
-    "from": "From",
-    "to": "To",
-    "date": "Date",
-    "find": "Find trips"
+    "fromLabel": "From:",
+    "fromDefault": "Kyiv",
+    "toLabel": "To:",
+    "toPlaceholder": "Enter destination",
+    "dateLabel": "Date:",
+    "dateDefault": "Today",
+    "submit": "Search",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "selectDate": "Select date",
+    "popularFrom": "Popular cities",
+    "popularTo": "Popular destinations",
+    "cityPlaceholder": "City",
+    "swap": "Swap cities"
   },
-  "booking": {
-    "title": "Booking",
-    "placeholder": "Select a trip to book"
+  "calendar": {
+    "regionLabel": "Choose travel date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "todayButton": "Today",
+    "close": "Close calendar",
+    "loading": "Loading availability...",
+    "error": "Could not load availability",
+    "providerError": "Provider error: trip availability is not confirmed",
+    "selectRouteError": "Select departure and destination cities",
+    "retry": "Retry",
+    "quickDates": "Nearest dates",
+    "availableDatesCount": "{{count}} available days",
+    "past": "past date",
+    "selected": "selected date",
+    "tripsCount": "{{count}} trips",
+    "noTrips": "No trips",
+    "lowestPrice": "from {{price}}",
+    "route": "Route"
+  },
+  "stats": {
+    "ratingVal": "4.8",
+    "ratingLabel": "rating",
+    "citiesVal": "120+",
+    "citiesLabel": "cities",
+    "paymentVal": "Payment",
+    "paymentLabel": "upon boarding"
   },
   "footer": {
-    "rights": "© {{year}} BusNet. All rights reserved."
+    "rights": "© {{year}} BUSNET UA. All rights reserved. Premium European Tech Mobility."
   },
   "admin": {
-    "login": "Admin sign-in",
-    "dashboard": "Admin dashboard"
+    "login": "Cabinet login",
+    "loginPlaceholder": "Cabinet login form",
+    "dashboard": "Administrator dashboard",
+    "dashboardPlaceholder": "Administrator dashboard content"
+  },
+  "passengerAuth": {
+    "loginTitle": "Passenger sign in",
+    "loginSubtitle": "Sign in to your BUSNET passenger account.",
+    "registerTitle": "Passenger registration",
+    "registerSubtitle": "Create a BUSNET passenger account.",
+    "recoveryTitle": "Reset your password",
+    "recoverySubtitle": "Enter the email address linked to your account.",
+    "fullName": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "loginAction": "Sign in",
+    "registerAction": "Create account",
+    "recoveryAction": "Send instructions",
+    "loading": "Please wait…",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "forgotPassword": "Forgot password?",
+    "registerPrompt": "Don't have an account yet?",
+    "registerLink": "Create an account",
+    "loginPrompt": "Already have an account?",
+    "loginLink": "Sign in",
+    "backToLogin": "Back to sign in",
+    "authUnavailable": "Passenger authentication is not configured for this project yet. Sign in, registration, and password recovery are currently unavailable.",
+    "required": "This field is required.",
+    "invalidEmail": "Enter a valid email address.",
+    "invalidCredentials": "The email or password is incorrect.",
+    "emailNotConfirmed": "Confirm your email using the link in your inbox before signing in.",
+    "networkError": "Could not connect to the server. Check your connection and try again.",
+    "serverError": "A server error occurred. Please try again later.",
+    "passwordRequirementsTitle": "Your password must include:",
+    "passwordMinLength": "at least 8 characters",
+    "passwordLowercase": "a lowercase letter",
+    "passwordUppercase": "an uppercase letter",
+    "passwordNumber": "a number",
+    "passwordWeak": "The password does not meet the requirements.",
+    "passwordMismatch": "The passwords do not match.",
+    "nameTooShort": "Enter your full name.",
+    "authStatusLabel": "Authentication status"
+  },
+  "popularDestinations": {
+    "title": "Popular destinations",
+    "subtitle": "Choose a route — the cities will be added to the search form.",
+    "selectRoute": "Choose this route",
+    "chooseRoute": "Choose route {{from}} — {{to}}"
+  },
+  "howItWorks": {
+    "title": "How it works",
+    "subtitle": "From finding an available trip to placing a booking in three simple steps.",
+    "steps": [
+      {
+        "title": "Find a trip",
+        "description": "Enter your cities and travel date to view available trips."
+      },
+      {
+        "title": "Choose a trip",
+        "description": "Compare the confirmed trip details and select “Choose trip”."
+      },
+      {
+        "title": "Book a ticket",
+        "description": "Enter the passenger details and confirm your booking."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Answers to common questions about searching and booking a trip",
+    "items": {
+      "search": {
+        "question": "How do I find a bus trip?",
+        "answer": "Enter the departure city, destination and date in the search form. Live trip search is not connected in the current version."
+      },
+      "notFound": {
+        "question": "What should I do if no trips are found?",
+        "answer": "Search results and a “no trips found” state are not implemented in the current version, so searching again is not available yet."
+      },
+      "chooseTrip": {
+        "question": "How do I choose a trip?",
+        "answer": "The results list and “Choose trip” button are not implemented yet, so selecting a trip is not currently possible."
+      },
+      "booking": {
+        "question": "How do I complete a booking?",
+        "answer": "The booking page is currently a placeholder; the booking and confirmation flow has not been implemented."
+      }
+    }
   }
 }

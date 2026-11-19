@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { ThemeContext, resolveMode, getTokens, type ThemeMode } from "./ThemeContext";
 
 interface Props {
@@ -7,9 +7,28 @@ interface Props {
 }
 
 export function ThemeProvider({ children, defaultMode = "system" }: Props) {
-  const [mode, setMode] = useState<ThemeMode>(defaultMode);
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    try {
+      const stored = window.localStorage.getItem("busnet_theme");
+      if (stored === "light" || stored === "dark" || stored === "system") {
+        return stored;
+      }
+    } catch {
+      // localStorage may be unavailable in privacy-restricted environments.
+    }
+    return defaultMode;
+  });
   const resolved = resolveMode(mode);
   const tokens = useMemo(() => getTokens(mode), [mode]);
+
+  const setMode = useCallback((nextMode: ThemeMode) => {
+    setModeState(nextMode);
+    try {
+      window.localStorage.setItem("busnet_theme", nextMode);
+    } catch {
+      // Theme selection still works for the current page session.
+    }
+  }, []);
 
   /* sync <html data-theme> and color-scheme */
   useEffect(() => {

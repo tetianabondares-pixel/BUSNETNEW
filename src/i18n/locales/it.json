@@ -1,0 +1,161 @@
+{
+  "app": {
+    "name": "BUSNET",
+    "nameSuffix": "UA",
+    "tagline": "Più che semplici viaggi",
+    "heroKicker": "VIAGGI IN PULLMAN IN EUROPA",
+    "heroTitle1": "L'Europa è",
+    "heroTitleAccent": "più vicina,",
+    "heroTitle2": "di quanto pensi",
+    "heroSubtitle": "Trova il viaggio · Prenota online · Paga alla salita"
+  },
+  "backToTop": {
+    "label": "Torna all'inizio"
+  },
+  "nav": {
+    "routes": "Rotte",
+    "partners": "Partner",
+    "faq": "FAQ",
+    "login": "Accedi",
+    "passengerLogin": "Accesso passeggeri"
+  },
+  "search": {
+    "fromLabel": "Da:",
+    "fromDefault": "Kyiv",
+    "toLabel": "A:",
+    "toPlaceholder": "Inserisci città",
+    "dateLabel": "Data:",
+    "dateDefault": "Oggi",
+    "submit": "Cerca",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "selectDate": "Seleziona la data",
+    "popularFrom": "Città popolari",
+    "popularTo": "Destinazioni popolari",
+    "cityPlaceholder": "Città",
+    "swap": "Inverti le città"
+  },
+  "calendar": {
+    "regionLabel": "Scegli la data di viaggio",
+    "previousMonth": "Mese precedente",
+    "nextMonth": "Mese successivo",
+    "todayButton": "Oggi",
+    "close": "Chiudi calendario",
+    "loading": "Caricamento disponibilità...",
+    "error": "Impossibile caricare la disponibilità",
+    "providerError": "Errore del provider: disponibilità non confermata",
+    "selectRouteError": "Seleziona città di partenza e destinazione",
+    "retry": "Riprova",
+    "quickDates": "Date più vicine",
+    "availableDatesCount": "{{count}} giorni disponibili",
+    "past": "data passata",
+    "selected": "data selezionata",
+    "tripsCount": "{{count}} viaggi",
+    "noTrips": "Nessun viaggio",
+    "lowestPrice": "da {{price}}",
+    "route": "Percorso"
+  },
+  "stats": {
+    "ratingVal": "4.8",
+    "ratingLabel": "valutazione",
+    "citiesVal": "120+",
+    "citiesLabel": "città",
+    "paymentVal": "Pagamento",
+    "paymentLabel": "alla salita"
+  },
+  "footer": {
+    "rights": "© {{year}} BUSNET UA. Tutti i diritti riservati. Mobilità tecnologica europea premium."
+  },
+  "admin": {
+    "login": "Accesso al pannello",
+    "loginPlaceholder": "Modulo di accesso al pannello",
+    "dashboard": "Pannello amministratore",
+    "dashboardPlaceholder": "Contenuto del pannello amministratore"
+  },
+  "passengerAuth": {
+    "loginTitle": "Accesso passeggeri",
+    "loginSubtitle": "Accedi al tuo account passeggeri BUSNET.",
+    "registerTitle": "Registrazione passeggeri",
+    "registerSubtitle": "Crea un account passeggeri BUSNET.",
+    "recoveryTitle": "Reimposta la password",
+    "recoverySubtitle": "Inserisci l'indirizzo email associato al tuo account.",
+    "fullName": "Nome e cognome",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Conferma password",
+    "loginAction": "Accedi",
+    "registerAction": "Crea account",
+    "recoveryAction": "Invia istruzioni",
+    "loading": "Attendi…",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
+    "forgotPassword": "Password dimenticata?",
+    "registerPrompt": "Non hai ancora un account?",
+    "registerLink": "Registrati",
+    "loginPrompt": "Hai già un account?",
+    "loginLink": "Accedi",
+    "backToLogin": "Torna all'accesso",
+    "authUnavailable": "L'autenticazione passeggeri non è ancora configurata per questo progetto. Accesso, registrazione e recupero password non sono al momento disponibili.",
+    "required": "Questo campo è obbligatorio.",
+    "invalidEmail": "Inserisci un indirizzo email valido.",
+    "invalidCredentials": "Email o password non corretti.",
+    "emailNotConfirmed": "Conferma l'email usando il link ricevuto prima di accedere.",
+    "networkError": "Impossibile connettersi al server. Controlla la connessione e riprova.",
+    "serverError": "Si è verificato un errore del server. Riprova più tardi.",
+    "passwordRequirementsTitle": "La password deve includere:",
+    "passwordMinLength": "almeno 8 caratteri",
+    "passwordLowercase": "una lettera minuscola",
+    "passwordUppercase": "una lettera maiuscola",
+    "passwordNumber": "un numero",
+    "passwordWeak": "La password non soddisfa i requisiti.",
+    "passwordMismatch": "Le password non coincidono.",
+    "nameTooShort": "Inserisci nome e cognome.",
+    "authStatusLabel": "Stato dell'autenticazione"
+  },
+  "popularDestinations": {
+    "title": "Destinazioni popolari",
+    "subtitle": "Scegli una tratta: le città verranno inserite nel modulo di ricerca.",
+    "selectRoute": "Scegli questa tratta",
+    "chooseRoute": "Scegli la tratta {{from}} — {{to}}"
+  },
+  "howItWorks": {
+    "title": "Come funziona",
+    "subtitle": "Dalla ricerca di un viaggio disponibile alla prenotazione, in tre semplici passaggi.",
+    "steps": [
+      {
+        "title": "Trova un viaggio",
+        "description": "Indica le città e la data per visualizzare i viaggi disponibili."
+      },
+      {
+        "title": "Scegli un viaggio",
+        "description": "Confronta i dettagli confermati dei viaggi e seleziona “Scegli viaggio”."
+      },
+      {
+        "title": "Prenota un biglietto",
+        "description": "Inserisci i dati del passeggero e conferma la prenotazione."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Domande frequenti",
+    "subtitle": "Risposte alle domande principali sulla ricerca e prenotazione",
+    "items": {
+      "search": {
+        "question": "Come trovo un viaggio in autobus?",
+        "answer": "Inserisci la città di partenza, la destinazione e la data nel modulo di ricerca. La ricerca effettiva dei viaggi non è ancora collegata in questa versione."
+      },
+      "notFound": {
+        "question": "Cosa devo fare se non trovo viaggi?",
+        "answer": "I risultati di ricerca e lo stato «nessun viaggio trovato» non sono ancora implementati, quindi al momento non è possibile ripetere la ricerca."
+      },
+      "chooseTrip": {
+        "question": "Come scelgo un viaggio?",
+        "answer": "L'elenco dei risultati e il pulsante «Scegli viaggio» non sono ancora implementati, quindi al momento non è possibile selezionare un viaggio."
+      },
+      "booking": {
+        "question": "Come completo una prenotazione?",
+        "answer": "La pagina di prenotazione è attualmente un segnaposto; il flusso di prenotazione e conferma non è ancora stato implementato."
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { HomePage } from "@/pages/HomePage";
 import { BookingPage } from "@/pages/BookingPage";
 import { AdminLoginPage } from "@/pages/admin/AdminLoginPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
+import { PassengerAuthPage } from "@/pages/auth/PassengerAuthPage";
 
 /**
  * MVP routes:
@@ -18,6 +19,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "booking", element: <BookingPage /> },
+      { path: "login", element: <PassengerAuthPage /> },
+      { path: "register", element: <PassengerAuthPage /> },
       { path: "admin/login", element: <AdminLoginPage /> },
       { path: "admin", element: <AdminDashboardPage /> },
     ],

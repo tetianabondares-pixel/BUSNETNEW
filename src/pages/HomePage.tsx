@@ -1,85 +1,210 @@
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
+import { Header } from "@/components/layout/Header";
+import { SearchWidget } from "@/components/SearchWidget";
+import { TrustStats } from "@/components/TrustStats";
+import {
+  PopularDestinations,
+  type PopularDestination,
+} from "@/components/PopularDestinations";
+import { HowItWorks } from "@/components/HowItWorks";
+import { FAQSection } from "@/components/FAQSection";
 
-/**
- * Landing page — hero section with search widget stub.
- * MVP scope: header, search, results area, footer.
- * Excludes: popular routes, FAQ, map, marketing sections.
- */
 export function HomePage() {
   const { t } = useTranslation();
-  const { tokens } = useTheme();
+  const { resolved, tokens } = useTheme();
+  const isDark = resolved === "dark";
+  const [selectedRoute, setSelectedRoute] =
+    useState<PopularDestination | null>(null);
 
   return (
-    <section
+    <div
       style={{
+        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: "2rem",
-        padding: "3rem 1.5rem",
-        textAlign: "center",
-        minHeight: "60vh",
+        justifyContent: "flex-start",
+        padding: 0,
+        backgroundColor: tokens.colorBg,
+        color: tokens.colorText,
+        transition: "background-color 300ms ease, color 300ms ease",
       }}
     >
-      <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>
-        {t("app.name")}
-      </h1>
-      <p style={{ color: tokens.colorTextSecondary, maxWidth: "36rem" }}>
-        {t("app.tagline")}
-      </p>
-
-      {/* Search widget stub */}
+      {/* Outer Cinematic Tech Container matching the Mockups */}
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-          justifyContent: "center",
-          padding: "1.5rem",
-          background: tokens.colorBgCard,
-          borderRadius: tokens.radiusLg,
-          boxShadow: tokens.shadowLg,
-          border: `1px solid ${tokens.colorBorder}`,
+          position: "relative",
           width: "100%",
-          maxWidth: "40rem",
+          maxWidth: "none",
+          minHeight: "100vh",
+          borderRadius: 0,
+          overflow: "hidden",
+          border: "none",
+          boxShadow: "none",
+          display: "flex",
+          flexDirection: "column",
+          background: isDark ? "#050912" : "#F4F7FB",
         }}
       >
-        <input
-          placeholder={t("search.from")}
-          aria-label={t("search.from")}
-          style={{ flex: 1, minWidth: "8rem", padding: "0.5rem 0.75rem", borderRadius: tokens.radius, border: `1px solid ${tokens.colorBorder}` }}
-        />
-        <input
-          placeholder={t("search.to")}
-          aria-label={t("search.to")}
-          style={{ flex: 1, minWidth: "8rem", padding: "0.5rem 0.75rem", borderRadius: tokens.radius, border: `1px solid ${tokens.colorBorder}` }}
-        />
-        <input
-          type="date"
-          aria-label={t("search.date")}
-          style={{ padding: "0.5rem 0.75rem", borderRadius: tokens.radius, border: `1px solid ${tokens.colorBorder}` }}
-        />
-        <button
+        {/* Crossfade both images so theme changes do not replace the background abruptly. */}
+        <div
           style={{
-            padding: "0.5rem 1.5rem",
-            background: tokens.colorPrimary,
-            color: tokens.colorTextInverse,
-            border: "none",
-            borderRadius: tokens.radius,
-            fontWeight: 600,
-            cursor: "pointer",
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "url(/images/busnet-kyiv-background-day.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "right center",
+            backgroundRepeat: "no-repeat",
+            opacity: isDark ? 0 : 1,
+            filter: isDark ? "blur(8px)" : "blur(0)",
+            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1), filter 850ms cubic-bezier(0.22, 1, 0.36, 1)",
+            zIndex: 1,
+          }}
+          aria-hidden="true"
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "url(/images/busnet-kyiv-background-night.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "right calc(50% + 42px)",
+            backgroundRepeat: "no-repeat",
+            opacity: isDark ? 0.95 : 0,
+            filter: isDark ? "blur(0)" : "blur(8px)",
+            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1), filter 850ms cubic-bezier(0.22, 1, 0.36, 1)",
+            zIndex: 1,
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Crossfade theme-specific shading with the images. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(90deg, rgba(244,247,251,0.96) 0%, rgba(244,247,251,0.86) 35%, rgba(244,247,251,0.5) 60%, rgba(244,247,251,0.12) 100%), linear-gradient(180deg, rgba(244,247,251,0.5) 0%, transparent 20%, transparent 75%, rgba(244,247,251,0.8) 100%)",
+            opacity: isDark ? 0 : 1,
+            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1)",
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+          aria-hidden="true"
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(90deg, rgba(5,9,18,0.96) 0%, rgba(5,9,18,0.85) 35%, rgba(5,9,18,0.55) 58%, rgba(5,9,18,0.15) 100%), linear-gradient(180deg, rgba(5,9,18,0.6) 0%, transparent 20%, transparent 75%, rgba(5,9,18,0.85) 100%)",
+            opacity: isDark ? 1 : 0,
+            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1)",
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Layer 4: Global Header */}
+        <Header />
+
+        {/* Layer 5: Hero Content (Left-aligned, Asymmetrical composition) */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 10,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "2rem 3rem 4.5rem",
+            maxWidth: "760px",
           }}
         >
-          {t("search.find")}
-        </button>
-      </div>
+          {/* Upper Kicker */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "1rem",
+            }}
+          >
+            <span
+              style={{
+                width: "4px",
+                height: "4px",
+                borderRadius: "50%",
+                background: isDark ? "#38BDF8" : "#087DFF",
+              }}
+            />
+            <span
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 600,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: isDark ? "#8B9AAF" : "#7A8A9D",
+              }}
+            >
+              {t("app.heroKicker")}
+            </span>
+          </div>
 
-      {/* Note: passenger counter is absent from search — per audit */}
-      <p style={{ fontSize: "0.75rem", color: tokens.colorTextSecondary }}>
-        {/* Results area placeholder */}
-      </p>
-    </section>
+          {/* Main Headline */}
+          <h1
+            style={{
+              fontSize: "clamp(2.5rem, 4.4vw, 3.4rem)",
+              fontWeight: 700,
+              letterSpacing: "-0.045em",
+              lineHeight: 1.05,
+              color: isDark ? "#FFFFFF" : "#101828",
+              marginBottom: "1rem",
+              textWrap: "balance",
+            }}
+          >
+            {t("app.heroTitle1")}{" "}
+            <span
+              style={{
+                color: isDark ? "#38BDF8" : "#087DFF",
+              }}
+            >
+              {t("app.heroTitleAccent")}
+            </span>
+            <br />
+            {t("app.heroTitle2")}
+          </h1>
+
+          {/* Subtitle */}
+          <p
+            style={{
+              fontSize: "0.88rem",
+              lineHeight: 1.5,
+              fontWeight: 400,
+              color: isDark ? "#8B9AAF" : "#66758A",
+              marginBottom: "2rem",
+              maxWidth: "520px",
+            }}
+          >
+            {t("app.heroSubtitle")}
+          </p>
+
+          {/* Interactive Search Widget */}
+          <SearchWidget selectedRoute={selectedRoute} />
+
+          {/* Trust Metrics */}
+          <TrustStats />
+        </div>
+      </div>
+      <PopularDestinations
+        isDark={isDark}
+        onSelectDestination={(destination) =>
+          setSelectedRoute({ ...destination })
+        }
+      />
+      <HowItWorks isDark={isDark} />
+      <FAQSection />
+    </div>
   );
 }
