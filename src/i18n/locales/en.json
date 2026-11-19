@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "BusNet",
+    "tagline": "Search and book bus tickets"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "booking": "Booking",
+    "login": "Sign in"
+  },
+  "search": {
+    "from": "From",
+    "to": "To",
+    "date": "Date",
+    "find": "Find trips"
+  },
+  "booking": {
+    "title": "Booking",
+    "placeholder": "Select a trip to book"
+  },
+  "footer": {
+    "rights": "© {{year}} BusNet. All rights reserved."
+  },
+  "admin": {
+    "login": "Admin sign-in",
+    "dashboard": "Admin dashboard"
+  }
+}
