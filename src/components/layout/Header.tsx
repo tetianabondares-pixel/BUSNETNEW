@@ -1,14 +1,17 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { User, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/theme";
 import { BusnetLogo } from "@/components/BusnetLogo";
+import { supabase } from "@/lib/supabase";
 
 export function Header() {
   const { t, i18n } = useTranslation();
   const { mode, resolved, setMode, tokens } = useTheme();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const isDark = resolved === "dark";
   const isPassengerAuthPage = pathname === "/login" || pathname === "/register";
   const isLandingPage = pathname === "/";
@@ -19,6 +22,29 @@ export function Header() {
   const setLanguage = (lang: string) => {
     const target = lang === "ua" ? "uk" : lang;
     i18n.changeLanguage(target);
+  };
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active) setIsSignedIn(Boolean(data.session));
+    });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setIsSignedIn(Boolean(session));
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleAuthAction = async () => {
+    if (!isSignedIn) {
+      navigate("/login");
+      return;
+    }
+    await supabase.auth.signOut();
+    navigate("/");
   };
 
   const toggleTheme = () => {
@@ -157,8 +183,9 @@ export function Header() {
         </button>
 
         {/* Login Button (Outline with icon) */}
-        <Link
-          to="/login"
+        <button
+          type="button"
+          onClick={handleAuthAction}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -187,8 +214,8 @@ export function Header() {
           }}
         >
           <User size={14} color={isDark ? "#38BDF8" : "#087DFF"} />
-          <span>{t("nav.passengerLogin")}</span>
-        </Link>
+          <span>{isSignedIn ? t("nav.signOut") : t("nav.passengerLogin")}</span>
+        </button>
       </div>
     </header>
   );

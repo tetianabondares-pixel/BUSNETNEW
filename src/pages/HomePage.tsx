@@ -20,6 +20,7 @@ export function HomePage() {
 
   return (
     <div
+      className="home-hero"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -34,6 +35,7 @@ export function HomePage() {
     >
       {/* Outer Cinematic Tech Container matching the Mockups */}
       <div
+        className="home-hero"
         style={{
           position: "relative",
           width: "100%",
@@ -50,6 +52,7 @@ export function HomePage() {
       >
         {/* Crossfade both images so theme changes do not replace the background abruptly. */}
         <div
+          className="home-hero__background"
           style={{
             position: "absolute",
             inset: 0,
@@ -65,6 +68,7 @@ export function HomePage() {
           aria-hidden="true"
         />
         <div
+          className="home-hero__background"
           style={{
             position: "absolute",
             inset: 0,
@@ -111,6 +115,7 @@ export function HomePage() {
 
         {/* Layer 5: Hero Content (Left-aligned, Asymmetrical composition) */}
         <div
+          className="home-hero__content"
           style={{
             position: "relative",
             zIndex: 10,

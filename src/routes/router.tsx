@@ -9,7 +9,6 @@ import { PassengerAuthPage } from "@/pages/auth/PassengerAuthPage";
 /**
  * MVP routes:
  *   /             — landing (hero + search widget)
- *   /booking      — booking stepper stub
  *   /admin/login  — admin login (separate, protected)
  *   /admin        — admin dashboard (separate, protected)
  */

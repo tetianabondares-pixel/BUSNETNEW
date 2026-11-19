@@ -4,21 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
 import { useNavigate } from "react-router-dom";
 import { BusnetCalendar } from "@/features/search/components/DatePicker/BusnetCalendar";
+import { supabase } from "@/lib/supabase";
 import "@/features/search/components/DatePicker/BusnetCalendar.css";
-
-const POPULAR_CITIES = [
-  "Київ",
-  "Варшава",
-  "Берлін",
-  "Прага",
-  "Львів",
-  "Одеса",
-  "Краків",
-  "Вроцлав",
-  "Відень",
-  "Будапешт",
-];
-
 interface SearchRouteSelection {
   from: string;
   to: string;
@@ -36,6 +23,9 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
 
   const [fromCity, setFromCity] = useState("Київ");
   const [toCity, setToCity] = useState("");
+  const [fromSuggestions, setFromSuggestions] = useState<Array<{ id: string; name: string }>>([]);
+  const [toSuggestions, setToSuggestions] = useState<Array<{ id: string; name: string }>>([]);
+  const [locationError, setLocationError] = useState(false);
   const [dateISO, setDateISO] = useState(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -69,6 +59,42 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
     setActiveDropdown(null);
   }, [selectedRoute]);
 
+  useEffect(() => {
+    if (activeDropdown !== "from" && activeDropdown !== "to") return;
+    const query = activeDropdown === "from" ? fromCity : toCity;
+    if (query.trim().length < 2) {
+      activeDropdown === "from" ? setFromSuggestions([]) : setToSuggestions([]);
+      return;
+    }
+
+    const timeout = window.setTimeout(async () => {
+      const language = i18n.language?.startsWith("en")
+        ? "en"
+        : i18n.language?.startsWith("it")
+          ? "it"
+          : "uk";
+      const { data, error } = await supabase.rpc("search_locations", {
+        p_query: query.trim(),
+        p_language: language,
+        p_limit: 10,
+      });
+      setLocationError(Boolean(error));
+      if (error || !Array.isArray(data)) {
+        activeDropdown === "from" ? setFromSuggestions([]) : setToSuggestions([]);
+        return;
+      }
+      const suggestions = data.map((item: { id: string; name: string }) => ({
+        id: item.id,
+        name: item.name,
+      }));
+      activeDropdown === "from"
+        ? setFromSuggestions(suggestions)
+        : setToSuggestions(suggestions);
+    }, 220);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeDropdown, fromCity, toCity, i18n.language]);
+
   // Close popovers on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -88,7 +114,8 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
   };
 
   const handleSearch = () => {
-    navigate(`/booking?from=${encodeURIComponent(fromCity)}&to=${encodeURIComponent(toCity || "Варшава")}&date=${encodeURIComponent(dateISO)}`);
+    if (!fromCity.trim() || !toCity.trim() || fromCity.trim() === toCity.trim()) return;
+    navigate(`/booking?from=${encodeURIComponent(fromCity.trim())}&to=${encodeURIComponent(toCity.trim())}&date=${encodeURIComponent(dateISO)}`);
   };
 
   const accentBlue = isDark ? "#38BDF8" : "#087DFF";
@@ -106,6 +133,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
     >
       {/* Main Glass Panel */}
       <div
+        className="search-widget-panel"
         style={{
           display: "flex",
           alignItems: "center",
@@ -123,6 +151,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
       >
         {/* Field 1: From City */}
         <div
+          className="search-widget-field search-widget-field--from"
           onClick={() => setActiveDropdown(activeDropdown === "from" ? null : "from")}
           style={{
             flex: "1 1 28%",
@@ -170,6 +199,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
 
         {/* Swap Button */}
         <button
+          className="search-widget-swap"
           onClick={handleSwap}
           title={t("search.swap")}
           aria-label={t("search.swap")}
@@ -202,6 +232,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
 
         {/* Field 2: To City */}
         <div
+          className="search-widget-field search-widget-field--to"
           onClick={() => setActiveDropdown(activeDropdown === "to" ? null : "to")}
           style={{
             flex: "1 1 32%",
@@ -249,6 +280,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
 
         {/* Vertical Divider */}
         <div
+          className="search-widget-divider"
           style={{
             width: "1px",
             height: "28px",
@@ -265,7 +297,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
           onClick={() => setActiveDropdown(activeDropdown === "date" ? null : "date")}
           aria-haspopup="dialog"
           aria-expanded={activeDropdown === "date"}
-          className="busnet-date-trigger"
+          className="busnet-date-trigger search-widget-field--date"
           style={{
             flex: "1 1 25%",
             display: "flex",
@@ -305,6 +337,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
 
         {/* Search Submit Button */}
         <button
+          className="search-widget-submit"
           onClick={handleSearch}
           style={{
             display: "flex",
@@ -342,6 +375,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
       {/* Dropdown Popovers */}
       {activeDropdown === "from" && (
         <div
+          className="search-widget-popover"
           style={{
             position: "absolute",
             top: "64px",
@@ -358,11 +392,16 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
           <div style={{ fontSize: "11px", color: isDark ? "#64748B" : "#8A98A9", padding: "4px 8px", fontWeight: 600 }}>
             {t("search.popularFrom")}
           </div>
-          {POPULAR_CITIES.slice(0, 5).map((city) => (
+          {locationError && (
+            <div style={{ padding: "8px 10px", fontSize: "12px", color: isDark ? "#FCA5A5" : "#B42318" }}>
+              {t("search.locationLoadError")}
+            </div>
+          )}
+          {fromSuggestions.map((location) => (
             <div
-              key={city}
+              key={location.id}
               onClick={() => {
-                setFromCity(city);
+                setFromCity(location.name);
                 setActiveDropdown(null);
               }}
               style={{
@@ -376,7 +415,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
               onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : "#F1F5F9")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              {city}
+              {location.name}
             </div>
           ))}
         </div>
@@ -384,6 +423,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
 
       {activeDropdown === "to" && (
         <div
+          className="search-widget-popover search-widget-popover--to"
           style={{
             position: "absolute",
             top: "64px",
@@ -400,11 +440,16 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
           <div style={{ fontSize: "11px", color: isDark ? "#64748B" : "#8A98A9", padding: "4px 8px", fontWeight: 600 }}>
             {t("search.popularTo")}
           </div>
-          {["Варшава", "Берлін", "Прага", "Вроцлав", "Відень", "Краків"].map((city) => (
+          {locationError && (
+            <div style={{ padding: "8px 10px", fontSize: "12px", color: isDark ? "#FCA5A5" : "#B42318" }}>
+              {t("search.locationLoadError")}
+            </div>
+          )}
+          {toSuggestions.map((location) => (
             <div
-              key={city}
+              key={location.id}
               onClick={() => {
-                setToCity(city);
+                setToCity(location.name);
                 setActiveDropdown(null);
               }}
               style={{
@@ -418,7 +463,7 @@ export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
               onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : "#F1F5F9")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              {city}
+              {location.name}
             </div>
           ))}
         </div>

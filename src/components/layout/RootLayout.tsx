@@ -28,7 +28,7 @@ export function RootLayout() {
         <Outlet />
       </main>
 
-      {!isHome && <Footer />}
+      <Footer />
       <BackToTopButton />
     </div>
   );

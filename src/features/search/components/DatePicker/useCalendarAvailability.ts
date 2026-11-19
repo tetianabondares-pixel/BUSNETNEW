@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { AvailabilityMonthRequest, CalendarAvailability } from "./calendar.types";
+import { supabase } from "@/lib/supabase";
 
 type AvailabilityState = {
   data: CalendarAvailability[];
@@ -52,35 +53,26 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
       return () => controller.abort();
     }
 
-    const endpoint = import.meta.env.VITE_BUSNET_AVAILABILITY_API as string | undefined;
     if (!request.from.trim() || !request.to.trim()) {
       setState({ data: [], loading: false, error: "calendar.selectRouteError" });
-      return () => controller.abort();
-    }
-    if (!endpoint) {
-      setState({ data: [], loading: false, error: "calendar.providerError" });
       return () => controller.abort();
     }
 
     setState({ data: [], loading: true, error: null });
     const timeout = window.setTimeout(async () => {
       try {
-        const url = new URL(endpoint, window.location.origin);
-        url.searchParams.set("year", String(request.year));
-        url.searchParams.set("month", String(request.month));
-        url.searchParams.set("from", request.from);
-        url.searchParams.set("to", request.to);
-        url.searchParams.set("timezone", request.timezone);
-        url.searchParams.set("schemaVersion", request.schemaVersion);
-
-        const response = await fetch(url.toString(), {
-          signal: controller.signal,
-          headers: { Accept: "application/json" },
+        const { data, error } = await supabase.rpc("get_month_availability", {
+          p_year: request.year,
+          p_month: request.month,
+          p_from: request.from,
+          p_to: request.to,
+          p_timezone: request.timezone,
+          p_schema_version: request.schemaVersion,
         });
-        if (!response.ok) throw new Error(`Provider returned ${response.status}`);
-        const data = normalizeAvailability(await response.json());
-        confirmedCache.set(cacheKey, data);
-        if (!controller.signal.aborted) setState({ data, loading: false, error: null });
+        if (error) throw error;
+        const availability = normalizeAvailability(data);
+        confirmedCache.set(cacheKey, availability);
+        if (!controller.signal.aborted) setState({ data: availability, loading: false, error: null });
       } catch (error) {
         if (controller.signal.aborted) return;
         const message = error instanceof Error ? error.message : "calendar.providerError";

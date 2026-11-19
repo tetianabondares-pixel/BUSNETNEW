@@ -33,6 +33,7 @@ export function TrustStats() {
 
   return (
     <div
+      className="trust-stats"
       style={{
         display: "inline-flex",
         alignItems: "center",

@@ -1,19 +1,13 @@
+import { useEffect, useState } from "react";
 import { ArrowRight, ChevronRight, Landmark } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { supabase } from "@/lib/supabase";
 import "./PopularDestinations.css";
 
 export interface PopularDestination {
   from: string;
   to: string;
 }
-
-// Temporary local examples only; these are not verified or bookable routes.
-export const MOCK_DESTINATIONS: readonly PopularDestination[] = [
-  { from: "Київ", to: "Варшава" },
-  { from: "Київ", to: "Прага" },
-  { from: "Львів", to: "Краків" },
-  { from: "Одеса", to: "Будапешт" },
-];
 
 interface PopularDestinationsProps {
   isDark: boolean;
@@ -24,7 +18,53 @@ export function PopularDestinations({
   isDark,
   onSelectDestination,
 }: PopularDestinationsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [destinations, setDestinations] = useState<PopularDestination[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const locale = i18n.language?.startsWith("en")
+      ? "en"
+      : i18n.language?.startsWith("it")
+        ? "it"
+        : "uk";
+
+    supabase
+      .from("popular_routes")
+      .select("routes(from_location_id,to_location_id)")
+      .eq("active", true)
+      .eq("locale", locale)
+      .order("sort_order")
+      .then(async ({ data, error }) => {
+        if (cancelled || error || !data?.length) return;
+
+        const routeIds = data as unknown as Array<{
+          routes: { from_location_id: string; to_location_id: string };
+        }>;
+        const locationIds = routeIds.flatMap((row) =>
+          [row.routes.from_location_id, row.routes.to_location_id],
+        );
+        const { data: locations, error: locationsError } = await supabase
+          .from("locations")
+          .select("id,name_uk,name_en,name_it")
+          .in("id", locationIds);
+
+        if (cancelled || locationsError || !locations) return;
+        const byId = new Map(locations.map((location) => [location.id, location]));
+        setDestinations(routeIds.map((row) => {
+          const from = byId.get(row.routes.from_location_id);
+          const to = byId.get(row.routes.to_location_id);
+          return {
+            from: locale === "en" ? (from?.name_en ?? from?.name_uk ?? "") : locale === "it" ? (from?.name_it ?? from?.name_uk ?? "") : (from?.name_uk ?? ""),
+            to: locale === "en" ? (to?.name_en ?? to?.name_uk ?? "") : locale === "it" ? (to?.name_it ?? to?.name_uk ?? "") : (to?.name_uk ?? ""),
+          };
+        }).filter((destination) => destination.from && destination.to));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [i18n.language]);
 
   const handleSelect = (destination: PopularDestination) => {
     onSelectDestination(destination);
@@ -55,7 +95,7 @@ export function PopularDestinations({
         </p>
 
         <div className="popular-destinations__grid">
-          {MOCK_DESTINATIONS.map((destination) => (
+          {destinations.map((destination) => (
             <button
               className="popular-destinations__card"
               key={`${destination.from}-${destination.to}`}

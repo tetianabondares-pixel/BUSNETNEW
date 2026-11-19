@@ -17,7 +17,8 @@
     "partners": "Partner",
     "faq": "FAQ",
     "login": "Accedi",
-    "passengerLogin": "Accesso passeggeri"
+    "passengerLogin": "Accesso passeggeri",
+    "signOut": "Esci"
   },
   "search": {
     "fromLabel": "Da:",
@@ -33,6 +34,7 @@
     "popularFrom": "Città popolari",
     "popularTo": "Destinazioni popolari",
     "cityPlaceholder": "Città",
+    "locationLoadError": "Impossibile caricare le località.",
     "swap": "Inverti le città"
   },
   "calendar": {
@@ -64,7 +66,18 @@
     "paymentLabel": "alla salita"
   },
   "footer": {
-    "rights": "© {{year}} BUSNET UA. Tutti i diritti riservati. Mobilità tecnologica europea premium."
+    "rights": "© {{year}} BUSNET UA. Tutti i diritti riservati.",
+    "homeLabel": "BUSNET UA — pagina iniziale",
+    "navigationLabel": "Navigazione nel piè di pagina",
+    "groups": {
+      "passengers": "Per i passeggeri",
+      "help": "Assistenza"
+    },
+    "links": {
+      "findTrip": "Cerca un viaggio",
+      "howItWorks": "Come funziona",
+      "faq": "Domande frequenti"
+    }
   },
   "admin": {
     "login": "Accesso al pannello",
@@ -95,11 +108,12 @@
     "loginPrompt": "Hai già un account?",
     "loginLink": "Accedi",
     "backToLogin": "Torna all'accesso",
-    "authUnavailable": "L'autenticazione passeggeri non è ancora configurata per questo progetto. Accesso, registrazione e recupero password non sono al momento disponibili.",
     "required": "Questo campo è obbligatorio.",
     "invalidEmail": "Inserisci un indirizzo email valido.",
     "invalidCredentials": "Email o password non corretti.",
     "emailNotConfirmed": "Conferma l'email usando il link ricevuto prima di accedere.",
+    "recoverySent": "Le istruzioni per il recupero della password sono state inviate alla tua email.",
+    "registrationSent": "L'account e stato creato. Conferma l'email usando il link ricevuto.",
     "networkError": "Impossibile connettersi al server. Controlla la connessione e riprova.",
     "serverError": "Si è verificato un errore del server. Riprova più tardi.",
     "passwordRequirementsTitle": "La password deve includere:",
@@ -111,6 +125,17 @@
     "passwordMismatch": "Le password non coincidono.",
     "nameTooShort": "Inserisci nome e cognome.",
     "authStatusLabel": "Stato dell'autenticazione"
+  },
+  "booking": {
+    "title": "Risultati della ricerca",
+    "placeholder": "Ricerca viaggi",
+    "loading": "Ricerca viaggi disponibili…",
+    "notFound": "Nessun viaggio trovato.",
+    "missingSearch": "Inserisci città e data per cercare.",
+    "searchError": "Impossibile caricare i viaggi. Riprova più tardi.",
+    "providerError": "Il provider è temporaneamente non disponibile. I risultati non sono stati confermati.",
+    "locationNotImported": "Le località della tratta non sono ancora state importate dal provider.",
+    "trip": "Viaggio"
   },
   "popularDestinations": {
     "title": "Destinazioni popolari",

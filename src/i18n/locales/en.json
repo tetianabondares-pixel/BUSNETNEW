@@ -17,7 +17,8 @@
     "partners": "Partners",
     "faq": "FAQ",
     "login": "Sign in",
-    "passengerLogin": "Passenger sign in"
+    "passengerLogin": "Passenger sign in",
+    "signOut": "Sign out"
   },
   "search": {
     "fromLabel": "From:",
@@ -33,6 +34,7 @@
     "popularFrom": "Popular cities",
     "popularTo": "Popular destinations",
     "cityPlaceholder": "City",
+    "locationLoadError": "Could not load locations.",
     "swap": "Swap cities"
   },
   "calendar": {
@@ -64,7 +66,18 @@
     "paymentLabel": "upon boarding"
   },
   "footer": {
-    "rights": "© {{year}} BUSNET UA. All rights reserved. Premium European Tech Mobility."
+    "rights": "© {{year}} BUSNET UA. All rights reserved.",
+    "homeLabel": "BUSNET UA — home",
+    "navigationLabel": "Footer navigation",
+    "groups": {
+      "passengers": "For passengers",
+      "help": "Help"
+    },
+    "links": {
+      "findTrip": "Find a trip",
+      "howItWorks": "How it works",
+      "faq": "Frequently asked questions"
+    }
   },
   "admin": {
     "login": "Cabinet login",
@@ -95,11 +108,12 @@
     "loginPrompt": "Already have an account?",
     "loginLink": "Sign in",
     "backToLogin": "Back to sign in",
-    "authUnavailable": "Passenger authentication is not configured for this project yet. Sign in, registration, and password recovery are currently unavailable.",
     "required": "This field is required.",
     "invalidEmail": "Enter a valid email address.",
     "invalidCredentials": "The email or password is incorrect.",
     "emailNotConfirmed": "Confirm your email using the link in your inbox before signing in.",
+    "recoverySent": "Password recovery instructions have been sent to your email.",
+    "registrationSent": "Your account was created. Confirm your email using the link in your inbox.",
     "networkError": "Could not connect to the server. Check your connection and try again.",
     "serverError": "A server error occurred. Please try again later.",
     "passwordRequirementsTitle": "Your password must include:",
@@ -111,6 +125,17 @@
     "passwordMismatch": "The passwords do not match.",
     "nameTooShort": "Enter your full name.",
     "authStatusLabel": "Authentication status"
+  },
+  "booking": {
+    "title": "Search results",
+    "placeholder": "Searching trips",
+    "loading": "Searching for available trips…",
+    "notFound": "No trips found.",
+    "missingSearch": "Enter cities and a date to search.",
+    "searchError": "Could not load trips. Please try again later.",
+    "providerError": "The provider is temporarily unavailable. Results could not be confirmed.",
+    "locationNotImported": "The route locations have not been imported from the provider yet.",
+    "trip": "Trip"
   },
   "popularDestinations": {
     "title": "Popular destinations",

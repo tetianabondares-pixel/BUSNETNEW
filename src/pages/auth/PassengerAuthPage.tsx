@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
+import { supabase } from "@/lib/supabase";
 import "./PassengerAuth.css";
 
 type AuthView = "login" | "register" | "recovery";
@@ -20,9 +21,10 @@ function isValidEmail(email: string) {
 }
 
 export function PassengerAuthPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [showRecovery, setShowRecovery] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -74,13 +76,77 @@ export function PassengerAuthPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setNotice("");
     if (!validate()) return;
 
-    // The new project has no configured Auth backend; never simulate success.
-    setNotice(t("passengerAuth.authUnavailable"));
+    setIsSubmitting(true);
+    try {
+      if (isRecovery) {
+        const { error } = await supabase.auth.resetPasswordForEmail(
+          email.trim(),
+          { redirectTo: `${window.location.origin}/login` },
+        );
+        if (error) throw error;
+        setNotice(t("passengerAuth.recoverySent"));
+        return;
+      }
+
+      if (isRegister) {
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts.shift() ?? "";
+        const lastName = nameParts.join(" ");
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/login`,
+            data: {
+              full_name: fullName.trim(),
+              firstName,
+              lastName,
+              role: "passenger",
+              preferred_language: i18n.language?.startsWith("it")
+                ? "it"
+                : i18n.language?.startsWith("en")
+                  ? "en"
+                  : "uk",
+            },
+          },
+        });
+        if (error) throw error;
+
+        if (data.session) {
+          navigate("/");
+        } else {
+          setNotice(t("passengerAuth.registrationSent"));
+        }
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+      navigate("/");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("passengerAuth.serverError");
+
+      if (/invalid login credentials|invalid email or password/i.test(message)) {
+        setNotice(t("passengerAuth.invalidCredentials"));
+      } else if (/email not confirmed/i.test(message)) {
+        setNotice(t("passengerAuth.emailNotConfirmed"));
+      } else if (/fetch|network/i.test(message)) {
+        setNotice(t("passengerAuth.networkError"));
+      } else {
+        setNotice(t("passengerAuth.serverError"));
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const changeView = (nextView: AuthView) => {
@@ -125,19 +191,6 @@ export function PassengerAuthPage() {
             boxShadow: tokens.shadowCard,
           }}
         >
-          <p
-            className="passenger-auth__backend-status"
-            role="status"
-            aria-label={t("passengerAuth.authStatusLabel")}
-            style={{
-              background: tokens.colorBgSecondary,
-              borderColor: tokens.colorBorderSubtle,
-              color: tokens.colorWarning,
-            }}
-          >
-            {t("passengerAuth.authUnavailable")}
-          </p>
-
           <form className="passenger-auth__form" onSubmit={handleSubmit} noValidate>
             {isRegister && (
               <div className="passenger-auth__field">
