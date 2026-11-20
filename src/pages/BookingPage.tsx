@@ -3,17 +3,11 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
-import { getScheduledArrivalDate } from "@/features/search/schedule-search";
-
-type ScheduledTrip = {
-  id: string;
-  departureDate: string;
-  departureTime: string;
-  departurePlace: string | null;
-  arrivalDate: string;
-  arrivalTime: string;
-  arrivalPlace: string | null;
-};
+import {
+  deduplicateScheduledServicesByDeparture,
+  getScheduledArrivalDate,
+  type ScheduledService,
+} from "@/features/search/schedule-search";
 
 function languageOf(language: string): "uk" | "en" | "it" {
   return language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
@@ -23,7 +17,7 @@ export function BookingPage() {
   const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
   const [searchParams] = useSearchParams();
-  const [trips, setTrips] = useState<ScheduledTrip[]>([]);
+  const [trips, setTrips] = useState<ScheduledService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [routeNames, setRouteNames] = useState({ from: "", to: "" });
@@ -121,7 +115,7 @@ export function BookingPage() {
           stopsBySchedule.set(stop.schedule_id, scheduleStops);
         }
 
-        const matchingTrips = (schedules ?? []).flatMap((schedule) => {
+        const scheduledServices = (schedules ?? []).flatMap((schedule) => {
           const scheduleStops = stopsBySchedule.get(schedule.id) ?? [];
           const fromStop = scheduleStops.find((stop) => stop.location_id === fromId);
           const toStop = scheduleStops.find((stop) => stop.location_id === toId);
@@ -143,11 +137,8 @@ export function BookingPage() {
             arrivalTime: toStop.departure_time.slice(0, 5),
             arrivalPlace: toStop.place,
           }];
-        }).sort((left, right) =>
-          `${left.departureDate}T${left.departureTime}`.localeCompare(
-            `${right.departureDate}T${right.departureTime}`,
-          ),
-        );
+        });
+        const matchingTrips = deduplicateScheduledServicesByDeparture(scheduledServices);
 
         if (!cancelled) {
           setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
