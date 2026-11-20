@@ -118,7 +118,7 @@ export function PassengerAuthPage() {
         if (error) throw error;
 
         if (data.session) {
-          navigate("/");
+          navigate(getPostAuthPath(), { replace: true });
         } else {
           setNotice(t("passengerAuth.registrationSent"));
         }
@@ -130,7 +130,7 @@ export function PassengerAuthPage() {
         password,
       });
       if (error) throw error;
-      navigate("/");
+      navigate(getPostAuthPath(), { replace: true });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t("passengerAuth.serverError");
@@ -147,6 +147,15 @@ export function PassengerAuthPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const getPostAuthPath = () => {
+    const state = location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null;
+    const destination = state?.from;
+    if (!destination?.pathname || ["/auth", "/login", "/register"].includes(destination.pathname)) {
+      return "/account";
+    }
+    return `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`;
   };
 
   const changeView = (nextView: AuthView) => {

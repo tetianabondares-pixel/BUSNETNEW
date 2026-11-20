@@ -14,11 +14,15 @@
   },
   "nav": {
     "routes": "Routes",
+    "popular": "Popular",
+    "content": "Content",
+    "audit": "Audit",
     "partners": "Partners",
     "faq": "FAQ",
     "login": "Sign in",
     "passengerLogin": "Passenger sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "account": "My account"
   },
   "search": {
     "fromLabel": "From:",
@@ -66,19 +70,51 @@
     "paymentVal": "Payment",
     "paymentLabel": "upon boarding"
   },
+  "finalCta": {
+    "title": "Ready to travel? Find your ticket in 60 seconds",
+    "subtitle": "Choose a convenient trip without prepayment or hidden fees — pay the driver when boarding",
+    "benefitsLabel": "Booking benefits",
+    "routes": "120+ destinations",
+    "cancellation": "Free cancellation",
+    "support": "Support 24/7",
+    "action": "Find a ticket"
+  },
   "footer": {
     "rights": "© {{year}} BUSNET UA. All rights reserved.",
     "homeLabel": "BUSNET UA — home",
     "navigationLabel": "Footer navigation",
+    "tagline": "Fast, safe journeys across Europe with no prepayment",
+    "socialLabel": "Social networks",
+    "legalLabel": "Legal information",
     "groups": {
       "passengers": "For passengers",
+      "routes": "Routes and services",
       "help": "Help"
     },
     "links": {
       "findTrip": "Find a trip",
       "howItWorks": "How it works",
-      "faq": "Frequently asked questions"
-    }
+      "faq": "Frequently asked questions",
+      "kyivWarsaw": "Kyiv — Warsaw",
+      "lvivKrakow": "Lviv — Krakow",
+      "schedule": "Trip schedules",
+      "partners": "For partners / carriers",
+      "baggage": "Baggage rules",
+      "border": "Crossing the border",
+      "refunds": "Ticket refunds"
+    },
+    "support": {
+      "title": "Support 24/7",
+      "online": "Dispatcher online",
+      "chat": "Open support chat",
+      "hours": "Available around the clock"
+    },
+    "legal": {
+      "offer": "Public offer",
+      "privacy": "Privacy policy",
+      "refunds": "Refund policy"
+    },
+    "payment": "Pay the driver on boarding"
   },
   "admin": {
     "login": "Cabinet login",
@@ -103,7 +139,98 @@
     "catalogSyncSignIn": "Sign in to the administrator account to continue.",
     "catalogSyncFailed": "Could not synchronize the catalog. Please try again.",
     "catalogSyncFailedWithCode": "Could not synchronize the catalog ({{code}}).",
-    "catalogSyncSuccess": "Imported: {{locations}} cities, {{routes}} directions, {{schedules}} schedules and {{stops}} stops."
+    "catalogSyncSuccess": "Imported: {{locations}} cities, {{routes}} directions, {{schedules}} schedules and {{stops}} stops.",
+    "loading": "Loading dashboard…",
+    "accessDenied": "Access denied",
+    "accessDeniedDescription": "This account does not have an administrator role.",
+    "signOut": "Sign out",
+    "navigation": "Dashboard navigation",
+    "overviewSubtitle": "BUSNET operational overview",
+    "bookingsSubtitle": "Passenger bookings and statuses",
+    "catalogSubtitle": "Provider data synchronization",
+    "routesSubtitle": "Routes and popular destinations",
+    "passengersSubtitle": "Customers and their accounts",
+    "cancellationsSubtitle": "Passenger cancellation request queue",
+    "searchPassengers": "Search passenger",
+    "searchCancellations": "Search cancellation request",
+    "noPassengers": "No passengers yet.",
+    "noCancellations": "No cancellation requests.",
+    "startReview": "Start review",
+    "approveCancellation": "Cancel booking",
+    "closeRequest": "Close request",
+    "exportCsv": "Export CSV",
+    "saveContent": "Save content",
+    "invalidJson": "Invalid JSON.",
+    "saveContentFailed": "Could not save content.",
+    "saveContentSuccess": "Content saved successfully.",
+    "contentKey": "Content key",
+    "providerLogs": "Provider request log",
+    "noProviderLogs": "No provider requests yet.",
+    "searchRoutes": "Search route",
+    "noRoutes": "No routes found.",
+    "popularSubtitle": "Manage popular homepage destinations",
+    "contentSubtitle": "Localized public content records",
+    "auditSubtitle": "Administrative action log",
+    "noPopular": "No popular destinations yet.",
+    "noContent": "Public content is not configured yet.",
+    "noAudit": "No administrative actions yet.",
+    "addPopular": "Add destination",
+    "route": "Route",
+    "locale": "Locale",
+    "active": "Active",
+    "inactive": "Inactive",
+    "searchBookings": "Search by number, passenger or status",
+    "results": "results",
+    "recentBookings": "Recent bookings",
+    "viewAll": "View all",
+    "noBookings": "No bookings yet.",
+    "catalogDescription": "Updates cities, routes, directions and weekly schedules from AL-TRANS in one atomic import.",
+    "routesDescription": "Available routes come from the provider catalog. Sync the catalog first, then manage popular routes in Supabase.",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "tabs": {
+      "overview": "Overview",
+      "bookings": "Bookings",
+      "passengers": "Passengers",
+      "cancellations": "Cancellations",
+      "catalog": "Catalog",
+      "routes": "Routes",
+      "popular": "Popular",
+      "content": "Content",
+      "audit": "Audit"
+    },
+    "stats": {
+      "bookings": "Bookings",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cancellations": "Cancellation requests",
+      "locations": "Cities",
+      "routes": "Active routes",
+      "schedules": "Schedules"
+    },
+    "table": {
+      "booking": "Booking",
+      "passenger": "Passenger",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Actions",
+      "email": "Email",
+      "phone": "Phone",
+      "locale": "Locale",
+      "created": "Created",
+      "reason": "Reason",
+      "operation": "Operation",
+      "response": "Response",
+      "requested": "Requested",
+      "route": "Route",
+      "providerId": "Provider ID",
+      "schedules": "Schedules",
+      "order": "Order",
+      "contentKey": "Content key",
+      "updated": "Updated",
+      "action": "Action",
+      "target": "Target"
+    }
   },
   "passengerAuth": {
     "loginTitle": "Passenger sign in",
@@ -157,7 +284,27 @@
     "locationNotImported": "The route locations have not been imported from the provider yet.",
     "locationAmbiguous": "More than one city has this name. Please specify the city.",
     "sameLocation": "Departure and destination must be different cities.",
-    "trip": "Trip"
+    "trip": "Trip",
+    "scheduleConfirmed": "Service from the weekly schedule",
+    "loadingLive": "Confirming trips with the provider…",
+    "availableTrips": "Available trips",
+    "priceUnavailable": "Price unavailable",
+    "passengerDetails": "Passenger details",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "nationality": "Nationality",
+    "documentType": "Document type",
+    "documentNumber": "Document number",
+    "seatNumber": "Seat (optional)",
+    "confirmBooking": "Confirm booking",
+    "bookingLoading": "Creating booking…",
+    "bookingCreated": "Booking created",
+    "bookingNumber": "Booking number",
+    "total": "Total",
+    "expiresAt": "Valid until",
+    "bookingError": "Could not create the booking. Please try again later.",
+    "tripUnavailable": "This trip is no longer available. Please choose another."
   },
   "popularDestinations": {
     "title": "Popular destinations",
@@ -167,41 +314,150 @@
   },
   "howItWorks": {
     "title": "How it works",
-    "subtitle": "From finding an available trip to placing a booking in three simple steps.",
+    "subtitle": "From choosing a route to having your ticket on your phone in three simple steps.",
+    "visual": {
+      "routeFrom": "Kyiv",
+      "routeTo": "Warsaw",
+      "date": "24 March",
+      "payment": "Pay when boarding"
+    },
     "steps": [
       {
-        "title": "Find a trip",
-        "description": "Enter your cities and travel date to view available trips."
+        "title": "Find your route",
+        "description": "120+ direct destinations. Choose cities and a date in seconds."
       },
       {
-        "title": "Choose a trip",
-        "description": "Compare the confirmed trip details and select “Choose trip”."
+        "title": "Compare conditions",
+        "description": "Exact schedules, carriers and onboard comforts with no hidden surprises."
       },
       {
-        "title": "Book a ticket",
-        "description": "Enter the passenger details and confirm your booking."
+        "title": "Instant booking",
+        "description": "Ticket on your phone in 60 seconds. Pay the driver when boarding."
       }
     ]
   },
+  "comfort": {
+    "eyebrow": "Travel standards",
+    "title": "Everything for a comfortable journey",
+    "subtitle": "Modern European buses equipped for long-distance international trips",
+    "features": {
+      "power": {
+        "title": "Power outlets & USB",
+        "description": "220V outlets and USB ports by every seat keep your devices charged.",
+        "highlight": "Power at every seat"
+      },
+      "wifi": {
+        "title": "High-speed Wi-Fi",
+        "description": "Uninterrupted Starlink internet across Ukraine and the EU for work and entertainment.",
+        "highlight": "Starlink on the route"
+      },
+      "climate": {
+        "title": "Climate control",
+        "description": "Individual air vents and a comfortable cabin temperature in any weather.",
+        "highlight": "Comfort in every season"
+      },
+      "luggage": {
+        "title": "Luggage included",
+        "description": "Up to 2 large suitcases (up to 30 kg each) in the luggage compartment plus hand luggage in the cabin, free of charge.",
+        "highlight": "2 suitcases + hand luggage"
+      },
+      "tracking": {
+        "title": "GPS trip tracking",
+        "description": "A live map of the bus in real time, so you know when to expect it.",
+        "highlight": "Live trip status"
+      }
+    }
+  },
+  "account": {
+    "eyebrow": "Passenger account",
+    "title": "My account",
+    "tabsLabel": "Account sections",
+    "loading": "Loading your account…",
+    "loadError": "Could not load your account. Check your connection and try again.",
+    "retry": "Try again",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…",
+    "signOutError": "Could not sign out. Please try again.",
+    "trips": {
+      "title": "My trips",
+      "upcoming": "Upcoming trips",
+      "past": "Past trips",
+      "noUpcoming": "You have no upcoming trips.",
+      "noPast": "Past trips will appear here.",
+      "emptyTitle": "No bookings yet",
+      "emptyDescription": "Your bookings will appear here once you make one.",
+      "bookingNumber": "Request number",
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "total": "Total",
+      "notAvailable": "Not provided",
+      "pendingNote": "The dispatcher is contacting the carrier to secure your seat. This is not a confirmed ticket yet.",
+      "status": {
+        "pending": "Awaiting confirmation",
+        "confirmed": "Confirmed",
+        "cancelled": "Cancelled",
+        "expired": "Request expired",
+        "refunded": "Refunded",
+        "unknown": "Status being checked"
+      }
+    },
+    "profile": {
+      "title": "Profile",
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "language": "Account language",
+      "languages": {
+        "uk": "Українська",
+        "en": "English",
+        "it": "Italiano"
+      },
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Profile updated.",
+      "emailConfirmation": "Changes saved. Confirm your new email address using the link we sent you.",
+      "saveError": "Could not save your profile. Check the details and try again."
+    },
+    "cancellation": {
+      "open": "Request cancellation",
+      "title": "Cancellation request",
+      "explanation": "Your request will be saved for dispatcher review. This does not cancel the booking automatically; it stays active until cancellation is confirmed.",
+      "reason": "Reason (optional)",
+      "keep": "Go back",
+      "submit": "Send request",
+      "sending": "Sending…",
+      "close": "Close",
+      "error": "Could not save the request. Try again or contact the dispatcher.",
+      "status": {
+        "new": "Cancellation request submitted for review.",
+        "in_progress": "The dispatcher is reviewing your cancellation request."
+      }
+    }
+  },
   "faq": {
     "title": "Frequently Asked Questions",
-    "subtitle": "Answers to common questions about searching and booking a trip",
+    "subtitle": "The essentials about tickets, payment and your trip",
+    "support": {
+      "title": "Didn't find your answer?",
+      "description": "Our dispatcher is available around the clock to help you.",
+      "contactHint": "Find the dispatcher’s contact in your ticket or booking confirmation."
+    },
     "items": {
-      "search": {
-        "question": "How do I find a bus trip?",
-        "answer": "Choose cities from the suggestions and select a date to see services in the Supabase weekly schedule. Prices and seat availability are shown only after the carrier confirms them."
+      "ticket": {
+        "question": "Do I need to print my ticket?",
+        "answer": "No. Show the driver your e-ticket on your phone."
       },
-      "notFound": {
-        "question": "What should I do if no trips are found?",
-        "answer": "Check the date and route. If no service is listed for that date, try another day."
+      "payment": {
+        "question": "How and when do I pay?",
+        "answer": "There is no prepayment. Pay in cash or by card when you board the bus."
       },
-      "chooseTrip": {
-        "question": "How do I choose a trip?",
-        "answer": "The list shows scheduled services, but price, seat availability and booking are not yet confirmed."
+      "luggage": {
+        "question": "How much luggage can I bring?",
+        "answer": "Typically, you can bring one suitcase weighing up to 25–30 kg and hand luggage at no extra charge. Check with the carrier about oversized luggage."
       },
-      "booking": {
-        "question": "How do I complete a booking?",
-        "answer": "The booking page is currently a placeholder; the booking and confirmation flow has not been implemented."
+      "border": {
+        "question": "What should I do if I'm delayed at the border?",
+        "answer": "Contact the dispatcher using the details in your ticket or booking confirmation. They are available around the clock and can advise you about the next steps."
       }
     }
   }

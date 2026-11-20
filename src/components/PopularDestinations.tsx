@@ -30,43 +30,83 @@ export function PopularDestinations({
         ? "it"
         : "uk";
 
-    supabase
-      .from("popular_routes")
-      .select("routes(from_location_id,to_location_id)")
-      .eq("active", true)
-      .eq("locale", locale)
-      .order("sort_order")
-      .then(async ({ data, error }) => {
-        if (cancelled || error || !data?.length) return;
+    const loadDestinations = async () => {
+      let routePairs: Array<{
+        from_location_id: string;
+        to_location_id: string;
+      }> = [];
 
-        const routeIds = data as unknown as Array<{
-          routes: { from_location_id: string; to_location_id: string };
-        }>;
-        const locationIds = routeIds.flatMap((row) =>
-          [row.routes.from_location_id, row.routes.to_location_id],
-        );
-        const { data: locations, error: locationsError } = await supabase
-          .from("locations")
-          .select("id,name_uk,name_en,name_it,country_code,provider_location_id")
-          .in("id", locationIds);
+      const { data: popularRows, error: popularError } = await supabase
+        .from("popular_routes")
+        .select("route_id,routes(from_location_id,to_location_id)")
+        .eq("active", true)
+        .eq("locale", locale)
+        .order("sort_order")
+        .limit(8);
 
-        if (cancelled || locationsError || !locations) return;
-        const byId = new Map(locations.map((location) => [location.id, location]));
-        setDestinations(routeIds.map((row) => {
-          const from = byId.get(row.routes.from_location_id);
-          const to = byId.get(row.routes.to_location_id);
-          const display = (location: typeof from): ResolvedLocation => ({
-            id: location?.id ?? "",
-            name: locale === "en" ? (location?.name_en ?? location?.name_uk ?? "") : locale === "it" ? (location?.name_it ?? location?.name_uk ?? "") : (location?.name_uk ?? ""),
-            nameUk: location?.name_uk ?? "",
-            nameEn: location?.name_en ?? null,
-            nameIt: location?.name_it ?? null,
-            countryCode: location?.country_code ?? null,
-            providerLocationId: location?.provider_location_id ?? null,
-          });
-          return { from: display(from), to: display(to) };
-        }).filter((destination) => destination.from.id && destination.to.id));
-      });
+      if (!cancelled && !popularError && popularRows?.length) {
+        routePairs = (popularRows as unknown as Array<{
+          routes:
+            | { from_location_id: string; to_location_id: string }
+            | Array<{ from_location_id: string; to_location_id: string }>
+            | null;
+        }>).flatMap((row) => {
+          if (Array.isArray(row.routes)) return row.routes;
+          return row.routes ? [row.routes] : [];
+        });
+      }
+
+      if (!cancelled && routePairs.length === 0) {
+        const { data: activeRoutes, error: routesError } = await supabase
+          .from("routes")
+          .select("from_location_id,to_location_id")
+          .eq("active", true)
+          .limit(8);
+        if (!routesError && activeRoutes?.length) {
+          routePairs = activeRoutes;
+        }
+      }
+
+      if (cancelled || routePairs.length === 0) return;
+
+      const locationIds = [...new Set(routePairs.flatMap((row) =>
+        [row.from_location_id, row.to_location_id],
+      ))];
+      const { data: locations, error: locationsError } = await supabase
+        .from("locations")
+        .select("id,name_uk,name_en,name_it,country_code,provider_location_id")
+        .in("id", locationIds)
+        .eq("active", true);
+
+      if (cancelled || locationsError || !locations) return;
+      const byId = new Map(locations.map((location) => [location.id, location]));
+      const nextDestinations = routePairs.map((row) => {
+        const from = byId.get(row.from_location_id);
+        const to = byId.get(row.to_location_id);
+        const display = (location: typeof from): ResolvedLocation => ({
+          id: location?.id ?? "",
+          name: locale === "en"
+            ? (location?.name_en ?? location?.name_uk ?? "")
+            : locale === "it"
+              ? (location?.name_it ?? location?.name_en ?? location?.name_uk ?? "")
+              : (location?.name_uk ?? ""),
+          nameUk: location?.name_uk ?? "",
+          nameEn: location?.name_en ?? null,
+          nameIt: location?.name_it ?? null,
+          countryCode: location?.country_code ?? null,
+          providerLocationId: location?.provider_location_id ?? null,
+        });
+        return { from: display(from), to: display(to) };
+      }).filter((destination) =>
+        destination.from.id &&
+        destination.to.id &&
+        destination.from.id !== destination.to.id,
+      );
+
+      if (!cancelled) setDestinations(nextDestinations);
+    };
+
+    void loadDestinations();
 
     return () => {
       cancelled = true;
@@ -105,7 +145,7 @@ export function PopularDestinations({
           {destinations.map((destination) => (
             <button
               className="popular-destinations__card"
-              key={`${destination.from}-${destination.to}`}
+              key={`${destination.from.id}:${destination.to.id}`}
               type="button"
               aria-label={t("popularDestinations.chooseRoute", {
                 from: destination.from.name,

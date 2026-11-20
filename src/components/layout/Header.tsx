@@ -13,7 +13,7 @@ export function Header() {
   const navigate = useNavigate();
   const [isSignedIn, setIsSignedIn] = useState(false);
   const isDark = resolved === "dark";
-  const isPassengerAuthPage = pathname === "/login" || pathname === "/register";
+  const isPassengerAuthPage = pathname === "/auth" || pathname === "/login" || pathname === "/register";
   const isLandingPage = pathname === "/";
 
   const languages = ["ua", "en", "it"] as const;
@@ -38,13 +38,12 @@ export function Header() {
     };
   }, []);
 
-  const handleAuthAction = async () => {
+  const handleAccountNavigation = () => {
     if (!isSignedIn) {
-      navigate("/login");
+      navigate("/auth");
       return;
     }
-    await supabase.auth.signOut();
-    navigate("/");
+    navigate("/account");
   };
 
   const toggleTheme = () => {
@@ -185,7 +184,7 @@ export function Header() {
         {/* Login Button (Outline with icon) */}
         <button
           type="button"
-          onClick={handleAuthAction}
+          onClick={handleAccountNavigation}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -214,7 +213,7 @@ export function Header() {
           }}
         >
           <User size={14} color={isDark ? "#38BDF8" : "#087DFF"} />
-          <span>{isSignedIn ? t("nav.signOut") : t("nav.passengerLogin")}</span>
+          <span>{isSignedIn ? t("nav.account") : t("nav.passengerLogin")}</span>
         </button>
       </div>
     </header>

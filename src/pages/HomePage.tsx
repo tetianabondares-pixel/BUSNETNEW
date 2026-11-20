@@ -9,6 +9,7 @@ import {
   type PopularDestination,
 } from "@/components/PopularDestinations";
 import { HowItWorks } from "@/components/HowItWorks";
+import { ComfortSection } from "@/components/ComfortSection";
 import { FAQSection } from "@/components/FAQSection";
 
 export function HomePage() {
@@ -161,7 +162,7 @@ export function HomePage() {
           <h1
             style={{
               fontSize: "clamp(2.5rem, 4.4vw, 3.4rem)",
-              fontWeight: 700,
+              fontWeight: 650,
               letterSpacing: "-0.045em",
               lineHeight: 1.05,
               color: isDark ? "#FFFFFF" : "#101828",
@@ -184,10 +185,10 @@ export function HomePage() {
           {/* Subtitle */}
           <p
             style={{
-              fontSize: "0.88rem",
+              fontSize: "0.96rem",
               lineHeight: 1.5,
-              fontWeight: 400,
-              color: isDark ? "#8B9AAF" : "#66758A",
+              fontWeight: 500,
+              color: isDark ? "#B6C2D2" : "#53647A",
               marginBottom: "2rem",
               maxWidth: "520px",
             }}
@@ -209,6 +210,7 @@ export function HomePage() {
         }
       />
       <HowItWorks isDark={isDark} />
+      <ComfortSection isDark={isDark} />
       <FAQSection />
     </div>
   );

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Headset } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
 import "./FAQSection.css";
 
-const FAQ_ITEMS = ["search", "notFound", "chooseTrip", "booking"] as const;
+const FAQ_ITEMS = ["ticket", "payment", "luggage", "border"] as const;
 
 export function FAQSection() {
   const { t } = useTranslation();
@@ -24,6 +24,16 @@ export function FAQSection() {
             {t("faq.title")}
           </h2>
           <p className="faq-section__subtitle">{t("faq.subtitle")}</p>
+          <aside className="faq-section__support">
+            <div className="faq-section__support-icon">
+              <Headset aria-hidden="true" size={20} />
+            </div>
+            <div>
+              <h3>{t("faq.support.title")}</h3>
+              <p>{t("faq.support.description")}</p>
+              <span>{t("faq.support.contactHint")}</span>
+            </div>
+          </aside>
         </div>
 
         <div className="faq-section__list">
@@ -52,11 +62,12 @@ export function FAQSection() {
                     type="button"
                   >
                     <span>{t(`faq.items.${item}.question`)}</span>
-                    <ChevronDown
-                      aria-hidden="true"
-                      className="faq-section__chevron"
-                      size={20}
-                    />
+                    <span className="faq-section__icon" aria-hidden="true">
+                      <ChevronDown
+                        className="faq-section__chevron"
+                        size={18}
+                      />
+                    </span>
                   </button>
                 </h3>
                 <div

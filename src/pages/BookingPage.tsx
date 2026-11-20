@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
@@ -9,6 +9,33 @@ import {
   type ScheduledService,
 } from "@/features/search/schedule-search";
 
+type ProviderTrip = {
+  trip_id: string;
+  carrier: string;
+  bus_number: string | null;
+  departure_city: string;
+  departure_place: string;
+  departure_date: string;
+  departure_time: string;
+  arrival_city: string;
+  arrival_place: string;
+  arrival_date: string;
+  arrival_time: string;
+  price: number | string | null;
+  currency: string;
+  can_book_with_payment_at_boarding: boolean;
+};
+
+type Passenger = {
+  fullName: string;
+  email: string;
+  phone: string;
+  nationality: string;
+  documentType: string;
+  documentNumber: string;
+  seatNumber: string;
+};
+
 function languageOf(language: string): "uk" | "en" | "it" {
   return language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
 }
@@ -18,12 +45,43 @@ export function BookingPage() {
   const { tokens } = useTheme();
   const [searchParams] = useSearchParams();
   const [trips, setTrips] = useState<ScheduledService[]>([]);
+  const [providerTrips, setProviderTrips] = useState<ProviderTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [providerLoading, setProviderLoading] = useState(false);
   const [error, setError] = useState("");
+  const [providerError, setProviderError] = useState("");
   const [routeNames, setRouteNames] = useState({ from: "", to: "" });
+  const [selectedTrip, setSelectedTrip] = useState<ProviderTrip | null>(null);
+  const [passengers, setPassengers] = useState<Passenger[]>([{
+    fullName: "", email: "", phone: "", nationality: "", documentType: "",
+    documentNumber: "", seatNumber: "",
+  }]);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingResult, setBookingResult] = useState<{
+    bookingNumber: string;
+    totalAmount: number;
+    currency: string;
+    expiresAt: string;
+  } | null>(null);
+  const [bookingError, setBookingError] = useState("");
+
   const fromId = searchParams.get("fromId")?.trim() ?? "";
   const toId = searchParams.get("toId")?.trim() ?? "";
   const date = searchParams.get("date")?.trim() ?? "";
+
+  useEffect(() => {
+    let cancelled = false;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled && data.user) {
+        setPassengers((current) => [{
+          ...current[0],
+          fullName: String(data.user?.user_metadata?.full_name ?? current[0].fullName),
+          email: data.user?.email ?? current[0].email,
+        }]);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +94,9 @@ export function BookingPage() {
     setLoading(true);
     setError("");
     setTrips([]);
+    setProviderTrips([]);
+    setSelectedTrip(null);
+    setBookingResult(null);
 
     const searchSchedules = async () => {
       try {
@@ -72,10 +133,7 @@ export function BookingPage() {
           (routes ?? []).map((route) => route.provider_route_id).filter(Boolean),
         )];
         if (providerRouteIds.length === 0) {
-          if (!cancelled) {
-            setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
-            setTrips([]);
-          }
+          if (!cancelled) setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
           return;
         }
 
@@ -88,10 +146,7 @@ export function BookingPage() {
 
         const scheduleIds = (schedules ?? []).map((schedule) => schedule.id);
         if (scheduleIds.length === 0) {
-          if (!cancelled) {
-            setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
-            setTrips([]);
-          }
+          if (!cancelled) setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
           return;
         }
 
@@ -127,7 +182,6 @@ export function BookingPage() {
             schedule.service_weekday,
           );
           if (!arrivalDate) return [];
-
           return [{
             id: `${schedule.id}:${date}`,
             departureDate: date,
@@ -138,92 +192,220 @@ export function BookingPage() {
             arrivalPlace: toStop.place,
           }];
         });
-        const matchingTrips = deduplicateScheduledServicesByDeparture(scheduledServices);
 
         if (!cancelled) {
           setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
-          setTrips(matchingTrips);
+          setTrips(deduplicateScheduledServicesByDeparture(scheduledServices));
         }
       } catch (caught) {
         if (cancelled) return;
-        setError(
-          caught instanceof Error && caught.message === "SAME_LOCATION"
-            ? t("booking.sameLocation")
-            : t("booking.searchError"),
-        );
+        setError(caught instanceof Error && caught.message === "SAME_LOCATION"
+          ? t("booking.sameLocation")
+          : t("booking.searchError"));
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     void searchSchedules();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [fromId, toId, date, i18n.language, t]);
 
+  useEffect(() => {
+    if (!fromId || !toId || !date || trips.length === 0) return;
+    let cancelled = false;
+    setProviderLoading(true);
+    setProviderError("");
+
+    void supabase.functions.invoke("altrans-adapter", {
+      body: {
+        operation: "search-trips",
+        fromLocationId: fromId,
+        toLocationId: toId,
+        travelDate: date,
+        passengersCount: 1,
+        currencyCode: "UAH",
+      },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setProviderError(t("booking.providerError"));
+        return;
+      }
+      const response = data as { providerError?: boolean; errorCode?: string; trips?: ProviderTrip[] } | null;
+      if (response?.providerError) {
+        setProviderError(t("booking.providerError"));
+        return;
+      }
+      setProviderTrips(response?.trips ?? []);
+    }).finally(() => {
+      if (!cancelled) setProviderLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [trips, fromId, toId, date, t]);
+
+  const updatePassenger = (field: keyof Passenger, value: string) => {
+    setPassengers((current) => [{ ...current[0], [field]: value }]);
+  };
+
+  const submitBooking = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedTrip) return;
+    setBookingLoading(true);
+    setBookingError("");
+    setBookingResult(null);
+    const { data, error } = await supabase.functions.invoke("altrans-adapter", {
+      body: {
+        operation: "create-booking",
+        tripId: selectedTrip.trip_id,
+        fromLocationId: fromId,
+        toLocationId: toId,
+        travelDate: date,
+        locale: languageOf(i18n.language),
+        passengers,
+      },
+    });
+    setBookingLoading(false);
+    if (error) {
+      setBookingError(t("booking.bookingError"));
+      return;
+    }
+    const response = data as {
+      errorCode?: string;
+      bookingId?: string;
+      bookingNumber?: string;
+      totalAmount?: number;
+      currency?: string;
+      expiresAt?: string;
+    };
+    if (!response.bookingNumber) {
+      setBookingError(
+        response.errorCode === "TRIP_UNAVAILABLE"
+          ? t("booking.tripUnavailable")
+          : t("booking.bookingError"),
+      );
+      return;
+    }
+    setBookingResult({
+      bookingNumber: response.bookingNumber,
+      totalAmount: response.totalAmount ?? 0,
+      currency: response.currency ?? "UAH",
+      expiresAt: response.expiresAt ?? "",
+    });
+  };
+
+  const inputStyle = {
+    width: "100%",
+    boxSizing: "border-box" as const,
+    padding: "10px 12px",
+    borderRadius: "10px",
+    border: `1px solid ${tokens.colorBorder}`,
+    background: tokens.colorBgInput,
+    color: tokens.colorText,
+  };
+
   return (
-    <section
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "1rem",
-        padding: "3rem 1.5rem",
-        minHeight: "50vh",
-        width: "100%",
-        boxSizing: "border-box",
-      }}
-    >
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>
-        {t("booking.title")}
-      </h1>
-      <p style={{ color: tokens.colorTextSecondary }}>
-        {routeNames.from || fromId} → {routeNames.to || toId} · {date}
-      </p>
+    <section style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "3rem 1.5rem", minHeight: "50vh", width: "100%", boxSizing: "border-box" }}>
+      <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>{t("booking.title")}</h1>
+      <p style={{ color: tokens.colorTextSecondary }}>{routeNames.from || fromId} → {routeNames.to || toId} · {date}</p>
 
-      {loading && (
-        <p style={{ color: tokens.colorTextSecondary }}>{t("booking.loading")}</p>
-      )}
+      {loading && <p style={{ color: tokens.colorTextSecondary }}>{t("booking.loading")}</p>}
+      {!loading && error && <p style={{ color: tokens.colorTextSecondary }}>{error}</p>}
 
-      {!loading && error && (
-        <p style={{ color: tokens.colorTextSecondary }}>{error}</p>
+      {!loading && !error && trips.length > 0 && (
+        <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
+          <p style={{ color: tokens.colorTextSecondary, margin: 0 }}>{t("booking.scheduleConfirmed")}</p>
+          {trips.map((trip) => (
+            <article key={trip.id} style={{ padding: "14px", borderRadius: "12px", border: `1px solid ${tokens.colorBorder}`, background: tokens.colorBgCard }}>
+              <strong>{routeNames.from} {trip.departureTime}</strong>
+              <div style={{ color: tokens.colorTextSecondary }}>
+                {trip.departurePlace ? `${trip.departurePlace} · ` : ""}{routeNames.to} · {trip.arrivalDate} {trip.arrivalTime}
+                {trip.arrivalPlace ? ` · ${trip.arrivalPlace}` : ""}
+              </div>
+            </article>
+          ))}
+        </div>
       )}
 
       {!loading && !error && trips.length === 0 && (
         <p style={{ color: tokens.colorTextSecondary }}>{t("booking.notFound")}</p>
       )}
 
-      <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
-        {trips.map((trip) => (
-          <article
-            key={trip.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "16px",
-              padding: "18px",
-              borderRadius: "14px",
-              border: `1px solid ${tokens.colorBorder}`,
-              background: tokens.colorBgCard,
-              boxSizing: "border-box",
-            }}
-          >
-            <div>
-              <strong>{t("calendar.scheduledService")}</strong>
-              <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
-                {routeNames.from} {trip.departureTime}
-                {trip.departurePlace ? ` · ${trip.departurePlace}` : ""}
-              </div>
-              <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
-                {routeNames.to} · {trip.arrivalDate} {trip.arrivalTime}
-                {trip.arrivalPlace ? ` · ${trip.arrivalPlace}` : ""}
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
+      {providerLoading && <p style={{ color: tokens.colorTextSecondary }}>{t("booking.loadingLive")}</p>}
+      {providerError && <p style={{ color: tokens.colorWarning }}>{providerError}</p>}
+
+      {!providerLoading && providerTrips.length > 0 && (
+        <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
+          <h2 style={{ fontSize: "1.1rem", margin: "8px 0 0" }}>{t("booking.availableTrips")}</h2>
+          {providerTrips.map((trip) => {
+            const price = trip.price == null ? null : Number(trip.price);
+            return (
+              <button
+                key={trip.trip_id}
+                type="button"
+                onClick={() => { setSelectedTrip(trip); setBookingResult(null); setBookingError(""); }}
+                style={{
+                  textAlign: "left",
+                  padding: "16px",
+                  borderRadius: "14px",
+                  border: `2px solid ${selectedTrip?.trip_id === trip.trip_id ? "#087DFF" : tokens.colorBorder}`,
+                  background: tokens.colorBgCard,
+                  color: tokens.colorText,
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                  <strong>{trip.departure_time} → {trip.arrival_time}</strong>
+                  <strong>{price == null ? t("booking.priceUnavailable") : `${price} ${trip.currency}`}</strong>
+                </div>
+                <div style={{ color: tokens.colorTextSecondary, marginTop: "6px" }}>
+                  {trip.carrier}{trip.bus_number ? ` · ${trip.bus_number}` : ""}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedTrip && (
+        <form onSubmit={submitBooking} style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px", padding: "18px", borderRadius: "14px", border: `1px solid ${tokens.colorBorder}`, background: tokens.colorBgCard, boxSizing: "border-box" }}>
+          <h2 style={{ fontSize: "1.1rem", margin: 0 }}>{t("booking.passengerDetails")}</h2>
+          {([
+            ["fullName", "fullName"],
+            ["email", "email"],
+            ["phone", "phone"],
+            ["nationality", "nationality"],
+            ["documentType", "documentType"],
+            ["documentNumber", "documentNumber"],
+            ["seatNumber", "seatNumber"],
+          ] as const).map(([field, key]) => (
+            <label key={field} style={{ display: "grid", gap: "6px", color: tokens.colorTextSecondary }}>
+              {t(`booking.${key}`)}
+              <input
+                required={field !== "seatNumber" && field !== "email"}
+                type={field === "email" ? "email" : "text"}
+                value={passengers[0][field]}
+                onChange={(event) => updatePassenger(field, event.target.value)}
+                style={inputStyle}
+              />
+            </label>
+          ))}
+          <button type="submit" disabled={bookingLoading} style={{ padding: "12px", borderRadius: "10px", border: 0, background: "#087DFF", color: "#fff", fontWeight: 700, cursor: bookingLoading ? "wait" : "pointer" }}>
+            {bookingLoading ? t("booking.bookingLoading") : t("booking.confirmBooking")}
+          </button>
+        </form>
+      )}
+
+      {bookingError && <p style={{ color: tokens.colorWarning }}>{bookingError}</p>}
+      {bookingResult && (
+        <div role="status" style={{ width: "100%", maxWidth: "760px", padding: "18px", borderRadius: "14px", border: "1px solid #22C55E", background: tokens.colorBgCard, boxSizing: "border-box" }}>
+          <strong>{t("booking.bookingCreated")}</strong>
+          <div>{t("booking.bookingNumber")}: {bookingResult.bookingNumber}</div>
+          <div>{t("booking.total")}: {bookingResult.totalAmount} {bookingResult.currency}</div>
+          {bookingResult.expiresAt && <div style={{ color: tokens.colorTextSecondary }}>{t("booking.expiresAt")}: {new Date(bookingResult.expiresAt).toLocaleString()}</div>}
+        </div>
+      )}
     </section>
   );
 }

@@ -18,7 +18,8 @@
     "faq": "FAQ",
     "login": "Accedi",
     "passengerLogin": "Accesso passeggeri",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "account": "Il mio account"
   },
   "search": {
     "fromLabel": "Da:",
@@ -66,19 +67,51 @@
     "paymentVal": "Pagamento",
     "paymentLabel": "alla salita"
   },
+  "finalCta": {
+    "title": "Pronto a partire? Trova il tuo biglietto in 60 secondi",
+    "subtitle": "Scegli un viaggio comodo senza anticipo né commissioni nascoste — paga l'autista alla salita",
+    "benefitsLabel": "Vantaggi della prenotazione",
+    "routes": "Oltre 120 destinazioni",
+    "cancellation": "Cancellazione gratuita",
+    "support": "Supporto 24/7",
+    "action": "Trova un biglietto"
+  },
   "footer": {
     "rights": "© {{year}} BUSNET UA. Tutti i diritti riservati.",
     "homeLabel": "BUSNET UA — pagina iniziale",
     "navigationLabel": "Navigazione nel piè di pagina",
+    "tagline": "Viaggi rapidi e sicuri in Europa, senza pagamento anticipato",
+    "socialLabel": "Social network",
+    "legalLabel": "Informazioni legali",
     "groups": {
       "passengers": "Per i passeggeri",
+      "routes": "Rotte e servizi",
       "help": "Assistenza"
     },
     "links": {
       "findTrip": "Cerca un viaggio",
       "howItWorks": "Come funziona",
-      "faq": "Domande frequenti"
-    }
+      "faq": "Domande frequenti",
+      "kyivWarsaw": "Kiev — Varsavia",
+      "lvivKrakow": "Leopoli — Cracovia",
+      "schedule": "Orari dei viaggi",
+      "partners": "Partner / Vettori",
+      "baggage": "Regole sui bagagli",
+      "border": "Attraversamento del confine",
+      "refunds": "Rimborso dei biglietti"
+    },
+    "support": {
+      "title": "Supporto 24/7",
+      "online": "Distributore online",
+      "chat": "Apri la chat di supporto",
+      "hours": "Disponibile tutto il giorno"
+    },
+    "legal": {
+      "offer": "Offerta pubblica",
+      "privacy": "Privacy",
+      "refunds": "Condizioni di rimborso"
+    },
+    "payment": "Pagamento all'autista alla salita"
   },
   "admin": {
     "login": "Accesso al pannello",
@@ -103,7 +136,98 @@
     "catalogSyncSignIn": "Accedi con l'account amministratore per continuare.",
     "catalogSyncFailed": "Impossibile sincronizzare il catalogo. Riprova.",
     "catalogSyncFailedWithCode": "Impossibile sincronizzare il catalogo ({{code}}).",
-    "catalogSyncSuccess": "Importati: {{locations}} città, {{routes}} direzioni, {{schedules}} orari e {{stops}} fermate."
+    "catalogSyncSuccess": "Importati: {{locations}} città, {{routes}} direzioni, {{schedules}} orari e {{stops}} fermate.",
+    "loading": "Caricamento pannello…",
+    "accessDenied": "Accesso negato",
+    "accessDeniedDescription": "Questo account non dispone di un ruolo amministrativo.",
+    "signOut": "Esci",
+    "navigation": "Navigazione del pannello",
+    "overviewSubtitle": "Panoramica operativa BUSNET",
+    "bookingsSubtitle": "Prenotazioni passeggeri e stati",
+    "catalogSubtitle": "Sincronizzazione dei dati del fornitore",
+    "routesSubtitle": "Tratte e destinazioni popolari",
+    "passengersSubtitle": "Clienti e i loro account",
+    "cancellationsSubtitle": "Coda delle richieste di annullamento",
+    "searchPassengers": "Cerca passeggero",
+    "searchCancellations": "Cerca richiesta di annullamento",
+    "noPassengers": "Nessun passeggero.",
+    "noCancellations": "Nessuna richiesta di annullamento.",
+    "startReview": "Inizia revisione",
+    "approveCancellation": "Annulla prenotazione",
+    "closeRequest": "Chiudi richiesta",
+    "exportCsv": "Esporta CSV",
+    "saveContent": "Salva contenuto",
+    "invalidJson": "JSON non valido.",
+    "saveContentFailed": "Impossibile salvare il contenuto.",
+    "saveContentSuccess": "Contenuto salvato.",
+    "contentKey": "Chiave contenuto",
+    "providerLogs": "Registro richieste del fornitore",
+    "noProviderLogs": "Nessuna richiesta al fornitore.",
+    "searchRoutes": "Cerca tratta",
+    "noRoutes": "Nessuna tratta trovata.",
+    "popularSubtitle": "Gestisci le destinazioni popolari della home",
+    "contentSubtitle": "Contenuti pubblici localizzati",
+    "auditSubtitle": "Registro delle azioni amministrative",
+    "noPopular": "Nessuna destinazione popolare.",
+    "noContent": "Contenuto pubblico non configurato.",
+    "noAudit": "Nessuna azione amministrativa.",
+    "addPopular": "Aggiungi destinazione",
+    "route": "Tratta",
+    "locale": "Lingua",
+    "active": "Attiva",
+    "inactive": "Inattiva",
+    "searchBookings": "Cerca per numero, passeggero o stato",
+    "results": "risultati",
+    "recentBookings": "Prenotazioni recenti",
+    "viewAll": "Vedi tutte",
+    "noBookings": "Nessuna prenotazione.",
+    "catalogDescription": "Aggiorna città, rotte, tratte e orari settimanali da AL-TRANS con un unico import atomico.",
+    "routesDescription": "Le tratte disponibili provengono dal catalogo del fornitore. Prima sincronizza il catalogo, quindi gestisci le tratte popolari in Supabase.",
+    "confirm": "Conferma",
+    "cancel": "Annulla",
+    "tabs": {
+      "overview": "Panoramica",
+      "bookings": "Prenotazioni",
+      "passengers": "Passeggeri",
+      "cancellations": "Annullamenti",
+      "catalog": "Catalogo",
+      "routes": "Tratte",
+      "popular": "Popolari",
+      "content": "Contenuti",
+      "audit": "Audit"
+    },
+    "stats": {
+      "bookings": "Prenotazioni",
+      "pending": "In attesa",
+      "confirmed": "Confermate",
+      "cancellations": "Richieste di annullamento",
+      "locations": "Città",
+      "routes": "Tratte attive",
+      "schedules": "Orari"
+    },
+    "table": {
+      "booking": "Prenotazione",
+      "passenger": "Passeggero",
+      "amount": "Importo",
+      "status": "Stato",
+      "actions": "Azioni",
+      "email": "Email",
+      "phone": "Telefono",
+      "locale": "Lingua",
+      "created": "Creato",
+      "reason": "Motivo",
+      "operation": "Operazione",
+      "response": "Risposta",
+      "requested": "Richiesta",
+      "route": "Tratta",
+      "providerId": "ID fornitore",
+      "schedules": "Orari",
+      "order": "Ordine",
+      "contentKey": "Chiave contenuto",
+      "updated": "Aggiornato",
+      "action": "Azione",
+      "target": "Oggetto"
+    }
   },
   "passengerAuth": {
     "loginTitle": "Accesso passeggeri",
@@ -157,7 +281,27 @@
     "locationNotImported": "Le località della tratta non sono ancora state importate dal provider.",
     "locationAmbiguous": "Più città hanno questo nome. Specifica la città.",
     "sameLocation": "La partenza e la destinazione devono essere città diverse.",
-    "trip": "Viaggio"
+    "trip": "Viaggio",
+    "scheduleConfirmed": "Corsa dall'orario settimanale",
+    "loadingLive": "Conferma dei viaggi con il fornitore…",
+    "availableTrips": "Viaggi disponibili",
+    "priceUnavailable": "Prezzo non disponibile",
+    "passengerDetails": "Dati del passeggero",
+    "fullName": "Nome e cognome",
+    "email": "Email",
+    "phone": "Telefono",
+    "nationality": "Nazionalità",
+    "documentType": "Tipo di documento",
+    "documentNumber": "Numero documento",
+    "seatNumber": "Posto (facoltativo)",
+    "confirmBooking": "Conferma prenotazione",
+    "bookingLoading": "Creazione prenotazione…",
+    "bookingCreated": "Prenotazione creata",
+    "bookingNumber": "Numero prenotazione",
+    "total": "Totale",
+    "expiresAt": "Valida fino al",
+    "bookingError": "Impossibile creare la prenotazione. Riprova più tardi.",
+    "tripUnavailable": "Questo viaggio non è più disponibile. Scegline un altro."
   },
   "popularDestinations": {
     "title": "Destinazioni popolari",
@@ -167,41 +311,150 @@
   },
   "howItWorks": {
     "title": "Come funziona",
-    "subtitle": "Dalla ricerca di un viaggio disponibile alla prenotazione, in tre semplici passaggi.",
+    "subtitle": "Dalla scelta della tratta al biglietto sul telefono in tre semplici passaggi.",
+    "visual": {
+      "routeFrom": "Kiev",
+      "routeTo": "Varsavia",
+      "date": "24 marzo",
+      "payment": "Pagamento all'imbarco"
+    },
     "steps": [
       {
-        "title": "Trova un viaggio",
-        "description": "Indica le città e la data per visualizzare i viaggi disponibili."
+        "title": "Trova la tua tratta",
+        "description": "Oltre 120 destinazioni dirette. Scegli città e data in pochi secondi."
       },
       {
-        "title": "Scegli un viaggio",
-        "description": "Confronta i dettagli confermati dei viaggi e seleziona “Scegli viaggio”."
+        "title": "Confronta le condizioni",
+        "description": "Orari precisi, vettori e comfort a bordo, senza sorprese."
       },
       {
-        "title": "Prenota un biglietto",
-        "description": "Inserisci i dati del passeggero e conferma la prenotazione."
+        "title": "Prenotazione istantanea",
+        "description": "Biglietto sul telefono in 60 secondi. Pagamento all'autista."
       }
     ]
   },
+  "comfort": {
+    "eyebrow": "Standard di viaggio",
+    "title": "Tutto il comfort che desideri durante il viaggio",
+    "subtitle": "Moderni autobus europei attrezzati per lunghi viaggi internazionali",
+    "features": {
+      "power": {
+        "title": "Prese e USB",
+        "description": "Prese da 220V e porte USB accanto a ogni sedile per mantenere carichi i tuoi dispositivi.",
+        "highlight": "Ricarica a ogni sedile"
+      },
+      "wifi": {
+        "title": "Wi-Fi ad alta velocità",
+        "description": "Internet Starlink senza interruzioni in Ucraina e nell'UE, per lavoro e intrattenimento.",
+        "highlight": "Starlink lungo il percorso"
+      },
+      "climate": {
+        "title": "Climatizzazione",
+        "description": "Bocchette d'aria individuali e una temperatura confortevole a bordo con qualsiasi condizione meteo.",
+        "highlight": "Comfort in ogni stagione"
+      },
+      "luggage": {
+        "title": "Bagaglio incluso",
+        "description": "Fino a 2 valigie grandi (fino a 30 kg ciascuna) nel vano bagagli e un bagaglio a mano in cabina, senza costi aggiuntivi.",
+        "highlight": "2 valigie e bagaglio a mano"
+      },
+      "tracking": {
+        "title": "Tracciamento GPS del viaggio",
+        "description": "Mappa live dell'autobus in tempo reale per sapere con precisione quando arriverà.",
+        "highlight": "Stato del viaggio in tempo reale"
+      }
+    }
+  },
+  "account": {
+    "eyebrow": "Area passeggeri",
+    "title": "Il mio account",
+    "tabsLabel": "Sezioni dell'account",
+    "loading": "Caricamento dell'account…",
+    "loadError": "Impossibile caricare l'account. Controlla la connessione e riprova.",
+    "retry": "Riprova",
+    "signOut": "Esci",
+    "signingOut": "Uscita in corso…",
+    "signOutError": "Impossibile uscire. Riprova.",
+    "trips": {
+      "title": "I miei viaggi",
+      "upcoming": "Viaggi futuri",
+      "past": "Viaggi passati",
+      "noUpcoming": "Non hai viaggi futuri.",
+      "noPast": "I viaggi passati appariranno qui.",
+      "emptyTitle": "Nessuna prenotazione",
+      "emptyDescription": "Le tue prenotazioni appariranno qui dopo averne effettuata una.",
+      "bookingNumber": "Numero richiesta",
+      "departure": "Partenza",
+      "arrival": "Arrivo",
+      "total": "Totale",
+      "notAvailable": "Non indicato",
+      "pendingNote": "Il dispatcher sta contattando il vettore per confermare il posto. Questo non è ancora un biglietto confermato.",
+      "status": {
+        "pending": "In attesa di conferma",
+        "confirmed": "Confermato",
+        "cancelled": "Annullato",
+        "expired": "Richiesta scaduta",
+        "refunded": "Rimborsato",
+        "unknown": "Stato in verifica"
+      }
+    },
+    "profile": {
+      "title": "Profilo",
+      "fullName": "Nome e cognome",
+      "email": "Email",
+      "phone": "Telefono",
+      "language": "Lingua dell'account",
+      "languages": {
+        "uk": "Українська",
+        "en": "English",
+        "it": "Italiano"
+      },
+      "save": "Salva modifiche",
+      "saving": "Salvataggio…",
+      "saved": "Profilo aggiornato.",
+      "emailConfirmation": "Modifiche salvate. Conferma il nuovo indirizzo email tramite il link inviato.",
+      "saveError": "Impossibile salvare il profilo. Controlla i dati e riprova."
+    },
+    "cancellation": {
+      "open": "Richiedi l'annullamento",
+      "title": "Richiesta di annullamento",
+      "explanation": "La richiesta verrà salvata per la verifica del dispatcher. La prenotazione non viene annullata automaticamente e resta attiva fino alla conferma.",
+      "reason": "Motivo (facoltativo)",
+      "keep": "Torna indietro",
+      "submit": "Invia richiesta",
+      "sending": "Invio…",
+      "close": "Chiudi",
+      "error": "Impossibile salvare la richiesta. Riprova o contatta il dispatcher.",
+      "status": {
+        "new": "Richiesta di annullamento inviata per la verifica.",
+        "in_progress": "Il dispatcher sta esaminando la richiesta."
+      }
+    }
+  },
   "faq": {
     "title": "Domande frequenti",
-    "subtitle": "Risposte alle domande principali sulla ricerca e prenotazione",
+    "subtitle": "Le informazioni essenziali su biglietti, pagamento e viaggio",
+    "support": {
+      "title": "Non hai trovato la risposta?",
+      "description": "Il nostro dispatcher è disponibile 24 ore su 24 per aiutarti.",
+      "contactHint": "Trovi i contatti del dispatcher nel biglietto o nella conferma della prenotazione."
+    },
     "items": {
-      "search": {
-        "question": "Come trovo un viaggio in autobus?",
-        "answer": "Scegli le città dai suggerimenti e seleziona una data per vedere le corse nell'orario settimanale di Supabase. Prezzi e posti disponibili vengono mostrati solo dopo la conferma del vettore."
+      "ticket": {
+        "question": "Devo stampare il biglietto?",
+        "answer": "No. Mostra al conducente il biglietto elettronico sul tuo telefono."
       },
-      "notFound": {
-        "question": "Cosa devo fare se non trovo viaggi?",
-        "answer": "Controlla la data e la tratta. Se non è prevista una corsa quel giorno, prova un'altra data."
+      "payment": {
+        "question": "Come e quando si paga?",
+        "answer": "Non è richiesto alcun pagamento anticipato. Puoi pagare in contanti o con carta quando sali sull'autobus."
       },
-      "chooseTrip": {
-        "question": "Come scelgo un viaggio?",
-        "answer": "L'elenco mostra le corse programmate, ma prezzo, disponibilità dei posti e prenotazione non sono ancora confermati."
+      "luggage": {
+        "question": "Quanto bagaglio posso portare?",
+        "answer": "Di norma puoi portare una valigia fino a 25–30 kg e il bagaglio a mano senza costi aggiuntivi. Per bagagli fuori misura, verifica le condizioni del vettore."
       },
-      "booking": {
-        "question": "Come completo una prenotazione?",
-        "answer": "La pagina di prenotazione è attualmente un segnaposto; il flusso di prenotazione e conferma non è ancora stato implementato."
+      "border": {
+        "question": "Cosa devo fare se resto bloccato alla frontiera?",
+        "answer": "Contatta il dispatcher ai recapiti indicati nel biglietto o nella conferma della prenotazione. È disponibile 24 ore su 24 e può indicarti come proseguire il viaggio."
       }
     }
   }

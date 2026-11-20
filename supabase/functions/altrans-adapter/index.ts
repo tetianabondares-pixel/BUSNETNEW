@@ -456,5 +456,215 @@ Deno.serve(async (request) => {
     return json({ providerError: false, trips, searchedAt: new Date().toISOString() });
   }
 
+  if (operation === "create-booking") {
+    const tripId = String(payload.tripId ?? "");
+    const fromLocationId = String(payload.fromLocationId ?? "");
+    const toLocationId = String(payload.toLocationId ?? "");
+    const travelDate = String(payload.travelDate ?? "");
+    const locale = String(payload.locale ?? "uk");
+    const passengers = Array.isArray(payload.passengers) ? payload.passengers : [];
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (
+      !tripId ||
+      !uuidPattern.test(fromLocationId) ||
+      !uuidPattern.test(toLocationId) ||
+      fromLocationId === toLocationId ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(travelDate) ||
+      passengers.length < 1 ||
+      passengers.length > 9 ||
+      !["uk", "en", "it"].includes(locale)
+    ) {
+      return json({ errorCode: "INVALID_BOOKING_PARAMS" }, 400);
+    }
+
+    for (const passengerValue of passengers) {
+      const passenger = asRecord(passengerValue);
+      if (
+        !passenger ||
+        String(passenger.fullName ?? "").trim().length < 2 ||
+        String(passenger.phone ?? "").trim().length < 7 ||
+        String(passenger.nationality ?? "").trim().length < 2 ||
+        String(passenger.documentType ?? "").trim().length < 2 ||
+        String(passenger.documentNumber ?? "").trim().length < 2
+      ) {
+        return json({ errorCode: "INVALID_PASSENGER" }, 400);
+      }
+      if (passenger.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(passenger.email))) {
+        return json({ errorCode: "INVALID_PASSENGER_EMAIL" }, 400);
+      }
+    }
+
+    const [fromLocation, toLocation] = await Promise.all([
+      resolveProviderLocationId(fromLocationId),
+      resolveProviderLocationId(toLocationId),
+    ]);
+    if (!fromLocation.ok || !toLocation.ok) {
+      return json({ errorCode: "TRIP_NOT_FOUND" }, 404);
+    }
+    const fromCityId = Number(fromLocation.providerLocationId);
+    const toCityId = Number(toLocation.providerLocationId);
+    if (!Number.isSafeInteger(fromCityId) || !Number.isSafeInteger(toCityId)) {
+      return json({ errorCode: "INVALID_PROVIDER_LOCATION_ID" }, 422);
+    }
+
+    const search = await providerRequest("/api/v2/booking/search_trips", {
+      method: "POST",
+      body: JSON.stringify({
+        departure_city_id: fromCityId,
+        arrival_city_id: toCityId,
+        depature_date: `${travelDate}T00:00:00`,
+        passengers_count: passengers.length,
+        currecny_code: "UAH",
+        enable_external_search: false,
+      }),
+    });
+    if (!search.ok) {
+      return json({ errorCode: "PROVIDER_UNAVAILABLE" }, 502);
+    }
+    const searchBody = asRecord(search.body);
+    if (!searchBody || searchBody.success !== true || !Array.isArray(searchBody.trips_sequences)) {
+      return json({ errorCode: "ALTRANS_INVALID_SEARCH_RESPONSE" }, 502);
+    }
+    const providerTrip = searchBody.trips_sequences
+      .map(normalizeTrip)
+      .filter((trip): trip is NonNullable<typeof trip> => trip !== null)
+      .find((trip) => trip.trip_id === tripId);
+    if (!providerTrip) {
+      return json({ errorCode: "TRIP_UNAVAILABLE" }, 409);
+    }
+    const price = Number(providerTrip.price);
+    if (!Number.isFinite(price) || price < 0) {
+      return json({ errorCode: "PRICE_CHANGED" }, 409);
+    }
+
+    const projectUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!projectUrl || !serviceRoleKey) {
+      return json({ errorCode: "BOOKING_NOT_CONFIGURED" }, 503);
+    }
+    const adminClient = createClient(projectUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: route, error: routeError } = await adminClient
+      .from("routes")
+      .select("id")
+      .eq("from_location_id", fromLocationId)
+      .eq("to_location_id", toLocationId)
+      .eq("active", true)
+      .maybeSingle();
+    if (routeError || !route) {
+      return json({ errorCode: "TRIP_NOT_FOUND" }, 404);
+    }
+
+    const toIso = (date: string, time: string) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+      const parsed = new Date(`${date}T${time.length === 5 ? `${time}:00` : time}+02:00`);
+      return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    };
+    const departureAt = toIso(providerTrip.departure_date, providerTrip.departure_time);
+    const arrivalAt = toIso(providerTrip.arrival_date, providerTrip.arrival_time);
+    if (!departureAt) {
+      return json({ errorCode: "TRIP_UNAVAILABLE" }, 409);
+    }
+
+    const { data: trip, error: tripError } = await adminClient
+      .from("trips")
+      .upsert({
+        route_id: route.id,
+        provider_trip_id: tripId,
+        departure_at: departureAt,
+        arrival_at: arrivalAt,
+        carrier: providerTrip.carrier,
+        status: "active",
+      }, { onConflict: "provider_trip_id" })
+      .select("id")
+      .single();
+    if (tripError || !trip) {
+      console.error("Booking trip upsert failed", tripError?.code);
+      return json({ errorCode: "TRIP_NOT_FOUND" }, 500);
+    }
+
+    const { error: priceError } = await adminClient
+      .from("trip_prices")
+      .upsert({
+        trip_id: trip.id,
+        currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
+        price,
+        seats_available: passengers.length,
+        source: "provider",
+        confirmed_at: new Date().toISOString(),
+      }, { onConflict: "trip_id" });
+    if (priceError) {
+      console.error("Booking price upsert failed", priceError.code);
+      return json({ errorCode: "TRIP_UNAVAILABLE" }, 500);
+    }
+
+    const authorization = request.headers.get("Authorization");
+    let passengerId: string | null = null;
+    if (authorization) {
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+      if (anonKey) {
+        const authClient = createClient(projectUrl, anonKey, {
+          global: { headers: { Authorization: authorization } },
+        });
+        const { data: userData } = await authClient.auth.getUser();
+        passengerId = userData.user?.id ?? null;
+      }
+    }
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const bookingNumber = `BUS-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+    const { data: booking, error: bookingError } = await adminClient
+      .from("bookings")
+      .insert({
+        booking_number: bookingNumber,
+        passenger_id: passengerId,
+        trip_id: trip.id,
+        status: "pending",
+        currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
+        total_amount: price * passengers.length,
+        expires_at: expiresAt,
+      })
+      .select("id")
+      .single();
+    if (bookingError || !booking) {
+      console.error("Booking insert failed", bookingError?.code);
+      return json({ errorCode: "BOOKING_FAILED" }, 500);
+    }
+
+    const passengerRows = passengers.map((passengerValue) => {
+      const passenger = asRecord(passengerValue) as JsonRecord;
+      return {
+        booking_id: booking.id,
+        full_name: String(passenger.fullName).trim(),
+        email: passenger.email ? String(passenger.email).trim() : null,
+        phone: String(passenger.phone).trim(),
+        seat_number: passenger.seatNumber ? String(passenger.seatNumber).trim() : null,
+        nationality: String(passenger.nationality).trim(),
+        document_type: String(passenger.documentType).trim(),
+        document_number: String(passenger.documentNumber).trim(),
+      };
+    });
+    const { error: passengersError } = await adminClient
+      .from("booking_passengers")
+      .insert(passengerRows);
+    if (passengersError) {
+      await adminClient.from("bookings").delete().eq("id", booking.id);
+      console.error("Booking passengers insert failed", passengersError.code);
+      return json({ errorCode: "BOOKING_FAILED" }, 500);
+    }
+
+    return json({
+      bookingId: booking.id,
+      bookingNumber,
+      status: "pending",
+      currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
+      totalAmount: price * passengers.length,
+      expiresAt,
+    });
+  }
+
   return json({ providerError: true, errorCode: "UNKNOWN_OPERATION" }, 400);
 });

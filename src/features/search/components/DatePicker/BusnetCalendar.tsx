@@ -62,15 +62,17 @@ export function BusnetCalendar({
       const panel = panelRef.current;
       if (!panel) return;
       const rect = triggerRef!.current!.getBoundingClientRect();
-      const width = Math.min(360, window.innerWidth - 24);
+      const width = Math.min(336, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+      const below = window.innerHeight - rect.bottom - 12;
+      const above = rect.top - 12;
       const height = Math.min(panel.scrollHeight, window.innerHeight - 24);
-      const anchorRect = triggerRef!.current!.parentElement?.getBoundingClientRect();
-      const hasRoomBeside = anchorRect != null && window.innerWidth - anchorRect.right >= width + 24;
-      const left = hasRoomBeside
-        ? anchorRect.right + 12
-        : Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-      const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
-      setPopoverStyle({ left, top, width, maxHeight: "calc(100dvh - 24px)" });
+      const opensBelow = below >= height || below >= above;
+      const top = opensBelow
+        ? rect.bottom + 8
+        : Math.max(12, rect.top - height - 8);
+      const maxHeight = opensBelow ? below : above;
+      setPopoverStyle({ left, top, width, maxHeight });
     };
     updatePosition();
     window.addEventListener("resize", updatePosition);
@@ -125,8 +127,12 @@ export function BusnetCalendar({
   const monthTitle = new Intl.DateTimeFormat(locale, { month: "long" }).format(visibleMonth);
   const yearLabel = String(year);
   const weekdayLabels = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat(locale, { weekday: "narrow" });
-    return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2023, 0, 2 + index)));
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
+    return Array.from({ length: 7 }, (_, index) =>
+      formatter.format(new Date(2023, 0, 2 + index)).replace(/\.$/, "").slice(0, 2)
+        .replace(/^./, (letter) => letter.toLocaleUpperCase(locale))
+        .replace(/.$/, (letter) => letter.toLocaleLowerCase(locale)),
+    );
   }, [locale]);
 
   const firstGridDate = useMemo(() => {
@@ -188,7 +194,6 @@ export function BusnetCalendar({
 
   if (!open) return null;
 
-  const quickDates = Array.from({ length: 7 }, (_, index) => addDays(today, index));
   const closeOnSwipe = (event: React.PointerEvent<HTMLDivElement>) => {
     if (dragStartRef.current == null) return;
     const distance = event.clientY - dragStartRef.current;
@@ -248,43 +253,38 @@ export function BusnetCalendar({
         )}
       </div>
 
-      <div className="busnet-calendar-status-row" aria-live="polite">
-        <span className={availability.error && !missingRoute ? "busnet-calendar-status-error" : ""}>{statusText}</span>
-        {availability.error && !missingRoute && (
-          <button type="button" onClick={availability.retry}>{t("calendar.retry")}</button>
-        )}
-        <button type="button" onClick={() => { setVisibleMonth(parseDateKey(today)); chooseDate(today); }}>
-          {t("calendar.todayButton")}
-        </button>
-      </div>
+      {!missingRoute && (availability.loading || availability.error || availability.data.length > 0) && (
+        <div className="busnet-calendar-status-row" aria-live="polite">
+          <span className={availability.error ? "busnet-calendar-status-error" : ""}>{statusText}</span>
+          {availability.error && (
+            <button type="button" onClick={availability.retry}>{t("calendar.retry")}</button>
+          )}
+        </div>
+      )}
 
-      <div className="busnet-quick-dates" aria-label={t("calendar.quickDates")}>
-        {quickDates.map((date) => {
-          const parsed = parseDateKey(date);
-          const dayLabel = date === today
-            ? t("search.today")
-            : date === addDays(today, 1)
-              ? t("search.tomorrow")
-              : new Intl.DateTimeFormat(locale, { weekday: "short" }).format(parsed);
-          const monthShort = new Intl.DateTimeFormat(locale, { month: "short" }).format(parsed);
+      <div className="busnet-calendar-quick-actions">
+        {[today, addDays(today, 1)].map((date, index) => {
+          const label = index === 0 ? t("search.today") : t("search.tomorrow");
+          const dateLabel = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(parseDateKey(date));
           return (
             <button
               type="button"
               key={date}
-              className={`busnet-quick-date ${date === selectedDate ? "is-selected" : ""} ${date === today ? "is-today" : ""}`}
+              className={`busnet-calendar-quick-action ${date === selectedDate ? "is-selected" : ""}`}
               onClick={() => chooseDate(date)}
               aria-pressed={date === selectedDate}
             >
-              <span>{dayLabel}</span>
-              <strong>{parsed.getDate()}</strong>
-              <span>{monthShort}</span>
+              <span>{label}</span>
+              <strong>{dateLabel}</strong>
             </button>
           );
         })}
       </div>
 
       <div className="busnet-calendar-weekdays" aria-hidden="true">
-        {weekdayLabels.map((label, index) => <span key={index}>{label}</span>)}
+        {weekdayLabels.map((label, index) => (
+          <span className={index >= 5 ? "is-weekend" : ""} key={index}>{label}</span>
+        ))}
       </div>
       <div
         className="busnet-calendar-grid"
