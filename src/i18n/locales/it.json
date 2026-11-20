@@ -35,6 +35,8 @@
     "popularTo": "Destinazioni popolari",
     "cityPlaceholder": "Città",
     "locationLoadError": "Impossibile caricare le località.",
+    "noLocations": "Nessuna città trovata.",
+    "loading": "Caricamento città...",
     "swap": "Inverti le città"
   },
   "calendar": {
@@ -135,6 +137,8 @@
     "searchError": "Impossibile caricare i viaggi. Riprova più tardi.",
     "providerError": "Il provider è temporaneamente non disponibile. I risultati non sono stati confermati.",
     "locationNotImported": "Le località della tratta non sono ancora state importate dal provider.",
+    "locationAmbiguous": "Più città hanno questo nome. Specifica la città.",
+    "sameLocation": "La partenza e la destinazione devono essere città diverse.",
     "trip": "Viaggio"
   },
   "popularDestinations": {

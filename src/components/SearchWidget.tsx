@@ -1,486 +1,174 @@
-import React, { useState, useRef, useEffect } from "react";
-import { MapPin, ArrowLeftRight, Calendar, Search } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { ArrowLeftRight, Calendar, MapPin, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "@/theme";
 import { useNavigate } from "react-router-dom";
-import { BusnetCalendar } from "@/features/search/components/DatePicker/BusnetCalendar";
+import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
+import { BusnetCalendar } from "@/features/search/components/DatePicker/BusnetCalendar";
+import type { ResolvedLocation } from "@/features/search/location.types";
 import "@/features/search/components/DatePicker/BusnetCalendar.css";
-interface SearchRouteSelection {
-  from: string;
-  to: string;
+
+export interface SearchRouteSelection {
+  from: ResolvedLocation;
+  to: ResolvedLocation;
 }
 
-interface SearchWidgetProps {
-  selectedRoute?: SearchRouteSelection | null;
-}
+type Field = "from" | "to";
+type Props = { selectedRoute?: SearchRouteSelection | null };
 
-export function SearchWidget({ selectedRoute = null }: SearchWidgetProps) {
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const languageOf = (language: string) => language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
+const localizedName = (location: ResolvedLocation, language: string) =>
+  language === "en" ? (location.nameEn ?? location.nameUk) :
+    language === "it" ? (location.nameIt ?? location.nameEn ?? location.nameUk) : location.nameUk;
+const rowToLocation = (row: Record<string, unknown>, language: string): ResolvedLocation => {
+  const nameUk = String(row.name_uk ?? row.name ?? "");
+  const nameEn = row.name_en == null ? null : String(row.name_en);
+  const nameIt = row.name_it == null ? null : String(row.name_it);
+  return {
+    id: String(row.id),
+    name: language === "en" ? (nameEn ?? nameUk) : language === "it" ? (nameIt ?? nameEn ?? nameUk) : nameUk,
+    nameUk,
+    nameEn,
+    nameIt,
+    countryCode: row.country_code == null ? null : String(row.country_code),
+    providerLocationId: row.provider_location_id == null ? null : String(row.provider_location_id),
+  };
+};
+
+export function SearchWidget({ selectedRoute = null }: Props) {
   const { t, i18n } = useTranslation();
   const { resolved, tokens } = useTheme();
   const navigate = useNavigate();
-  const isDark = resolved === "dark";
-
-  const [fromCity, setFromCity] = useState("Київ");
-  const [toCity, setToCity] = useState("");
-  const [fromSuggestions, setFromSuggestions] = useState<Array<{ id: string; name: string }>>([]);
-  const [toSuggestions, setToSuggestions] = useState<Array<{ id: string; name: string }>>([]);
-  const [locationError, setLocationError] = useState(false);
-  const [dateISO, setDateISO] = useState(() => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  });
-
-  const [activeDropdown, setActiveDropdown] = useState<"from" | "to" | "date" | null>(null);
+  const language = languageOf(i18n.language);
+  const [fromLocation, setFromLocation] = useState<ResolvedLocation | null>(null);
+  const [toLocation, setToLocation] = useState<ResolvedLocation | null>(null);
+  const [fromText, setFromText] = useState("");
+  const [toText, setToText] = useState("");
+  const [dateISO, setDateISO] = useState(todayISO);
+  const [active, setActive] = useState<Field | "date" | null>(null);
+  const [suggestions, setSuggestions] = useState<ResolvedLocation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<"rpc" | "empty" | null>(null);
+  const [highlighted, setHighlighted] = useState(-1);
+  const [composing, setComposing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dateTriggerRef = useRef<HTMLButtonElement>(null);
-
-  const locale = i18n.language?.startsWith("it")
-    ? "it-IT"
-    : i18n.language?.startsWith("en")
-      ? "en-US"
-      : "uk-UA";
-
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
-      day: "numeric",
-      month: "long",
-    }).format(new Date(`${iso}T12:00:00`));
-
-  const dateStr = formatDate(dateISO);
+  const requestRef = useRef(0);
 
   useEffect(() => {
     if (!selectedRoute) return;
-    setFromCity(selectedRoute.from);
-    setToCity(selectedRoute.to);
-    setActiveDropdown(null);
+    setFromLocation(selectedRoute.from); setToLocation(selectedRoute.to);
+    setFromText(selectedRoute.from.name); setToText(selectedRoute.to.name);
   }, [selectedRoute]);
 
   useEffect(() => {
-    if (activeDropdown !== "from" && activeDropdown !== "to") return;
-    const query = activeDropdown === "from" ? fromCity : toCity;
-    if (query.trim().length < 2) {
-      activeDropdown === "from" ? setFromSuggestions([]) : setToSuggestions([]);
-      return;
-    }
+    setFromLocation((location) => location ? { ...location, name: localizedName(location, language) } : null);
+    setToLocation((location) => location ? { ...location, name: localizedName(location, language) } : null);
+    setFromText((text) => fromLocation ? localizedName(fromLocation, language) : text);
+    setToText((text) => toLocation ? localizedName(toLocation, language) : text);
+  }, [language]);
 
-    const timeout = window.setTimeout(async () => {
-      const language = i18n.language?.startsWith("en")
-        ? "en"
-        : i18n.language?.startsWith("it")
-          ? "it"
-          : "uk";
-      const { data, error } = await supabase.rpc("search_locations", {
-        p_query: query.trim(),
-        p_language: language,
-        p_limit: 10,
-      });
-      setLocationError(Boolean(error));
-      if (error || !Array.isArray(data)) {
-        activeDropdown === "from" ? setFromSuggestions([]) : setToSuggestions([]);
-        return;
-      }
-      const suggestions = data.map((item: { id: string; name: string }) => ({
-        id: item.id,
-        name: item.name,
-      }));
-      activeDropdown === "from"
-        ? setFromSuggestions(suggestions)
-        : setToSuggestions(suggestions);
-    }, 220);
-
-    return () => window.clearTimeout(timeout);
-  }, [activeDropdown, fromCity, toCity, i18n.language]);
-
-  // Close popovers on click outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    if (active !== "from" && active !== "to") return;
+    const text = active === "from" ? fromText : toText;
+    const fromId = fromLocation?.id;
+    const toId = toLocation?.id;
+    const requestId = ++requestRef.current;
+    const timer = window.setTimeout(async () => {
+      if (text.trim().length === 1) { setSuggestions([]); setError(null); return; }
+      setLoading(true); setError(null);
+      const rpc = active === "to" ? "search_destination_locations" : "search_origin_locations";
+      const { data, error: rpcError } = await supabase.rpc(rpc, {
+        p_query: text.trim(), p_language: language, p_limit: 8,
+        ...(active === "to" ? { p_from_location_id: fromId ?? null } : { p_to_location_id: toId ?? null }),
+      });
+      if (requestId !== requestRef.current) return;
+      setLoading(false);
+      if (rpcError) { setSuggestions([]); setError("rpc"); return; }
+      const rows = Array.isArray(data) ? data : [];
+      setSuggestions(rows.map((row) => rowToLocation(row as Record<string, unknown>, language)));
+      setError(rows.length ? null : "empty");
+      setHighlighted(-1);
+    }, text.trim().length ? 220 : 0);
+    return () => window.clearTimeout(timer);
+  }, [active, fromText, toText, fromLocation?.id, toLocation?.id, language]);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setActive(null);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const handleSwap = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const temp = fromCity;
-    setFromCity(toCity || "Варшава");
-    setToCity(temp);
+  const select = (field: Field, location: ResolvedLocation) => {
+    if (field === "from") { setFromLocation(location); setFromText(location.name); }
+    else { setToLocation(location); setToText(location.name); }
+    setSuggestions([]); setActive(null); setHighlighted(-1);
   };
-
+  const edit = (field: Field, value: string) => {
+    if (field === "from") { setFromText(value); setFromLocation(null); }
+    else { setToText(value); setToLocation(null); }
+    setActive(field);
+  };
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, field: Field) => {
+    if (composing) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlighted((current) => event.key === "ArrowDown"
+        ? Math.min(current + 1, suggestions.length - 1) : Math.max(current - 1, -1));
+    } else if (event.key === "Enter" && highlighted >= 0) {
+      event.preventDefault(); select(field, suggestions[highlighted]);
+    } else if (event.key === "Escape" || event.key === "Tab") setActive(null);
+  };
+  const swap = () => {
+    const oldFrom = fromLocation; setFromLocation(toLocation); setToLocation(oldFrom);
+    const oldText = fromText; setFromText(toText); setToText(oldText); setSuggestions([]);
+  };
   const handleSearch = () => {
-    if (!fromCity.trim() || !toCity.trim() || fromCity.trim() === toCity.trim()) return;
-    navigate(`/booking?from=${encodeURIComponent(fromCity.trim())}&to=${encodeURIComponent(toCity.trim())}&date=${encodeURIComponent(dateISO)}`);
+    if (!fromLocation || !toLocation || fromLocation.id === toLocation.id ||
+      !fromLocation.providerLocationId || !toLocation.providerLocationId || dateISO < todayISO()) return;
+    navigate(`/booking?fromId=${encodeURIComponent(fromLocation.id)}&toId=${encodeURIComponent(toLocation.id)}&date=${encodeURIComponent(dateISO)}`);
   };
-
-  const accentBlue = isDark ? "#38BDF8" : "#087DFF";
-
-  return (
-    <div
-      id="trip-search"
-      ref={containerRef}
-      style={{
-        position: "relative",
-        zIndex: 15,
-        width: "100%",
-        maxWidth: "680px",
-      }}
-    >
-      {/* Main Glass Panel */}
-      <div
-        className="search-widget-panel"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          height: "56px",
-          padding: "4px 6px 4px 14px",
-          borderRadius: "16px",
-          background: isDark ? "rgba(7, 15, 27, 0.88)" : "rgba(255, 255, 255, 0.92)",
-          backdropFilter: "blur(18px)",
-          border: `1px solid ${isDark ? "rgba(255, 255, 255, 0.10)" : "rgba(16, 24, 40, 0.08)"}`,
-          boxShadow: isDark
-            ? "0 14px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
-            : "0 8px 30px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.03)",
-          transition: "all 200ms ease",
-        }}
-      >
-        {/* Field 1: From City */}
-        <div
-          className="search-widget-field search-widget-field--from"
-          onClick={() => setActiveDropdown(activeDropdown === "from" ? null : "from")}
-          style={{
-            flex: "1 1 28%",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-            padding: "4px 6px",
-            borderRadius: "10px",
-            minWidth: 0,
-          }}
-        >
-          <MapPin size={16} color={accentBlue} style={{ flexShrink: 0 }} />
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <span
-              style={{
-                fontSize: "10px",
-                color: isDark ? "#8B9AAF" : "#8A98A9",
-                lineHeight: 1.1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("search.fromLabel")}
-            </span>
-            <input
-              type="text"
-              value={fromCity}
-              onChange={(e) => setFromCity(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              placeholder={t("search.cityPlaceholder")}
-              style={{
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                fontSize: "13px",
-                fontWeight: 600,
-                color: isDark ? "#FFFFFF" : "#172033",
-                width: "100%",
-                padding: 0,
-                marginTop: "1px",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Swap Button */}
-        <button
-          className="search-widget-swap"
-          onClick={handleSwap}
-          title={t("search.swap")}
-          aria-label={t("search.swap")}
-          style={{
-            width: "28px",
-            height: "28px",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(16, 24, 40, 0.04)",
-            border: `1px solid ${isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(16, 24, 40, 0.08)"}`,
-            color: isDark ? "#8B9AAF" : "#66758A",
-            cursor: "pointer",
-            margin: "0 4px",
-            transition: "all 150ms ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = accentBlue;
-            e.currentTarget.style.borderColor = accentBlue;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = isDark ? "#8B9AAF" : "#66758A";
-            e.currentTarget.style.borderColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(16, 24, 40, 0.08)";
-          }}
-        >
-          <ArrowLeftRight size={13} />
-        </button>
-
-        {/* Field 2: To City */}
-        <div
-          className="search-widget-field search-widget-field--to"
-          onClick={() => setActiveDropdown(activeDropdown === "to" ? null : "to")}
-          style={{
-            flex: "1 1 32%",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-            padding: "4px 6px",
-            borderRadius: "10px",
-            minWidth: 0,
-          }}
-        >
-          <MapPin size={16} color={accentBlue} style={{ flexShrink: 0 }} />
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <span
-              style={{
-                fontSize: "10px",
-                color: isDark ? "#8B9AAF" : "#8A98A9",
-                lineHeight: 1.1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("search.toLabel")}
-            </span>
-            <input
-              type="text"
-              value={toCity}
-              onChange={(e) => setToCity(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              placeholder={t("search.toPlaceholder")}
-              style={{
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                fontSize: "13px",
-                fontWeight: toCity ? 600 : 400,
-                color: toCity ? (isDark ? "#FFFFFF" : "#172033") : (isDark ? "#64748B" : "#8A98A9"),
-                width: "100%",
-                padding: 0,
-                marginTop: "1px",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Vertical Divider */}
-        <div
-          className="search-widget-divider"
-          style={{
-            width: "1px",
-            height: "28px",
-            background: isDark ? "rgba(255, 255, 255, 0.10)" : "rgba(16, 24, 40, 0.08)",
-            margin: "0 8px",
-            flexShrink: 0,
-          }}
-        />
-
-        {/* Field 3: Date */}
-        <button
-          ref={dateTriggerRef}
-          type="button"
-          onClick={() => setActiveDropdown(activeDropdown === "date" ? null : "date")}
-          aria-haspopup="dialog"
-          aria-expanded={activeDropdown === "date"}
-          className="busnet-date-trigger search-widget-field--date"
-          style={{
-            flex: "1 1 25%",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-            padding: "4px 6px",
-            borderRadius: "10px",
-            minWidth: 0,
-          }}
-        >
-          <Calendar size={16} color={accentBlue} style={{ flexShrink: 0 }} />
-          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <span
-              style={{
-                fontSize: "10px",
-                color: isDark ? "#8B9AAF" : "#8A98A9",
-                lineHeight: 1.1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("search.dateLabel")}
-            </span>
-            <span
-              style={{
-                fontSize: "13px",
-                fontWeight: 600,
-                color: isDark ? "#FFFFFF" : "#172033",
-                whiteSpace: "nowrap",
-                marginTop: "1px",
-              }}
-            >
-              {dateStr}
-            </span>
-          </div>
-        </button>
-
-        {/* Search Submit Button */}
-        <button
-          className="search-widget-submit"
-          onClick={handleSearch}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "6px",
-            height: "40px",
-            padding: "0 20px",
-            borderRadius: "11px",
-            background: "linear-gradient(135deg, #168BFF 0%, #0875F9 100%)",
-            color: "#FFFFFF",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
-            flexShrink: 0,
-            boxShadow: isDark
-              ? "0 4px 14px rgba(8, 125, 255, 0.35)"
-              : "0 4px 12px rgba(8, 125, 255, 0.22)",
-            transition: "all 200ms ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.filter = "brightness(1.08)";
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.filter = "none";
-            e.currentTarget.style.transform = "none";
-          }}
-        >
-          <Search size={15} strokeWidth={2.2} />
-          <span>{t("search.submit")}</span>
-        </button>
+  const renderField = (field: Field) => {
+    const text = field === "from" ? fromText : toText;
+    const inputId = `search-${field}`;
+    return <div style={{ flex: "1 1 32%", minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+      <MapPin size={16} color={resolved === "dark" ? "#38BDF8" : "#087DFF"} />
+      <div style={{ minWidth: 0, width: "100%" }}>
+        <label htmlFor={inputId} style={{ fontSize: 10, color: resolved === "dark" ? "#8B9AAF" : "#8A98A9" }}>
+          {t(`search.${field}Label`)}
+        </label>
+        <input id={inputId} role="combobox" aria-autocomplete="list" aria-expanded={active === field}
+          aria-controls={`${inputId}-list`} aria-activedescendant={highlighted >= 0 ? `${inputId}-option-${highlighted}` : undefined}
+          value={text} onFocus={() => setActive(field)} onChange={(event) => edit(field, event.target.value)}
+          onKeyDown={(event) => handleKeyDown(event, field)} onCompositionStart={() => setComposing(true)}
+          onCompositionEnd={() => setComposing(false)} placeholder={t("search.cityPlaceholder")}
+          style={{ background: "transparent", border: 0, outline: 0, width: "100%", color: resolved === "dark" ? "#fff" : "#172033", fontWeight: 600 }} />
       </div>
-
-      {/* Dropdown Popovers */}
-      {activeDropdown === "from" && (
-        <div
-          className="search-widget-popover"
-          style={{
-            position: "absolute",
-            top: "64px",
-            left: 0,
-            width: "240px",
-            background: isDark ? "#0B1422" : "#FFFFFF",
-            border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(16,24,40,0.1)"}`,
-            borderRadius: "12px",
-            boxShadow: tokens.shadowCard,
-            padding: "8px",
-            zIndex: 30,
-          }}
-        >
-          <div style={{ fontSize: "11px", color: isDark ? "#64748B" : "#8A98A9", padding: "4px 8px", fontWeight: 600 }}>
-            {t("search.popularFrom")}
-          </div>
-          {locationError && (
-            <div style={{ padding: "8px 10px", fontSize: "12px", color: isDark ? "#FCA5A5" : "#B42318" }}>
-              {t("search.locationLoadError")}
-            </div>
-          )}
-          {fromSuggestions.map((location) => (
-            <div
-              key={location.id}
-              onClick={() => {
-                setFromCity(location.name);
-                setActiveDropdown(null);
-              }}
-              style={{
-                padding: "8px 10px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                cursor: "pointer",
-                color: isDark ? "#F1F5F9" : "#101828",
-                transition: "background 120ms ease",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : "#F1F5F9")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              {location.name}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeDropdown === "to" && (
-        <div
-          className="search-widget-popover search-widget-popover--to"
-          style={{
-            position: "absolute",
-            top: "64px",
-            left: "160px",
-            width: "240px",
-            background: isDark ? "#0B1422" : "#FFFFFF",
-            border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(16,24,40,0.1)"}`,
-            borderRadius: "12px",
-            boxShadow: tokens.shadowCard,
-            padding: "8px",
-            zIndex: 30,
-          }}
-        >
-          <div style={{ fontSize: "11px", color: isDark ? "#64748B" : "#8A98A9", padding: "4px 8px", fontWeight: 600 }}>
-            {t("search.popularTo")}
-          </div>
-          {locationError && (
-            <div style={{ padding: "8px 10px", fontSize: "12px", color: isDark ? "#FCA5A5" : "#B42318" }}>
-              {t("search.locationLoadError")}
-            </div>
-          )}
-          {toSuggestions.map((location) => (
-            <div
-              key={location.id}
-              onClick={() => {
-                setToCity(location.name);
-                setActiveDropdown(null);
-              }}
-              style={{
-                padding: "8px 10px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                cursor: "pointer",
-                color: isDark ? "#F1F5F9" : "#101828",
-                transition: "background 120ms ease",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.06)" : "#F1F5F9")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              {location.name}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <BusnetCalendar
-        open={activeDropdown === "date"}
-        selectedDate={dateISO}
-        fromCity={fromCity}
-        toCity={toCity}
-        onChange={setDateISO}
-        onClose={() => {
-          setActiveDropdown(null);
-          window.requestAnimationFrame(() => dateTriggerRef.current?.focus());
-        }}
-        triggerRef={dateTriggerRef}
-      />
+    </div>;
+  };
+  const isDark = resolved === "dark";
+  return <div id="trip-search" ref={containerRef} style={{ position: "relative", zIndex: 15, width: "100%", maxWidth: 680 }}>
+    <div className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16, background: isDark ? "rgba(7,15,27,.88)" : "rgba(255,255,255,.92)", boxShadow: tokens.shadowCard }}>
+      {renderField("from")}
+      <button type="button" className="search-widget-swap" onClick={swap} aria-label={t("search.swap")}><ArrowLeftRight size={13} /></button>
+      {renderField("to")}
+      <div style={{ width: 1, height: 28, background: isDark ? "rgba(255,255,255,.1)" : "rgba(16,24,40,.08)", margin: "0 8px" }} />
+      <button ref={dateTriggerRef} type="button" onClick={() => setActive(active === "date" ? null : "date")} aria-haspopup="dialog" aria-expanded={active === "date"} style={{ display: "flex", alignItems: "center", gap: 8, border: 0, background: "transparent", color: isDark ? "#fff" : "#172033" }}>
+        <Calendar size={16} /><span>{new Intl.DateTimeFormat(i18n.language, { day: "numeric", month: "long" }).format(new Date(`${dateISO}T12:00:00`))}</span>
+      </button>
+      <button type="button" onClick={handleSearch} aria-label={t("search.submit")} style={{ height: 40, padding: "0 16px", border: 0, borderRadius: 11, background: "#087DFF", color: "#fff" }}><Search size={15} /></button>
     </div>
-  );
+    {(active === "from" || active === "to") && <div id={`search-${active}-list`} role="listbox" style={{ position: "absolute", top: 64, left: 0, width: 300, maxHeight: 320, overflowY: "auto", padding: 8, borderRadius: 12, background: isDark ? "#0B1422" : "#fff", boxShadow: tokens.shadowCard }}>
+      {loading && <div role="status" style={{ padding: 10 }}>{t("search.loading")}</div>}
+      {!loading && error === "rpc" && <div style={{ padding: 10 }}>{t("search.locationLoadError")}</div>}
+      {!loading && error === "empty" && <div style={{ padding: 10 }}>{t("search.noLocations")}</div>}
+      {!loading && !error && suggestions.map((location, index) => <button type="button" role="option" id={`search-${active}-option-${index}`} aria-selected={highlighted === index} key={location.id} onMouseDown={(event) => event.preventDefault()} onClick={() => select(active, location)} style={{ display: "block", width: "100%", minHeight: 44, textAlign: "left", border: 0, borderRadius: 8, background: highlighted === index ? (isDark ? "#17263a" : "#eef5ff") : "transparent", color: isDark ? "#fff" : "#101828" }}>
+        {location.name}{location.countryCode ? ` · ${location.countryCode}` : ""}
+      </button>)}
+    </div>}
+    <BusnetCalendar open={active === "date"} selectedDate={dateISO} fromLocationId={fromLocation?.id ?? null} toLocationId={toLocation?.id ?? null} onChange={setDateISO} onClose={() => setActive(null)} triggerRef={dateTriggerRef} />
+  </div>;
 }

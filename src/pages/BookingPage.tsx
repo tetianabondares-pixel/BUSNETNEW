@@ -8,19 +8,20 @@ import { supabase } from "@/lib/supabase";
  * Supabase-backed trip results. Booking confirmation is implemented later.
  */
 export function BookingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
   const [searchParams] = useSearchParams();
   const [trips, setTrips] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const from = searchParams.get("from")?.trim() ?? "";
-  const to = searchParams.get("to")?.trim() ?? "";
+  const [routeNames, setRouteNames] = useState({ from: "", to: "" });
+  const fromId = searchParams.get("fromId")?.trim() ?? "";
+  const toId = searchParams.get("toId")?.trim() ?? "";
   const date = searchParams.get("date")?.trim() ?? "";
 
   useEffect(() => {
     let cancelled = false;
-    if (!from || !to || !date) {
+    if (!fromId || !toId || !date) {
       setError(t("booking.missingSearch"));
       setLoading(false);
       return;
@@ -30,35 +31,41 @@ export function BookingPage() {
     setError("");
     const runProviderSearch = async () => {
       try {
-        const { data: locations, error: locationsError } = await supabase
+        const { data: locations, error: locationError } = await supabase
           .from("locations")
           .select("id,name_uk,name_en,name_it,provider_location_id")
-          .or(`name_uk.ilike.${from},name_en.ilike.${from},name_it.ilike.${from}`)
-          .limit(10);
-
-        if (locationsError) throw locationsError;
-
-        const toLocations = await supabase
-          .from("locations")
-          .select("id,name_uk,name_en,name_it,provider_location_id")
-          .or(`name_uk.ilike.${to},name_en.ilike.${to},name_it.ilike.${to}`)
-          .limit(10);
-
-        if (toLocations.error) throw toLocations.error;
-        const fromLocation = locations?.[0];
-        const toLocation = toLocations.data?.[0];
-
-        if (!fromLocation?.provider_location_id || !toLocation?.provider_location_id) {
+          .in("id", [fromId, toId])
+          .eq("active", true);
+        if (locationError) throw locationError;
+        const fromLocation = locations?.find((location) => location.id === fromId);
+        const toLocation = locations?.find((location) => location.id === toId);
+        if (!fromLocation || !toLocation || !fromLocation.provider_location_id || !toLocation.provider_location_id) {
           throw new Error("ALTRANS_LOCATION_NOT_IMPORTED");
         }
+        if (fromId === toId) throw new Error("SAME_LOCATION");
+        const locale = i18n.language?.startsWith("en")
+          ? "en"
+          : i18n.language?.startsWith("it")
+            ? "it"
+            : "uk";
+        const displayName = (location: typeof fromLocation) =>
+          locale === "en"
+            ? location.name_en ?? location.name_uk
+            : locale === "it"
+              ? location.name_it ?? location.name_en ?? location.name_uk
+              : location.name_uk;
+        setRouteNames({
+          from: displayName(fromLocation),
+          to: displayName(toLocation),
+        });
 
         const { data, error: invokeError } = await supabase.functions.invoke(
           "altrans-adapter",
           {
             body: {
               operation: "search-trips",
-              cityFromId: fromLocation.provider_location_id,
-              cityToId: toLocation.provider_location_id,
+              fromLocationId: fromLocation.id,
+              toLocationId: toLocation.id,
               travelDate: date,
               currencyCode: "UAH",
             },
@@ -78,7 +85,11 @@ export function BookingPage() {
         setError(
           caught instanceof Error && caught.message === "ALTRANS_LOCATION_NOT_IMPORTED"
             ? t("booking.locationNotImported")
-            : t("booking.searchError"),
+            : caught instanceof Error && caught.message === "AMBIGUOUS_LOCATION"
+              ? t("booking.locationAmbiguous")
+              : caught instanceof Error && caught.message === "SAME_LOCATION"
+                ? t("booking.sameLocation")
+                : t("booking.searchError"),
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -90,7 +101,7 @@ export function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [from, to, date, t]);
+  }, [fromId, toId, date, i18n.language, t]);
 
   return (
     <section
@@ -109,7 +120,7 @@ export function BookingPage() {
         {t("booking.title")}
       </h1>
       <p style={{ color: tokens.colorTextSecondary }}>
-        {from} → {to} · {date}
+        {routeNames.from || fromId} → {routeNames.to || toId} · {date}
       </p>
 
       {loading && (
@@ -126,14 +137,18 @@ export function BookingPage() {
 
       <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
         {trips.map((trip) => {
-          const departure = String(trip.departure_at ?? "");
+          const departureDate = String(trip.departure_date ?? "");
+          const departureTime = String(trip.departure_time ?? "");
+          const arrivalDate = String(trip.arrival_date ?? "");
+          const arrivalTime = String(trip.arrival_time ?? "");
           const carrier = String(trip.carrier ?? "");
           const price = trip.price == null ? "" : String(trip.price);
           const currency = String(trip.currency ?? "");
+          const tripId = String(trip.trip_id ?? `${departureDate}-${departureTime}`);
 
           return (
             <article
-              key={String(trip.trip_id)}
+              key={tripId}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -149,8 +164,13 @@ export function BookingPage() {
               <div>
                 <strong>{carrier || t("booking.trip")}</strong>
                 <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
-                  {departure ? new Date(departure).toLocaleString() : ""}
+                  {departureDate} {departureTime}
                 </div>
+                {(arrivalDate || arrivalTime) && (
+                  <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
+                    {String(trip.arrival_city ?? "")} · {arrivalDate} {arrivalTime}
+                  </div>
+                )}
               </div>
               <strong>{price} {currency}</strong>
             </article>

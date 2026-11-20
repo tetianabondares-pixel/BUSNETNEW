@@ -408,13 +408,21 @@ function: search-trips
 fromLocationId
 toLocationId
 travelDate
-timezone
-schemaVersion
+passengersCount
+currencyCode
 ```
 
 `travelDate` передавати як `YYYY-MM-DD`.
-Timezone фронтенду не передавати як доказ реального timezone провайдера,
-якщо API провайдера не підтверджує операції в Europe/Kyiv.
+Edge Function сама знаходить provider city IDs за UUID локацій і надсилає
+AL-TRANS поля `departure_city_id`, `arrival_city_id`, `depature_date`,
+`passengers_count`, `currecny_code` та `enable_external_search: false`.
+Одруківки `depature_date` і `currecny_code` навмисні — це поля legacy API.
+Не призначати часовий пояс до provider-часу, якщо API його не повертає.
+
+Каталог міст синхронізується Edge Function operation `sync-catalog`.
+Операція вимагає активну роль `super_admin`, `admin` або `provider_operator`;
+вона оновлює `locations` з підтверджених `schedules[].items[]`, записує
+спрямовані пари зупинок у `routes` і не видаляє наявні записи.
 
 Response:
 
@@ -422,15 +430,15 @@ Response:
 {
   "trips": [
     {
-      "id": "uuid",
-      "departureAt": "2026-11-20T08:30:00+02:00",
-      "arrivalAt": "2026-11-20T18:45:00+02:00",
-      "durationMinutes": 615,
-      "carrier": "Provider name",
-      "currency": "UAH",
-      "price": 1450,
-      "seatsAvailable": 12,
-      "providerTripId": "external-id"
+      "trip_id": "31145",
+      "departure_date": "05.11.2026",
+      "departure_time": "09:30:00",
+      "arrival_date": "06.11.2026",
+      "arrival_time": "16:20:00",
+      "carrier": "AL-TRANS",
+      "currency": "EUR",
+      "price": 120,
+      "can_book_with_payment_at_boarding": true
     }
   ],
   "providerError": false,
@@ -442,9 +450,8 @@ Response:
 
 ```json
 {
-  "trips": [],
   "providerError": true,
-  "errorCode": "PROVIDER_UNAVAILABLE"
+  "errorCode": "ALTRANS_UNAVAILABLE"
 }
 ```
 

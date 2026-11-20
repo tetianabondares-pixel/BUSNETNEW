@@ -45,7 +45,7 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    const cacheKey = `${request.year}-${request.month}-${request.from}-${request.to}`;
+    const cacheKey = `${request.year}-${request.month}-${request.fromLocationId}-${request.toLocationId}`;
     const cached = confirmedCache.get(cacheKey);
 
     if (cached) {
@@ -53,7 +53,7 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
       return () => controller.abort();
     }
 
-    if (!request.from.trim() || !request.to.trim()) {
+    if (!request.fromLocationId || !request.toLocationId) {
       setState({ data: [], loading: false, error: "calendar.selectRouteError" });
       return () => controller.abort();
     }
@@ -64,8 +64,8 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
         const { data, error } = await supabase.rpc("get_month_availability", {
           p_year: request.year,
           p_month: request.month,
-          p_from: request.from,
-          p_to: request.to,
+          p_from_location_id: request.fromLocationId,
+          p_to_location_id: request.toLocationId,
           p_timezone: request.timezone,
           p_schema_version: request.schemaVersion,
         });
@@ -84,7 +84,7 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [request.year, request.month, request.from, request.to, retryKey]);
+  }, [request.year, request.month, request.fromLocationId, request.toLocationId, request.timezone, request.schemaVersion, retryKey]);
 
   return { ...state, retry: () => setRetryKey((value) => value + 1) };
 }

@@ -11,8 +11,8 @@ export type CalendarAvailability = {
 export type AvailabilityMonthRequest = {
   year: number;
   month: number;
-  from: string;
-  to: string;
+  fromLocationId: string | null;
+  toLocationId: string | null;
   timezone: "Europe/Kyiv";
   schemaVersion: "1";
 };

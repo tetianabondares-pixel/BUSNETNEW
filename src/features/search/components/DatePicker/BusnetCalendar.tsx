@@ -9,11 +9,11 @@ import "./BusnetCalendar.css";
 type BusnetCalendarProps = {
   open: boolean;
   selectedDate: string;
-  fromCity: string;
-  toCity: string;
+  fromLocationId: string | null;
+  toLocationId: string | null;
   onChange: (date: string) => void;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  triggerRef: React.RefObject<HTMLButtonElement | null> | null;
 };
 
 function usePresentationMode(): "sheet" | "popover" {
@@ -36,8 +36,8 @@ function usePresentationMode(): "sheet" | "popover" {
 export function BusnetCalendar({
   open,
   selectedDate,
-  fromCity,
-  toCity,
+  fromLocationId,
+  toLocationId,
   onChange,
   onClose,
   triggerRef,
@@ -56,9 +56,9 @@ export function BusnetCalendar({
   }, [open, selectedDate, today]);
 
   useEffect(() => {
-    if (!open || mode !== "popover" || !triggerRef.current) return;
+    if (!open || mode !== "popover" || !triggerRef?.current) return;
     const updatePosition = () => {
-      const rect = triggerRef.current!.getBoundingClientRect();
+      const rect = triggerRef!.current!.getBoundingClientRect();
       const width = Math.min(360, window.innerWidth - 24);
       const estimatedHeight = 470;
       let left = Math.min(window.innerWidth - width - 12, Math.max(12, rect.right - width));
@@ -89,7 +89,7 @@ export function BusnetCalendar({
       if (mode === "popover" &&
           panelRef.current &&
           !panelRef.current.contains(event.target as Node) &&
-          !triggerRef.current?.contains(event.target as Node)) onClose();
+          !triggerRef?.current?.contains(event.target as Node)) onClose();
     };
     document.addEventListener("keydown", handleKey);
     document.addEventListener("mousedown", handleOutside);
@@ -108,8 +108,8 @@ export function BusnetCalendar({
   const availability = useCalendarAvailability({
     year,
     month,
-    from: fromCity,
-    to: toCity,
+    fromLocationId,
+    toLocationId,
     timezone: "Europe/Kyiv",
     schemaVersion: "1",
   });
