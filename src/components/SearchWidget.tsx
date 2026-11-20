@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Calendar, MapPin, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -53,8 +53,12 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const [highlighted, setHighlighted] = useState(-1);
   const [composing, setComposing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const fromFieldRef = useRef<HTMLDivElement>(null);
+  const toFieldRef = useRef<HTMLDivElement>(null);
   const dateTriggerRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef(0);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     if (!selectedRoute) return;
@@ -69,6 +73,43 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     setToText((text) => toLocation ? localizedName(toLocation, language) : text);
   }, [language]);
 
+  useLayoutEffect(() => {
+    if (active !== "from" && active !== "to") return;
+    const updatePosition = () => {
+      const container = containerRef.current;
+      const panel = panelRef.current;
+      const field = active === "from" ? fromFieldRef.current : toFieldRef.current;
+      if (!container || !panel || !field) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const fieldRect = field.getBoundingClientRect();
+      const narrow = window.matchMedia("(max-width: 640px)").matches;
+      const width = narrow
+        ? Math.min(containerRect.width, window.innerWidth - 24)
+        : Math.min(300, window.innerWidth - 24);
+      const left = narrow
+        ? 0
+        : Math.max(0, Math.min(
+          (active === "to" ? fieldRect.right : fieldRect.left) - containerRect.left -
+            (active === "to" ? width : 0),
+          containerRect.width - width,
+        ));
+      const top = narrow
+        ? panelRect.bottom - containerRect.top + 8
+        : fieldRect.bottom - containerRect.top + 8;
+      setPopoverStyle({ left, top, width });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [active]);
+
   useEffect(() => {
     if (active !== "from" && active !== "to") return;
     const text = active === "from" ? fromText : toText;
@@ -76,7 +117,12 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     const toId = toLocation?.id;
     const requestId = ++requestRef.current;
     const timer = window.setTimeout(async () => {
-      if (text.trim().length === 1) { setSuggestions([]); setError(null); return; }
+      if (text.trim().length === 1) {
+        setSuggestions([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
       setLoading(true); setError(null);
       const rpc = active === "to" ? "search_destination_locations" : "search_origin_locations";
       const { data, error: rpcError } = await supabase.rpc(rpc, {
@@ -96,7 +142,10 @@ export function SearchWidget({ selectedRoute = null }: Props) {
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setActive(null);
+      if (containerRef.current?.contains(event.target as Node)) return;
+      if (event.target instanceof Element &&
+          event.target.closest(".busnet-calendar-sheet, .busnet-calendar-popover, .busnet-calendar-backdrop")) return;
+      setActive(null);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -108,6 +157,9 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     setSuggestions([]); setActive(null); setHighlighted(-1);
   };
   const edit = (field: Field, value: string) => {
+    requestRef.current += 1;
+    setSuggestions([]);
+    setError(null);
     if (field === "from") { setFromText(value); setFromLocation(null); }
     else { setToText(value); setToLocation(null); }
     setActive(field);
@@ -134,7 +186,9 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const renderField = (field: Field) => {
     const text = field === "from" ? fromText : toText;
     const inputId = `search-${field}`;
-    return <div style={{ flex: "1 1 32%", minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+    return <div ref={field === "from" ? fromFieldRef : toFieldRef}
+      className={`search-widget-field search-widget-field--${field}`}
+      style={{ flex: "1 1 32%", minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
       <MapPin size={16} color={resolved === "dark" ? "#38BDF8" : "#087DFF"} />
       <div style={{ minWidth: 0, width: "100%" }}>
         <label htmlFor={inputId} style={{ fontSize: 10, color: resolved === "dark" ? "#8B9AAF" : "#8A98A9" }}>
@@ -142,7 +196,15 @@ export function SearchWidget({ selectedRoute = null }: Props) {
         </label>
         <input id={inputId} role="combobox" aria-autocomplete="list" aria-expanded={active === field}
           aria-controls={`${inputId}-list`} aria-activedescendant={highlighted >= 0 ? `${inputId}-option-${highlighted}` : undefined}
-          value={text} onFocus={() => setActive(field)} onChange={(event) => edit(field, event.target.value)}
+          name={`busnet-${field}-city`} autoComplete="off" autoCorrect="off" spellCheck={false}
+          value={text} onFocus={() => {
+            if (active !== field) {
+              requestRef.current += 1;
+              setSuggestions([]);
+              setError(null);
+            }
+            setActive(field);
+          }} onChange={(event) => edit(field, event.target.value)}
           onKeyDown={(event) => handleKeyDown(event, field)} onCompositionStart={() => setComposing(true)}
           onCompositionEnd={() => setComposing(false)} placeholder={t("search.cityPlaceholder")}
           style={{ background: "transparent", border: 0, outline: 0, width: "100%", color: resolved === "dark" ? "#fff" : "#172033", fontWeight: 600 }} />
@@ -151,21 +213,27 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   };
   const isDark = resolved === "dark";
   return <div id="trip-search" ref={containerRef} style={{ position: "relative", zIndex: 15, width: "100%", maxWidth: 680 }}>
-    <div className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16, background: isDark ? "rgba(7,15,27,.88)" : "rgba(255,255,255,.92)", boxShadow: tokens.shadowCard }}>
+    <div ref={panelRef} className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16, background: isDark ? "rgba(7,15,27,.88)" : "rgba(255,255,255,.92)", boxShadow: tokens.shadowCard }}>
       {renderField("from")}
       <button type="button" className="search-widget-swap" onClick={swap} aria-label={t("search.swap")}><ArrowLeftRight size={13} /></button>
       {renderField("to")}
-      <div style={{ width: 1, height: 28, background: isDark ? "rgba(255,255,255,.1)" : "rgba(16,24,40,.08)", margin: "0 8px" }} />
-      <button ref={dateTriggerRef} type="button" onClick={() => setActive(active === "date" ? null : "date")} aria-haspopup="dialog" aria-expanded={active === "date"} style={{ display: "flex", alignItems: "center", gap: 8, border: 0, background: "transparent", color: isDark ? "#fff" : "#172033" }}>
+      <div className="search-widget-divider" style={{ width: 1, height: 28, background: isDark ? "rgba(255,255,255,.1)" : "rgba(16,24,40,.08)", margin: "0 4px" }} />
+      <button ref={dateTriggerRef} type="button" className="search-widget-field search-widget-field--date" onClick={() => setActive(active === "date" ? null : "date")} aria-haspopup="dialog" aria-expanded={active === "date"} style={{ display: "flex", alignItems: "center", gap: 8, border: 0, background: "transparent", color: isDark ? "#fff" : "#172033" }}>
         <Calendar size={16} /><span>{new Intl.DateTimeFormat(i18n.language, { day: "numeric", month: "long" }).format(new Date(`${dateISO}T12:00:00`))}</span>
       </button>
-      <button type="button" onClick={handleSearch} aria-label={t("search.submit")} style={{ height: 40, padding: "0 16px", border: 0, borderRadius: 11, background: "#087DFF", color: "#fff" }}><Search size={15} /></button>
+      <button type="button" className="search-widget-submit" onClick={handleSearch} aria-label={t("search.submit")} style={{ height: 40, padding: "0 14px", border: 0, borderRadius: 11, background: "#087DFF", color: "#fff" }}><Search size={15} /></button>
     </div>
-    {(active === "from" || active === "to") && <div id={`search-${active}-list`} role="listbox" style={{ position: "absolute", top: 64, left: 0, width: 300, maxHeight: 320, overflowY: "auto", padding: 8, borderRadius: 12, background: isDark ? "#0B1422" : "#fff", boxShadow: tokens.shadowCard }}>
+    {(active === "from" || active === "to") && <div id={`search-${active}-list`} role="listbox"
+      className={`search-widget-popover search-widget-popover--${active}`}
+      style={{ ...popoverStyle, background: isDark ? "#0B1422" : "#fff", boxShadow: tokens.shadowCard }}>
       {loading && <div role="status" style={{ padding: 10 }}>{t("search.loading")}</div>}
       {!loading && error === "rpc" && <div style={{ padding: 10 }}>{t("search.locationLoadError")}</div>}
       {!loading && error === "empty" && <div style={{ padding: 10 }}>{t("search.noLocations")}</div>}
-      {!loading && !error && suggestions.map((location, index) => <button type="button" role="option" id={`search-${active}-option-${index}`} aria-selected={highlighted === index} key={location.id} onMouseDown={(event) => event.preventDefault()} onClick={() => select(active, location)} style={{ display: "block", width: "100%", minHeight: 44, textAlign: "left", border: 0, borderRadius: 8, background: highlighted === index ? (isDark ? "#17263a" : "#eef5ff") : "transparent", color: isDark ? "#fff" : "#101828" }}>
+      {!loading && !error && suggestions.map((location, index) => <button type="button" role="option"
+        className="search-widget-option" id={`search-${active}-option-${index}`}
+        aria-selected={highlighted === index} key={location.id}
+        onMouseDown={(event) => event.preventDefault()} onClick={() => select(active, location)}
+        style={{ background: highlighted === index ? (isDark ? "#17263a" : "#eef5ff") : "transparent", color: isDark ? "#fff" : "#101828" }}>
         {location.name}{location.countryCode ? ` · ${location.countryCode}` : ""}
       </button>)}
     </div>}

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { CalendarAvailability } from "./calendar.types";
@@ -55,18 +56,21 @@ export function BusnetCalendar({
     if (open) setVisibleMonth(parseDateKey(selectedDate || today));
   }, [open, selectedDate, today]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || mode !== "popover" || !triggerRef?.current) return;
     const updatePosition = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
       const rect = triggerRef!.current!.getBoundingClientRect();
       const width = Math.min(360, window.innerWidth - 24);
-      const estimatedHeight = 470;
-      let left = Math.min(window.innerWidth - width - 12, Math.max(12, rect.right - width));
-      let top = rect.bottom + 8;
-      if (top + estimatedHeight > window.innerHeight - 12) {
-        top = Math.max(12, rect.top - estimatedHeight - 8);
-      }
-      setPopoverStyle({ left, top, width });
+      const height = Math.min(panel.scrollHeight, window.innerHeight - 24);
+      const anchorRect = triggerRef!.current!.parentElement?.getBoundingClientRect();
+      const hasRoomBeside = anchorRect != null && window.innerWidth - anchorRect.right >= width + 24;
+      const left = hasRoomBeside
+        ? anchorRect.right + 12
+        : Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
+      const top = Math.max(12, Math.min(rect.top, window.innerHeight - height - 12));
+      setPopoverStyle({ left, top, width, maxHeight: "calc(100dvh - 24px)" });
     };
     updatePosition();
     window.addEventListener("resize", updatePosition);
@@ -198,6 +202,7 @@ export function BusnetCalendar({
         ? t(availability.error)
         : t("calendar.providerError")
       : t("calendar.scheduledDatesCount", { count: availability.data.filter((item) => item.isAvailable).length });
+  const missingRoute = availability.error === "calendar.selectRouteError";
 
   const calendar = (
     <>
@@ -244,8 +249,8 @@ export function BusnetCalendar({
       </div>
 
       <div className="busnet-calendar-status-row" aria-live="polite">
-        <span className={availability.error ? "busnet-calendar-status-error" : ""}>{statusText}</span>
-        {availability.error && (
+        <span className={availability.error && !missingRoute ? "busnet-calendar-status-error" : ""}>{statusText}</span>
+        {availability.error && !missingRoute && (
           <button type="button" onClick={availability.retry}>{t("calendar.retry")}</button>
         )}
         <button type="button" onClick={() => { setVisibleMonth(parseDateKey(today)); chooseDate(today); }}>
@@ -323,15 +328,6 @@ export function BusnetCalendar({
               onKeyDown={(event) => handleGridKey(event, date)}
             >
               <span>{parsed.getDate()}</span>
-              {mode === "popover" && (
-                <span className="busnet-calendar-tooltip" role="tooltip">
-                  <strong>{new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(parsed)}</strong>
-                  {available
-                    ? t("calendar.scheduledService")
-                    : t("calendar.noScheduledService")}
-                  {item?.routes.length ? ` · ${t("calendar.route")}: ${item.routes.join(", ")}` : ""}
-                </span>
-              )}
             </button>
           );
         })}
@@ -339,8 +335,7 @@ export function BusnetCalendar({
     </>
   );
 
-  if (mode === "sheet") {
-    return (
+  const dialog = mode === "sheet" ? (
       <>
         <div className="busnet-calendar-backdrop" onPointerDown={onClose} aria-hidden="true" />
         <div
@@ -353,10 +348,7 @@ export function BusnetCalendar({
           {calendar}
         </div>
       </>
-    );
-  }
-
-  return (
+    ) : (
     <div
       ref={panelRef}
       role="dialog"
@@ -369,4 +361,5 @@ export function BusnetCalendar({
       {calendar}
     </div>
   );
+  return createPortal(dialog, document.body);
 }

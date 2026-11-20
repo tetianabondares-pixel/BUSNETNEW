@@ -3,15 +3,27 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
+import { getScheduledArrivalDate } from "@/features/search/schedule-search";
 
-/**
- * Supabase-backed trip results. Booking confirmation is implemented later.
- */
+type ScheduledTrip = {
+  id: string;
+  departureDate: string;
+  departureTime: string;
+  departurePlace: string | null;
+  arrivalDate: string;
+  arrivalTime: string;
+  arrivalPlace: string | null;
+};
+
+function languageOf(language: string): "uk" | "en" | "it" {
+  return language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
+}
+
 export function BookingPage() {
   const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
   const [searchParams] = useSearchParams();
-  const [trips, setTrips] = useState<Array<Record<string, unknown>>>([]);
+  const [trips, setTrips] = useState<ScheduledTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [routeNames, setRouteNames] = useState({ from: "", to: "" });
@@ -29,75 +41,131 @@ export function BookingPage() {
 
     setLoading(true);
     setError("");
-    const runProviderSearch = async () => {
+    setTrips([]);
+
+    const searchSchedules = async () => {
       try {
         const { data: locations, error: locationError } = await supabase
           .from("locations")
-          .select("id,name_uk,name_en,name_it,provider_location_id")
+          .select("id,name_uk,name_en,name_it")
           .in("id", [fromId, toId])
           .eq("active", true);
         if (locationError) throw locationError;
+
         const fromLocation = locations?.find((location) => location.id === fromId);
         const toLocation = locations?.find((location) => location.id === toId);
-        if (!fromLocation || !toLocation || !fromLocation.provider_location_id || !toLocation.provider_location_id) {
-          throw new Error("ALTRANS_LOCATION_NOT_IMPORTED");
-        }
+        if (!fromLocation || !toLocation) throw new Error("LOCATION_NOT_FOUND");
         if (fromId === toId) throw new Error("SAME_LOCATION");
-        const locale = i18n.language?.startsWith("en")
-          ? "en"
-          : i18n.language?.startsWith("it")
-            ? "it"
-            : "uk";
+
+        const locale = languageOf(i18n.language);
         const displayName = (location: typeof fromLocation) =>
           locale === "en"
             ? location.name_en ?? location.name_uk
             : locale === "it"
               ? location.name_it ?? location.name_en ?? location.name_uk
               : location.name_uk;
-        setRouteNames({
-          from: displayName(fromLocation),
-          to: displayName(toLocation),
-        });
 
-        const { data, error: invokeError } = await supabase.functions.invoke(
-          "altrans-adapter",
-          {
-            body: {
-              operation: "search-trips",
-              fromLocationId: fromLocation.id,
-              toLocationId: toLocation.id,
-              travelDate: date,
-              currencyCode: "UAH",
-            },
-          },
+        const { data: routes, error: routeError } = await supabase
+          .from("routes")
+          .select("provider_route_id")
+          .eq("from_location_id", fromId)
+          .eq("to_location_id", toId)
+          .eq("active", true)
+          .not("provider_route_id", "is", null);
+        if (routeError) throw routeError;
+
+        const providerRouteIds = [...new Set(
+          (routes ?? []).map((route) => route.provider_route_id).filter(Boolean),
+        )];
+        if (providerRouteIds.length === 0) {
+          if (!cancelled) {
+            setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
+            setTrips([]);
+          }
+          return;
+        }
+
+        const { data: schedules, error: scheduleError } = await supabase
+          .from("provider_route_schedules")
+          .select("id, title, service_weekday")
+          .in("provider_route_id", providerRouteIds)
+          .eq("active", true);
+        if (scheduleError) throw scheduleError;
+
+        const scheduleIds = (schedules ?? []).map((schedule) => schedule.id);
+        if (scheduleIds.length === 0) {
+          if (!cancelled) {
+            setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
+            setTrips([]);
+          }
+          return;
+        }
+
+        const { data: stops, error: stopsError } = await supabase
+          .from("provider_route_schedule_stops")
+          .select("schedule_id, location_id, stop_order, day_offset, departure_time, place")
+          .in("schedule_id", scheduleIds)
+          .in("location_id", [fromId, toId]);
+        if (stopsError) throw stopsError;
+
+        const stopsBySchedule = new Map<string, Array<{
+          location_id: string;
+          stop_order: number;
+          day_offset: number;
+          departure_time: string;
+          place: string | null;
+        }>>();
+        for (const stop of stops ?? []) {
+          const scheduleStops = stopsBySchedule.get(stop.schedule_id) ?? [];
+          scheduleStops.push(stop);
+          stopsBySchedule.set(stop.schedule_id, scheduleStops);
+        }
+
+        const matchingTrips = (schedules ?? []).flatMap((schedule) => {
+          const scheduleStops = stopsBySchedule.get(schedule.id) ?? [];
+          const fromStop = scheduleStops.find((stop) => stop.location_id === fromId);
+          const toStop = scheduleStops.find((stop) => stop.location_id === toId);
+          if (!fromStop || !toStop) return [];
+          const arrivalDate = getScheduledArrivalDate(
+            date,
+            { stopOrder: fromStop.stop_order, dayOffset: fromStop.day_offset },
+            { stopOrder: toStop.stop_order, dayOffset: toStop.day_offset },
+            schedule.service_weekday,
+          );
+          if (!arrivalDate) return [];
+
+          return [{
+            id: `${schedule.id}:${date}`,
+            departureDate: date,
+            departureTime: fromStop.departure_time.slice(0, 5),
+            departurePlace: fromStop.place,
+            arrivalDate,
+            arrivalTime: toStop.departure_time.slice(0, 5),
+            arrivalPlace: toStop.place,
+          }];
+        }).sort((left, right) =>
+          `${left.departureDate}T${left.departureTime}`.localeCompare(
+            `${right.departureDate}T${right.departureTime}`,
+          ),
         );
 
-        if (cancelled) return;
-        if (invokeError) {
-          setError(t("booking.providerError"));
-        } else if (data?.providerError) {
-          setError(t("booking.providerError"));
-        } else {
-          setTrips(Array.isArray(data?.trips) ? data.trips : []);
+        if (!cancelled) {
+          setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
+          setTrips(matchingTrips);
         }
       } catch (caught) {
         if (cancelled) return;
         setError(
-          caught instanceof Error && caught.message === "ALTRANS_LOCATION_NOT_IMPORTED"
-            ? t("booking.locationNotImported")
-            : caught instanceof Error && caught.message === "AMBIGUOUS_LOCATION"
-              ? t("booking.locationAmbiguous")
-              : caught instanceof Error && caught.message === "SAME_LOCATION"
-                ? t("booking.sameLocation")
-                : t("booking.searchError"),
+          caught instanceof Error && caught.message === "SAME_LOCATION"
+            ? t("booking.sameLocation")
+            : t("booking.searchError"),
         );
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    void runProviderSearch();
-
+    void searchSchedules();
     return () => {
       cancelled = true;
     };
@@ -136,46 +204,34 @@ export function BookingPage() {
       )}
 
       <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
-        {trips.map((trip) => {
-          const departureDate = String(trip.departure_date ?? "");
-          const departureTime = String(trip.departure_time ?? "");
-          const arrivalDate = String(trip.arrival_date ?? "");
-          const arrivalTime = String(trip.arrival_time ?? "");
-          const carrier = String(trip.carrier ?? "");
-          const price = trip.price == null ? "" : String(trip.price);
-          const currency = String(trip.currency ?? "");
-          const tripId = String(trip.trip_id ?? `${departureDate}-${departureTime}`);
-
-          return (
-            <article
-              key={tripId}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "16px",
-                padding: "18px",
-                borderRadius: "14px",
-                border: `1px solid ${tokens.colorBorder}`,
-                background: tokens.colorBgCard,
-                boxSizing: "border-box",
-              }}
-            >
-              <div>
-                <strong>{carrier || t("booking.trip")}</strong>
-                <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
-                  {departureDate} {departureTime}
-                </div>
-                {(arrivalDate || arrivalTime) && (
-                  <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
-                    {String(trip.arrival_city ?? "")} · {arrivalDate} {arrivalTime}
-                  </div>
-                )}
+        {trips.map((trip) => (
+          <article
+            key={trip.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "16px",
+              padding: "18px",
+              borderRadius: "14px",
+              border: `1px solid ${tokens.colorBorder}`,
+              background: tokens.colorBgCard,
+              boxSizing: "border-box",
+            }}
+          >
+            <div>
+              <strong>{t("calendar.scheduledService")}</strong>
+              <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
+                {routeNames.from} {trip.departureTime}
+                {trip.departurePlace ? ` · ${trip.departurePlace}` : ""}
               </div>
-              <strong>{price} {currency}</strong>
-            </article>
-          );
-        })}
+              <div style={{ color: tokens.colorTextSecondary, marginTop: "4px" }}>
+                {routeNames.to} · {trip.arrivalDate} {trip.arrivalTime}
+                {trip.arrivalPlace ? ` · ${trip.arrivalPlace}` : ""}
+              </div>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );

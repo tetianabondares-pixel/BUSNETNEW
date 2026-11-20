@@ -42,7 +42,7 @@ export function HomePage() {
           maxWidth: "none",
           minHeight: "100vh",
           borderRadius: 0,
-          overflow: "hidden",
+          overflow: "visible",
           border: "none",
           boxShadow: "none",
           display: "flex",

@@ -113,7 +113,8 @@ html[data-theme="dark"] .busnet-calendar-status-error {
 .busnet-calendar-weekdays,
 .busnet-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(44px, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
 }
 
 .busnet-calendar-weekdays {
@@ -138,7 +139,7 @@ html[data-theme="dark"] .busnet-calendar-status-error {
 
 .busnet-calendar-cell {
   position: relative;
-  min-width: 44px;
+  min-width: 0;
   min-height: 44px;
   border-radius: 10px;
   border: 1px solid transparent;
@@ -220,35 +221,6 @@ html[data-theme="dark"] .busnet-calendar-cell {
 
 .busnet-calendar-cell.is-selected .busnet-calendar-price {
   color: #FFFFFF;
-}
-
-.busnet-calendar-tooltip {
-  position: absolute;
-  z-index: 20;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  width: 220px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: #172033;
-  color: #FFFFFF;
-  font-size: 11px;
-  line-height: 1.45;
-  box-shadow: 0 10px 28px rgba(3, 19, 39, 0.24);
-  opacity: 0;
-  visibility: hidden;
-}
-
-.busnet-calendar-cell:hover .busnet-calendar-tooltip,
-.busnet-calendar-cell:focus-visible .busnet-calendar-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-.busnet-calendar-tooltip strong {
-  display: block;
 }
 
 .busnet-quick-dates {
@@ -338,9 +310,6 @@ html[data-theme="dark"] .busnet-quick-date strong {
 
 @media (pointer: coarse), (max-width: 767px) {
   .busnet-calendar-popover {
-    display: none;
-  }
-  .busnet-calendar-tooltip {
     display: none;
   }
   .busnet-quick-dates {

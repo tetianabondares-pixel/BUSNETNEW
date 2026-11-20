@@ -83,8 +83,27 @@
   "admin": {
     "login": "Cabinet login",
     "loginPlaceholder": "Cabinet login form",
+    "loginSubtitle": "Sign in to your administrator account.",
+    "loginAction": "Sign in",
+    "loginLoading": "Signing in…",
+    "forgotPassword": "Forgot password?",
+    "recoveryTitle": "Reset administrator password",
+    "recoverySubtitle": "Enter the account email to receive a recovery link.",
+    "recoveryAction": "Send recovery link",
+    "recoverySent": "If the account exists, a recovery link has been sent.",
+    "backToLogin": "Back to sign in",
+    "resetTitle": "New administrator password",
+    "resetSubtitle": "Choose a new password with at least 8 characters.",
+    "newPassword": "New password",
+    "resetAction": "Save password",
     "dashboard": "Administrator dashboard",
-    "dashboardPlaceholder": "Administrator dashboard content"
+    "dashboardPlaceholder": "Manage the provider catalog and synchronize schedules.",
+    "catalogSyncButton": "Sync AL-TRANS catalog",
+    "catalogSyncLoading": "Synchronizing catalog…",
+    "catalogSyncSignIn": "Sign in to the administrator account to continue.",
+    "catalogSyncFailed": "Could not synchronize the catalog. Please try again.",
+    "catalogSyncFailedWithCode": "Could not synchronize the catalog ({{code}}).",
+    "catalogSyncSuccess": "Imported: {{locations}} cities, {{routes}} directions, {{schedules}} schedules and {{stops}} stops."
   },
   "passengerAuth": {
     "loginTitle": "Passenger sign in",
@@ -130,8 +149,8 @@
   "booking": {
     "title": "Search results",
     "placeholder": "Searching trips",
-    "loading": "Searching for available trips…",
-    "notFound": "No trips found.",
+    "loading": "Loading scheduled trips…",
+    "notFound": "No service is scheduled for the selected date. Choose another date marked in the calendar.",
     "missingSearch": "Enter cities and a date to search.",
     "searchError": "Could not load trips. Please try again later.",
     "providerError": "The provider is temporarily unavailable. Results could not be confirmed.",
@@ -170,15 +189,15 @@
     "items": {
       "search": {
         "question": "How do I find a bus trip?",
-        "answer": "Enter the departure city, destination and date in the search form. Live trip search is not connected in the current version."
+        "answer": "Choose cities from the suggestions and select a date to see services in the Supabase weekly schedule. Prices and seat availability are shown only after the carrier confirms them."
       },
       "notFound": {
         "question": "What should I do if no trips are found?",
-        "answer": "Search results and a “no trips found” state are not implemented in the current version, so searching again is not available yet."
+        "answer": "Check the date and route. If no service is listed for that date, try another day."
       },
       "chooseTrip": {
         "question": "How do I choose a trip?",
-        "answer": "The results list and “Choose trip” button are not implemented yet, so selecting a trip is not currently possible."
+        "answer": "The list shows scheduled services, but price, seat availability and booking are not yet confirmed."
       },
       "booking": {
         "question": "How do I complete a booking?",

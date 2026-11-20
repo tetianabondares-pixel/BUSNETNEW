@@ -1,3 +1,4 @@
+-- Applied in production as migration version 20261120133431.
 create table if not exists public.provider_route_schedules (
   id uuid primary key default gen_random_uuid(),
   provider_route_id text not null,
