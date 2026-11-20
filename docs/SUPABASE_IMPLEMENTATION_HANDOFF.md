@@ -509,6 +509,15 @@ Requirements:
 public.request_booking_cancellation(p_booking_id uuid, p_reason text)
 ```
 
+Required compatible return shape:
+
+```sql
+returns table (
+  request_id uuid,
+  status text
+)
+```
+
 Requirements:
 
 - authenticated caller
@@ -517,6 +526,12 @@ Requirements:
 - create or return existing open cancellation request
 - reason length max 1000 chars
 - no direct booking cancellation
+- return a table/array-compatible result with `request_id` and `status`
+
+Do not replace this RPC with a scalar `returns uuid` implementation if the frontend
+uses `supabase.rpc(...).data?.length`. The current frontend account flow expects
+the tabular response shape. SQL signatures must not be changed without updating
+the frontend at the same time.
 
 ### `cancel_booking`
 

@@ -56,13 +56,22 @@ create or replace function public.request_booking_cancellation(
   p_booking_id uuid,
   p_reason text
 )
-returns uuid
+returns table (
+  id uuid,
+  booking_id uuid,
+  passenger_id uuid,
+  reason text,
+  status text,
+  created_at timestamptz,
+  updated_at timestamptz
+)
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_booking public.bookings%rowtype;
+  v_status text;
+  v_expires_at timestamptz;
   v_request_id uuid;
 begin
   if auth.uid() is null then
@@ -73,50 +82,59 @@ begin
     raise exception 'Reason too long';
   end if;
 
-  select * into v_booking
-  from public.bookings
-  where id = p_booking_id
-    and passenger_id = auth.uid()
+  select b.status, b.expires_at
+  into v_status, v_expires_at
+  from public.bookings as b
+  where b.id = p_booking_id
+    and b.passenger_id = auth.uid()
   for update;
 
   if not found then
     raise exception 'Booking not found';
   end if;
 
-  if v_booking.status not in ('pending', 'confirmed')
-    or (
-      v_booking.status = 'pending'
-      and v_booking.expires_at is not null
-      and v_booking.expires_at <= now()
-    )
+  if v_status not in ('pending', 'confirmed') then
+    raise exception 'Booking cannot be cancelled in status %', v_status;
+  end if;
+
+  if v_status = 'pending'
+     and v_expires_at is not null
+     and v_expires_at <= now()
   then
-    raise exception 'Booking cannot be cancelled';
+    raise exception 'Booking has expired';
   end if;
 
   select request_row.id
   into v_request_id
   from public.booking_cancellation_requests as request_row
   where request_row.booking_id = p_booking_id
-    and request_row.status in ('new', 'in_progress')
-  for update;
+    and request_row.status in ('new', 'in_progress');
 
-  if found then
-    return v_request_id;
+  if v_request_id is null then
+    insert into public.booking_cancellation_requests (
+      booking_id,
+      passenger_id,
+      reason
+    )
+    values (
+      p_booking_id,
+      auth.uid(),
+      p_reason
+    )
+    returning booking_cancellation_requests.id
+    into v_request_id;
   end if;
 
-  insert into public.booking_cancellation_requests (
-    booking_id,
-    passenger_id,
-    reason
-  )
-  values (
-    p_booking_id,
-    auth.uid(),
-    p_reason
-  )
-  returning id into v_request_id;
-
-  return v_request_id;
+  return query
+  select request_row.id,
+         request_row.booking_id,
+         request_row.passenger_id,
+         request_row.reason,
+         request_row.status,
+         request_row.created_at,
+         request_row.updated_at
+  from public.booking_cancellation_requests as request_row
+  where request_row.id = v_request_id;
 end;
 $$;
 
