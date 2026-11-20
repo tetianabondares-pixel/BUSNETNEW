@@ -111,7 +111,6 @@ export function BusnetCalendar({
     fromLocationId,
     toLocationId,
     timezone: "Europe/Kyiv",
-    schemaVersion: "1",
   });
   const availabilityByDate = useMemo(
     () => new Map(availability.data.map((item) => [item.date, item])),
@@ -198,7 +197,7 @@ export function BusnetCalendar({
       ? availability.error.startsWith("calendar.")
         ? t(availability.error)
         : t("calendar.providerError")
-      : t("calendar.availableDatesCount", { count: availability.data.filter((item) => item.isAvailable).length });
+      : t("calendar.scheduledDatesCount", { count: availability.data.filter((item) => item.isAvailable).length });
 
   const calendar = (
     <>
@@ -294,16 +293,12 @@ export function BusnetCalendar({
           const maxLimit = !isWithinSearchLimit(date, today);
           const disabled = outside || past || maxLimit;
           const item = availabilityByDate.get(date);
-          const available = Boolean(item?.isAvailable && item.tripsCount > 0);
+          const available = Boolean(item?.isAvailable && item.scheduledServicesCount > 0);
           const selected = date === selectedDate;
-          const price = item && item.minPrice != null && item.currency
-            ? `${item.currency} ${item.minPrice}`
-            : null;
           const ariaParts = [
             new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(parsed),
             past ? t("calendar.past") : "",
-            available ? t("calendar.tripsCount", { count: item?.tripsCount ?? 0 }) : t("calendar.noTrips"),
-            price ? t("calendar.lowestPrice", { price }) : "",
+            available ? t("calendar.scheduledService") : t("calendar.noScheduledService"),
             selected ? t("calendar.selected") : "",
           ].filter(Boolean);
 
@@ -328,14 +323,12 @@ export function BusnetCalendar({
               onKeyDown={(event) => handleGridKey(event, date)}
             >
               <span>{parsed.getDate()}</span>
-              {mode === "popover" ? null : price ? <span className="busnet-calendar-price">{price}</span> : null}
               {mode === "popover" && (
                 <span className="busnet-calendar-tooltip" role="tooltip">
                   <strong>{new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(parsed)}</strong>
                   {available
-                    ? t("calendar.tripsCount", { count: item?.tripsCount ?? 0 })
-                    : t("calendar.noTrips")}
-                  {price ? ` · ${t("calendar.lowestPrice", { price })}` : ""}
+                    ? t("calendar.scheduledService")
+                    : t("calendar.noScheduledService")}
                   {item?.routes.length ? ` · ${t("calendar.route")}: ${item.routes.join(", ")}` : ""}
                 </span>
               )}

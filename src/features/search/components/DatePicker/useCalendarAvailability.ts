@@ -8,30 +8,45 @@ type AvailabilityState = {
   error: string | null;
 };
 
-const confirmedCache = new Map<string, CalendarAvailability[]>();
+const scheduleCache = new Map<string, CalendarAvailability[]>();
 
 function normalizeAvailability(payload: unknown): CalendarAvailability[] {
-  const root = payload as { data?: unknown; availability?: unknown };
+  const root = payload as { data?: unknown; availability?: unknown } | null;
   const rows = Array.isArray(payload)
     ? payload
-    : Array.isArray(root.data)
+    : Array.isArray(root?.data)
       ? root.data
-      : Array.isArray(root.availability)
+      : Array.isArray(root?.availability)
         ? root.availability
         : null;
 
   if (!rows) throw new Error("Invalid availability response");
 
   return rows.map((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error("Invalid schedule availability row");
+    }
     const item = row as Record<string, unknown>;
+    const date = item.date;
+    const count = Number(item.scheduledServicesCount ?? item.scheduled_services_count);
+    const isAvailable = item.isAvailable ?? item.is_available;
+    const routes = item.routes;
+    if (
+      typeof date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      !Number.isSafeInteger(count) ||
+      count < 0 ||
+      typeof isAvailable !== "boolean" ||
+      isAvailable !== (count > 0) ||
+      !Array.isArray(routes)
+    ) {
+      throw new Error("Invalid schedule availability row");
+    }
     return {
-      date: String(item.date ?? ""),
-      tripsCount: Number(item.tripsCount ?? item.trips_count ?? 0),
-      minPrice: item.minPrice == null && item.min_price == null ? null : Number(item.minPrice ?? item.min_price),
-      maxPrice: item.maxPrice == null && item.max_price == null ? null : Number(item.maxPrice ?? item.max_price),
-      currency: item.currency == null ? null : String(item.currency),
-      routes: Array.isArray(item.routes) ? item.routes.map(String) : [],
-      isAvailable: Boolean(item.isAvailable ?? item.is_available),
+      date,
+      scheduledServicesCount: count,
+      routes: routes.map(String),
+      isAvailable,
     };
   });
 }
@@ -45,8 +60,8 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    const cacheKey = `${request.year}-${request.month}-${request.fromLocationId}-${request.toLocationId}`;
-    const cached = confirmedCache.get(cacheKey);
+    const cacheKey = `${request.year}-${request.month}-${request.fromLocationId}-${request.toLocationId}-${request.timezone}`;
+    const cached = scheduleCache.get(cacheKey);
 
     if (cached) {
       setState({ data: cached, loading: false, error: null });
@@ -67,11 +82,10 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
           p_from_location_id: request.fromLocationId,
           p_to_location_id: request.toLocationId,
           p_timezone: request.timezone,
-          p_schema_version: request.schemaVersion,
         });
         if (error) throw error;
         const availability = normalizeAvailability(data);
-        confirmedCache.set(cacheKey, availability);
+        scheduleCache.set(cacheKey, availability);
         if (!controller.signal.aborted) setState({ data: availability, loading: false, error: null });
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -84,7 +98,7 @@ export function useCalendarAvailability(request: AvailabilityMonthRequest) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [request.year, request.month, request.fromLocationId, request.toLocationId, request.timezone, request.schemaVersion, retryKey]);
+  }, [request.year, request.month, request.fromLocationId, request.toLocationId, request.timezone, retryKey]);
 
   return { ...state, retry: () => setRetryKey((value) => value + 1) };
 }

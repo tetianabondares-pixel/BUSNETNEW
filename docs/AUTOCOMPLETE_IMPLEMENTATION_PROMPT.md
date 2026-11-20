@@ -54,9 +54,9 @@ Supabase:
 - `supabase/migrations/20261119153000_busnet_passenger_auth_profile.sql`
 - `supabase/functions/altrans-adapter/index.ts`
 
-## Existing data model
+## Target data model
 
-The new Supabase schema already contains:
+The new Supabase schema and the schedule migration provide:
 
 - `locations`
 - `routes`
@@ -64,6 +64,8 @@ The new Supabase schema already contains:
 - `trip_stops`
 - `trip_prices`
 - `availability_cache`
+- `provider_route_schedules`
+- `provider_route_schedule_stops`
 - `popular_routes`
 - `provider_request_logs`
 - `bookings`
@@ -326,10 +328,12 @@ Do not pass free text to the provider adapter as the sole location key.
 When both canonical locations are selected:
 
 - call `get_month_availability` for the selected pair;
-- pass timezone and schema version;
+- pass timezone;
 - debounce and abort stale requests;
-- show loading, provider error, retry, and no availability states;
-- cache confirmed availability briefly;
+- show loading, retry, and scheduled/no-schedule states;
+- describe dates as matching the published timetable, not confirmed seats;
+- do not show prices in the calendar;
+- cache the monthly schedule response by pair and month;
 - update availability after swapping or changing locations.
 
 When a location pair is incomplete:
@@ -338,7 +342,9 @@ When a location pair is incomplete:
 - do not show fake dots or static prices;
 - show `selectRouteError`.
 
-Never show fake availability or static fallback prices.
+The monthly calendar is calculated from recurring provider schedules and stop
+offsets, not from `trips` or `trip_prices`. Never present a scheduled date as
+confirmed bookability or show static fallback prices.
 
 ## Popular routes
 

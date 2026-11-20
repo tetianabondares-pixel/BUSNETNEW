@@ -114,7 +114,7 @@ create table public.routes (
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (from_location_id, to_location_id)
+  unique (from_location_id, to_location_id, provider_route_id)
 );
 ```
 
@@ -124,6 +124,20 @@ create table public.routes (
 - неактивні маршрути;
 - неактивні міста;
 - користувацькі назви замість нормалізованих ID.
+
+AL-TRANS publishes recurring schedules rather than a static inventory of dated
+trips. Persist those schedules separately in `provider_route_schedules` and
+`provider_route_schedule_stops`:
+
+- one schedule row per provider route, timetable variant, and direction;
+- `service_weekday` uses ISO weekdays (Monday = 1 through Sunday = 7);
+- each ordered stop stores its canonical location, departure time, and
+  `day_offset` from that direction's first stop;
+- inbound stops are stored in reverse order.
+
+The calendar derives scheduled dates from these tables. It must not depend on
+pre-populated `trips` or `trip_prices`, and a scheduled date is not a guarantee
+of current seats or a price. The date-based AL-TRANS search confirms those.
 
 ### 3.4 `trips`
 
@@ -167,7 +181,8 @@ create table public.trip_stops (
 );
 ```
 
-`day_offset` обов’язково враховувати для календаря й відображення дати зупинки.
+`day_offset` in `trip_stops` is for concrete dated trips; recurring calendar
+dates use `provider_route_schedule_stops.day_offset`.
 
 ### 3.6 `trip_prices`
 
@@ -205,9 +220,13 @@ create table public.availability_cache (
 );
 ```
 
-Рекомендований TTL:
+`availability_cache` is only for confirmed date-specific provider results; it
+must not be populated from recurring schedules. The monthly calendar reads
+`provider_route_schedules` instead.
 
-- календарна доступність: 1-5 хвилин;
+Рекомендований TTL для даних `availability_cache`:
+
+- підтверджена доступність конкретної дати: 1-5 хвилин;
 - деталі конкретного рейсу: перевіряти при виборі;
 - остаточна ціна: перевіряти під час створення бронювання.
 
@@ -419,10 +438,12 @@ AL-TRANS поля `departure_city_id`, `arrival_city_id`, `depature_date`,
 Одруківки `depature_date` і `currecny_code` навмисні — це поля legacy API.
 Не призначати часовий пояс до provider-часу, якщо API його не повертає.
 
-Каталог міст синхронізується Edge Function operation `sync-catalog`.
+Каталог і розклад міст синхронізуються Edge Function operation `sync-catalog`.
 Операція вимагає активну роль `super_admin`, `admin` або `provider_operator`;
-вона оновлює `locations` з підтверджених `schedules[].items[]`, записує
-спрямовані пари зупинок у `routes` і не видаляє наявні записи.
+вона атомарно оновлює локалізовані `locations`, спрямовані пари `routes`,
+тижневі `provider_route_schedules` та впорядковані
+`provider_route_schedule_stops`. Записи відсутніх у повному імпорті ліній і
+розкладів деактивуються, а не використовуються як доступні.
 
 Response:
 
@@ -459,6 +480,10 @@ Response:
 
 ## 6. Календар доступності
 
+Календар показує дні, у які за опублікованим тижневим розкладом є рейс для
+вибраної пари зупинок. Це **не** підтвердження вільних місць і не ціна;
+booking page має підтвердити конкретний рейс запитом `search-trips`.
+
 ### Запит
 
 ```text
@@ -469,41 +494,33 @@ month
 fromLocationId
 toLocationId
 timezone
-schemaVersion
 ```
 
-Параметри застарілого запиту мають скасовуватися при зміні місяця або маршруту.
+Застарілі запити скасовуються при зміні місяця або маршруту.
 
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "date": "2026-11-20",
-      "tripsCount": 3,
-      "minPrice": 1450,
-      "maxPrice": 2100,
-      "currency": "UAH",
-      "routes": ["Київ — Варшава"],
-      "isAvailable": true,
-      "confirmedAt": "2026-11-19T14:55:00Z"
-    }
-  ],
-  "providerError": false
-}
+[
+  {
+    "date": "2026-11-23",
+    "scheduled_services_count": 1,
+    "routes": ["Київ — Рим"],
+    "is_available": true
+  }
+]
 ```
 
 Правила:
 
 - по одному запису на день;
-- якщо провайдер підтвердив нуль — `tripsCount=0`, `isAvailable=false`;
-- якщо провайдер не відповів — provider error;
-- не показувати ціну як факт, якщо її не підтвердив backend;
+- `scheduled_services_count` рахує відповідні повторювані розклади, не конкретні рейси;
+- дата обчислюється через service weekday маршруту та `day_offset` посадкової зупинки;
+- якщо розклад не збігається — `scheduled_services_count=0`, `is_available=false`;
+- календар не показує ціну чи наявність місць;
+- live search окремо відображає помилки провайдера, не маскуючи їх як порожній результат;
 - сервер сам формує availability;
-- frontend не створює fallback availability;
-- cache тільки для підтверджених даних;
-- cache expiry короткий.
+- frontend не створює fallback availability.
 
 ## 7. Обмеження календаря
 
@@ -515,7 +532,7 @@ Frontend і backend повинні застосовувати однакові �
 - max horizon = 365 днів;
 - наступний місяць блокувати по досягненню горизонту;
 - попередній місяць блокувати раніше today;
-- враховувати `dayOffset` з `trip_stops`;
+- враховувати `day_offset` з `provider_route_schedule_stops`;
 - timezone не стверджувати як факт провайдера поза даними API.
 
 ## 8. Контракт бронювання
@@ -601,6 +618,11 @@ reason optional
 - public read дозволений тільки для active confirmed даних;
 - write тільки service role або адміністраторські server functions.
 
+### `provider_route_schedules`, `provider_route_schedule_stops`
+
+- public read дозволений тільки для active schedules;
+- write тільки через атомарну `sync-catalog` server operation.
+
 ### `availability_cache`
 
 - public read через RPC або Edge Function;
@@ -662,8 +684,9 @@ reason optional
 - frontend mock destinations;
 - mock trip prices.
 
-Наявність мають підтверджуватися сервером або provider.
-У день помилки провайдера UI показує provider error, а не zero availability.
+Recurring schedule dates are candidates only. Bookability, seats, and prices
+must be confirmed by the date-based provider search. A provider error there must
+not be shown as an empty result.
 
 ## 12. Env і секрети
 

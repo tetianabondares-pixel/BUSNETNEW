@@ -1,5 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { cityLocalizations } from "./city-localizations.ts";
+import {
+  buildDirectedRoutePairs,
+  normalizeProviderSchedule,
+  type ProviderRouteSchedule,
+} from "./schedule-import.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -163,7 +169,7 @@ async function syncCatalog(request: Request) {
   const catalog = await providerRequest("/api/v3/cache/routes", { method: "GET" });
   const catalogBody = asRecord(catalog.body);
   const providerRoutes = asArray(catalogBody?.routes);
-  if (!catalog.ok || providerRoutes.length === 0) {
+  if (!catalog.ok || catalogBody?.success !== true || providerRoutes.length === 0) {
     return json(
       { providerError: true, errorCode: catalog.errorCode ?? "ALTRANS_EMPTY_CATALOG" },
       catalog.status,
@@ -173,7 +179,12 @@ async function syncCatalog(request: Request) {
   const locations = new Map<string, {
     provider_location_id: string;
     name_uk: string;
+    name_en: string | null;
+    name_it: string | null;
     normalized_name: string;
+    ascii_name: string | null;
+    aliases: string[];
+    country_code: string | null;
     active: boolean;
   }>();
   const routePairs = new Map<string, {
@@ -181,6 +192,7 @@ async function syncCatalog(request: Request) {
     toProviderId: string;
     providerRouteId: string;
   }>();
+  const providerSchedules: ProviderRouteSchedule[] = [];
   const errors: string[] = [];
 
   for (const routeValue of providerRoutes) {
@@ -201,7 +213,7 @@ async function syncCatalog(request: Request) {
       body: JSON.stringify({ key: navigationKey }),
     });
     const detailsBody = asRecord(details.body);
-    if (!details.ok || !detailsBody) {
+    if (!details.ok || !detailsBody || detailsBody.success !== true) {
       errors.push(`${navigationKey}:${details.errorCode ?? "INVALID_ROUTE_DETAILS"}`);
       continue;
     }
@@ -232,10 +244,21 @@ async function syncCatalog(request: Request) {
 
         const providerLocationId = String(cityId);
         const name = cityName.trim();
+        const localization = cityLocalizations[name];
+        const aliases = [...new Set([
+          name,
+          localization?.name_en,
+          localization?.name_it,
+        ].filter((alias): alias is string => Boolean(alias)))];
         locations.set(providerLocationId, {
           provider_location_id: providerLocationId,
           name_uk: name,
+          name_en: localization?.name_en ?? null,
+          name_it: localization?.name_it ?? null,
           normalized_name: name.normalize("NFC").toLocaleLowerCase("uk-UA"),
+          ascii_name: localization?.name_en ?? null,
+          aliases,
+          country_code: localization?.country_code ?? null,
           active: true,
         });
         scheduleLocations.push(providerLocationId);
@@ -246,17 +269,15 @@ async function syncCatalog(request: Request) {
         continue;
       }
 
-      for (let fromIndex = 0; fromIndex < scheduleLocations.length; fromIndex += 1) {
-        for (let toIndex = fromIndex + 1; toIndex < scheduleLocations.length; toIndex += 1) {
-          const fromProviderId = scheduleLocations[fromIndex];
-          const toProviderId = scheduleLocations[toIndex];
-          if (fromProviderId === toProviderId) continue;
-          routePairs.set(`${providerRouteId}:${fromProviderId}:${toProviderId}`, {
-            fromProviderId,
-            toProviderId,
-            providerRouteId,
-          });
+      try {
+        providerSchedules.push(...normalizeProviderSchedule(providerRouteId, scheduleRecord));
+        for (const pair of buildDirectedRoutePairs(providerRouteId, scheduleLocations)) {
+          routePairs.set(`${providerRouteId}:${pair.fromProviderId}:${pair.toProviderId}`, pair);
         }
+      } catch (error) {
+        errors.push(
+          `${navigationKey}:${error instanceof Error ? error.message : "INVALID_SCHEDULE"}`,
+        );
       }
     }
   }
@@ -283,16 +304,16 @@ async function syncCatalog(request: Request) {
     provider_route_id: pair.providerRouteId,
     active: true,
   }));
-  if (routeRows.length === 0) {
+  if (routeRows.length === 0 || providerSchedules.length === 0) {
     return json({
       providerError: true,
-      errorCode: "ALTRANS_NO_ROUTES",
+      errorCode: routeRows.length === 0 ? "ALTRANS_NO_ROUTES" : "ALTRANS_NO_SCHEDULES",
     }, 502);
   }
 
   const { data: syncData, error: syncError } = await adminClient.rpc(
     "sync_altrans_catalog",
-    { p_locations: rows, p_routes: routeRows },
+    { p_locations: rows, p_routes: routeRows, p_schedules: providerSchedules },
   );
   if (syncError) {
     console.error("Catalog sync transaction failed", syncError.code);
@@ -302,11 +323,17 @@ async function syncCatalog(request: Request) {
   const syncResult = asRecord(asArray(syncData)[0]);
   const importedLocations = Number(syncResult?.imported_locations);
   const importedRoutes = Number(syncResult?.imported_routes);
+  const importedSchedules = Number(syncResult?.imported_schedules);
+  const importedScheduleStops = Number(syncResult?.imported_schedule_stops);
   if (
     !Number.isSafeInteger(importedLocations) ||
     !Number.isSafeInteger(importedRoutes) ||
+    !Number.isSafeInteger(importedSchedules) ||
+    !Number.isSafeInteger(importedScheduleStops) ||
     importedLocations !== rows.length ||
-    importedRoutes !== routeRows.length
+    importedRoutes !== routeRows.length ||
+    importedSchedules !== providerSchedules.length ||
+    importedScheduleStops !== providerSchedules.reduce((count, schedule) => count + schedule.stops.length, 0)
   ) {
     console.error("Catalog sync returned unexpected row counts");
     return json({ providerError: true, errorCode: "CATALOG_IMPORT_INCOMPLETE" }, 500);
@@ -316,6 +343,8 @@ async function syncCatalog(request: Request) {
     providerError: false,
     importedLocations,
     importedRoutes,
+    importedSchedules,
+    importedScheduleStops,
   });
 }
 
@@ -418,10 +447,10 @@ Deno.serve(async (request) => {
     }
 
     const root = asRecord(result.body);
-    if (root?.success === false) {
-      return json({ providerError: true, errorCode: "ALTRANS_SEARCH_FAILED", trips: [] }, 502);
+    if (!root || root.success !== true || !Array.isArray(root.trips_sequences)) {
+      return json({ providerError: true, errorCode: "ALTRANS_INVALID_SEARCH_RESPONSE", trips: [] }, 502);
     }
-    const trips = asArray(root?.trips_sequences)
+    const trips = root.trips_sequences
       .map(normalizeTrip)
       .filter((trip): trip is NonNullable<typeof trip> => trip !== null);
     return json({ providerError: false, trips, searchedAt: new Date().toISOString() });
