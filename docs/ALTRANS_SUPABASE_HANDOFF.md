@@ -7,6 +7,7 @@ This handoff is for the AI/operator with access to the BUSNET Supabase project.
 - The user confirmed that `altrans-adapter` is already deployed. Their Supabase screenshot shows the function in the production project, with 11 deployments and a recent update. The screenshot does not establish the active source code or `verify_jwt` setting; verify both in Supabase before acting.
 - The project shown in the screenshot is `BUSNET NEW`, production branch `main`, project reference `htgvcoshbnvoseigtgd`.
 - No Supabase data, migrations, secrets, Edge Function deployments, or AL-TRANS bookings were changed or created in this local task.
+- Update from the owner on 2026-11-22: the separate `admin_dashboard_workflows` migration was applied and checked in production. Supabase recorded it under a version different from local timestamp `20261121100000`. The owner did not run write-RPC tests or Security Advisors. This report does not verify or deploy the AL-TRANS Edge Function changes described below.
 - Do not deploy the local function over production until its current deployed source, schema, JWT settings, and route schedule data have been checked. The production function may contain changes not present in this worktree.
 - Do not expose AL-TRANS keys, Supabase JWTs, service-role keys, or passenger/provider personal data in responses or logs.
 - Do not run `busnet-fresh/al_trans_routes_import.sql` against this project. It targets a different `public.routes` schema and includes route deletions.
