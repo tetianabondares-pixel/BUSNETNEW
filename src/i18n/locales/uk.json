@@ -9,6 +9,10 @@
     "heroTitle2": "ніж здається",
     "heroSubtitle": "Знайди рейс · Бронюй онлайн · Оплачуй при посадці"
   },
+  "maintenance": {
+    "title": "BUSNET тимчасово недоступний",
+    "description": "Сайт знаходиться на технічному обслуговуванні. Спробуйте зайти пізніше."
+  },
   "backToTop": {
     "label": "Повернутися нагору"
   },
@@ -167,13 +171,79 @@
     "providerLogs": "Журнал запитів провайдера",
     "noProviderLogs": "Запитів провайдера ще немає.",
     "searchRoutes": "Пошук маршруту",
+    "searchLocations": "Пошук міста або псевдоніма",
+    "locationsSubtitle": "Міста, локалізації та ідентифікатори провайдера",
+    "noLocations": "Міста не знайдено.",
+    "editLocalization": "Редагувати локалізацію",
+    "aliases": "Аліаси (через кому)",
+    "invalidLocation": "Українська назва міста обов’язкова.",
+    "scheduleDetails": "Показати зупинки",
+    "weekday": "День тижня",
+    "dayOffset": "дн.",
+    "scheduleDisclaimer": "Тижневий розклад — це кандидат доступності, а не підтвердження вільних місць чи остаточної ціни.",
     "noRoutes": "Маршрутів не знайдено.",
     "popularSubtitle": "Керування популярними напрямками головної",
     "contentSubtitle": "Локалізовані публічні контент-записи",
+    "contentStructureHint": "Підтримуються ключі finalCta, faq, howItWorks і footer. JSON задає поля заголовків/текстів; для FAQ — items та support, для howItWorks — масив steps. Відсутні поля залишаються перекладеними за замовчуванням.",
     "auditSubtitle": "Журнал адміністративних дій",
     "noPopular": "Популярних напрямків ще немає.",
     "noContent": "Публічний контент ще не налаштований.",
     "noAudit": "Адміністративних дій ще немає.",
+    "loadFailed": "Не вдалося завантажити дані. Спробуйте оновити сторінку.",
+    "actionFailed": "Дію не виконано. Перевірте права та спробуйте ще раз.",
+    "actionSucceeded": "Зміни збережено.",
+    "auditWriteFailed": "Синхронізація завершилася, але запис аудиту не збережено.",
+    "invalidSettings": "Перевірте значення налаштувань.",
+    "allStatuses": "Усі статуси",
+    "allLocales": "Усі мови",
+    "fromDate": "Від дати",
+    "toDate": "До дати",
+    "bookingDetails": "Деталі рейсу",
+    "pagination": "Сторінки результатів",
+    "previous": "Назад",
+    "next": "Далі",
+    "moveUp": "Перемістити вище",
+    "moveDown": "Перемістити нижче",
+    "delete": "Видалити",
+    "confirmDeletePopular": "Видалити цей популярний маршрут?",
+    "confirmDeleteContent": "Видалити цей запис контенту?",
+    "unsupportedContentKey": "Виберіть підтримуваний ключ контенту та введіть JSON-об’єкт.",
+    "rejectCancellation": "Відхилити запит",
+    "resolutionNote": "Коментар до рішення (необов’язково)",
+    "unassigned": "Не призначено",
+    "installApp": "Встановити застосунок",
+    "enableNotifications": "Увімкнути сповіщення",
+    "notifications": "Сповіщення",
+    "noNotifications": "Нових подій немає.",
+    "settingsSubtitle": "Операційні параметри BUSNET",
+    "saveSettings": "Зберегти налаштування",
+    "settings": {
+      "timezone": "Часовий пояс",
+      "expirationMinutes": "Термін очікування бронювання, хв",
+      "currencies": "Підтримувані валюти (через кому)",
+      "maxPassengers": "Максимум пасажирів у бронюванні",
+      "defaultLocale": "Мова за замовчуванням",
+      "supportEmail": "Email підтримки",
+      "supportPhone": "Телефон підтримки",
+      "maintenanceMode": "Режим технічного обслуговування",
+      "runtimeNote": "Параметри зберігаються у конфігурації. Для впливу на бронювання та публічний сайт потрібне підключення відповідних серверних процесів."
+    },
+    "status": {
+      "pending": "Очікує",
+      "confirmed": "Підтверджено",
+      "cancelled": "Скасовано",
+      "expired": "Термін минув",
+      "refunded": "Повернено"
+    },
+    "cancellationStatus": {
+      "new": "Нове",
+      "in_progress": "На розгляді",
+      "resolved": "Завершено"
+    },
+    "cancellationResolution": {
+      "approved": "схвалено",
+      "rejected": "відхилено"
+    },
     "addPopular": "Додати напрямок",
     "route": "Маршрут",
     "locale": "Мова",
@@ -195,6 +265,7 @@
       "cancellations": "Скасування",
       "catalog": "Каталог",
       "routes": "Маршрути",
+      "locations": "Міста",
       "popular": "Популярні",
       "content": "Контент",
       "audit": "Аудит"
@@ -206,7 +277,12 @@
       "cancellations": "Запити на скасування",
       "locations": "Міста",
       "routes": "Активні маршрути",
-      "schedules": "Розклади"
+      "schedules": "Розклади",
+      "cancelled": "Скасовані",
+      "expired": "Прострочені",
+      "refunded": "Повернені",
+      "passengers": "Пасажири",
+      "providerErrors": "Помилки провайдера"
     },
     "table": {
       "booking": "Бронювання",
@@ -229,7 +305,21 @@
       "contentKey": "Ключ контенту",
       "updated": "Оновлено",
       "action": "Дія",
-      "target": "Об’єкт"
+      "target": "Об’єкт",
+      "provider": "Провайдер",
+      "travelDate": "Дата поїздки",
+      "completed": "Завершено",
+      "bookingCount": "Бронювань",
+      "latestBooking": "Останнє бронювання",
+      "tripId": "ID рейсу",
+      "expires": "Діє до",
+      "confirmed": "Підтверджено",
+      "actor": "Виконавець",
+      "details": "Деталі",
+      "assignedTo": "Відповідальний",
+      "location": "Місто",
+      "country": "Країна",
+      "coordinates": "Координати"
     }
   },
   "passengerAuth": {
@@ -286,9 +376,14 @@
     "locationAmbiguous": "Знайдено кілька міст із такою назвою. Уточніть місто.",
     "sameLocation": "Міста відправлення та призначення мають бути різними.",
     "trip": "Рейс",
-    "scheduleConfirmed": "Рейс за тижневим розкладом",
     "loadingLive": "Підтверджуємо рейси у провайдера…",
     "availableTrips": "Доступні рейси",
+    "noProviderTrips": "AL-TRANS не знайшов доступного рейсу на цю дату.",
+    "showDetails": "Деталі маршруту",
+    "hideDetails": "Згорнути деталі",
+    "bookTrip": "Забронювати",
+    "stopArrival": "Прибуття",
+    "stopDeparture": "Відправлення",
     "priceUnavailable": "Ціна недоступна",
     "passengerDetails": "Дані пасажира",
     "checkingAccount": "Перевіряємо вхід до кабінету…",
@@ -299,6 +394,7 @@
     "email": "Email",
     "phone": "Телефон",
     "profileLoadError": "Не вдалося завантажити збережені контактні дані. Заповніть форму вручну.",
+    "profilePhoneSaveError": "Не вдалося зберегти номер телефону в профілі. Перевірте дані профілю та спробуйте ще раз.",
     "confirmBooking": "Надіслати заявку BUSNET",
     "bookingLoading": "Надсилаємо заявку…",
     "bookingCreated": "Заявку отримано в BUSNET",
@@ -307,7 +403,8 @@
     "total": "До сплати",
     "expiresAt": "Дійсне до",
     "bookingError": "Не вдалося створити бронювання. Спробуйте пізніше.",
-    "tripUnavailable": "Рейс більше недоступний. Оберіть інший."
+    "tripUnavailable": "Рейс більше недоступний. Оберіть інший.",
+    "tripPriceChanged": "Ціна рейсу змінилася. Оновіть пошук і спробуйте ще раз."
   },
   "popularDestinations": {
     "title": "Популярні напрямки",
@@ -419,6 +516,7 @@
       "saving": "Зберігаємо…",
       "saved": "Профіль оновлено.",
       "emailConfirmation": "Зміни збережено. Підтвердьте нову email-адресу за посиланням у листі.",
+      "languageChangeError": "Не вдалося змінити мову інтерфейсу.",
       "saveError": "Не вдалося зберегти профіль. Перевірте дані та спробуйте ще раз."
     },
     "cancellation": {

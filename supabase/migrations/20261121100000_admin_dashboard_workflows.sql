@@ -86,11 +86,13 @@ create policy "provider logs operations read"
   for select to authenticated
   using (public.has_admin_role(array['super_admin', 'admin', 'provider_operator']));
 
+drop policy if exists "routes operations read" on public.routes;
 create policy "routes operations read"
   on public.routes
   for select to authenticated
   using (public.has_admin_role(array['super_admin', 'admin', 'provider_operator']));
 
+drop policy if exists "locations operations read" on public.locations;
 create policy "locations operations read"
   on public.locations
   for select to authenticated
@@ -106,11 +108,13 @@ revoke update on public.locations from authenticated;
 grant update (name_uk, name_en, name_it, aliases, normalized_name)
   on public.locations to authenticated;
 
+drop policy if exists "provider schedules operations read" on public.provider_route_schedules;
 create policy "provider schedules operations read"
   on public.provider_route_schedules
   for select to authenticated
   using (public.has_admin_role(array['super_admin', 'admin', 'provider_operator']));
 
+drop policy if exists "provider schedule stops operations read" on public.provider_route_schedule_stops;
 create policy "provider schedule stops operations read"
   on public.provider_route_schedule_stops
   for select to authenticated
@@ -451,9 +455,22 @@ set search_path = public
 as $$
 declare
   v_query text := nullif(btrim(p_query), '');
+  v_timezone text;
 begin
   if not public.has_admin_role(array['super_admin', 'admin', 'support']) then
     raise exception 'authorization denied';
+  end if;
+  select setting_value #>> '{}'
+  into v_timezone
+  from public.admin_settings
+  where setting_key = 'timezone';
+  v_timezone := coalesce(nullif(v_timezone, ''), 'Europe/Kyiv');
+  if not exists (
+    select 1
+    from pg_timezone_names
+    where name = v_timezone
+  ) then
+    raise exception 'invalid admin timezone setting';
   end if;
   if p_page < 0 or p_page_size < 1 or p_page_size > 100 then
     raise exception 'invalid pagination';
@@ -506,8 +523,14 @@ begin
     count(*) over()
   from public.bookings b
   where (p_status is null or b.status = p_status)
-    and (p_from_date is null or b.created_at >= p_from_date::timestamptz)
-    and (p_to_date is null or b.created_at < (p_to_date + 1)::timestamptz)
+    and (
+      p_from_date is null
+      or b.created_at >= (p_from_date::timestamp at time zone v_timezone)
+    )
+    and (
+      p_to_date is null
+      or b.created_at < ((p_to_date + 1)::timestamp at time zone v_timezone)
+    )
     and (
       v_query is null
       or b.booking_number ilike '%' || v_query || '%'
@@ -810,10 +833,18 @@ drop policy if exists "admin notifications own update" on public.admin_notificat
 create policy "admin notifications own update"
   on public.admin_notifications
   for update to authenticated
-  using (recipient_id = auth.uid())
-  with check (recipient_id = auth.uid());
+  using (
+    recipient_id = auth.uid()
+    and public.has_admin_role(array['super_admin', 'admin', 'support'])
+  )
+  with check (
+    recipient_id = auth.uid()
+    and public.has_admin_role(array['super_admin', 'admin', 'support'])
+  );
 
-grant select, update on public.admin_notifications to authenticated;
+grant select on public.admin_notifications to authenticated;
+revoke update on public.admin_notifications from public, anon, authenticated;
+grant update (read_at) on public.admin_notifications to authenticated;
 
 create or replace function public.mark_admin_notification_read(p_notification_id uuid)
 returns table (notification_id uuid, read_at timestamptz)
@@ -983,29 +1014,20 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_booking public.bookings%rowtype;
 begin
-  select * into v_booking
-  from public.bookings
-  where id = new.booking_id;
-
   insert into public.admin_notifications (
     recipient_id, type, booking_id, passenger_id, title, message, metadata
   )
   select
     ap.user_id,
     'new_booking',
-    v_booking.id,
-    v_booking.passenger_id,
+    new.id,
+    new.passenger_id,
     'Нове бронювання',
-    format('Бронювання %s від пасажира %s очікує підтвердження',
-      v_booking.booking_number,
-      coalesce(nullif(btrim(new.full_name), ''), 'Без імені')),
+    format('Заявка %s очікує обробки', new.booking_number),
     jsonb_build_object(
-      'booking_number', v_booking.booking_number,
-      'passenger_name', new.full_name,
-      'status', v_booking.status
+      'booking_number', new.booking_number,
+      'status', new.status
     )
   from public.admin_profiles ap
   where ap.active = true
@@ -1018,7 +1040,7 @@ $$;
 drop trigger if exists notify_admins_new_booking on public.bookings;
 drop trigger if exists notify_admins_new_booking on public.booking_passengers;
 create trigger notify_admins_new_booking
-  after insert on public.booking_passengers
+  after insert on public.bookings
   for each row execute function public.notify_admins_new_booking();
 
 create or replace function public.admin_request_booking_cancellation(

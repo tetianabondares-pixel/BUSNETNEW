@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ClipboardCheck, Route, Search, Wifi } from "lucide-react";
+import { CalendarDays, Wifi } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { contentRecord, contentString, usePublicContent } from "@/lib/public-content";
 import "./HowItWorks.css";
 
 interface HowItWorksProps { isDark: boolean; }
 
 const steps = [
-  { title: "howItWorks.steps.0.title", description: "howItWorks.steps.0.description", Icon: Search },
-  { title: "howItWorks.steps.1.title", description: "howItWorks.steps.1.description", Icon: Route },
-  { title: "howItWorks.steps.2.title", description: "howItWorks.steps.2.description", Icon: ClipboardCheck },
+  { title: "howItWorks.steps.0.title", description: "howItWorks.steps.0.description" },
+  { title: "howItWorks.steps.1.title", description: "howItWorks.steps.1.description" },
+  { title: "howItWorks.steps.2.title", description: "howItWorks.steps.2.description" },
 ] as const;
 
 export function HowItWorks({ isDark }: HowItWorksProps) {
   const { t } = useTranslation();
+  const content = usePublicContent("howItWorks");
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -67,20 +69,22 @@ export function HowItWorks({ isDark }: HowItWorksProps) {
       data-theme={isDark ? "dark" : "light"} data-visible={isVisible}
       id="how-it-works" ref={sectionRef}>
       <div className="how-it-works__content">
-        <h2 className="how-it-works__title" id="how-it-works-title">{t("howItWorks.title")}</h2>
-        <p className="how-it-works__subtitle">{t("howItWorks.subtitle")}</p>
+        <h2 className="how-it-works__title" id="how-it-works-title">{contentString(content, "title", t("howItWorks.title"))}</h2>
+        <p className="how-it-works__subtitle">{contentString(content, "subtitle", t("howItWorks.subtitle"))}</p>
         <ol className="how-it-works__steps">
-          {steps.map(({ title, description, Icon }, index) => (
+          {steps.map(({ title, description }, index) => {
+            const stepContent = Array.isArray(content?.steps)
+              ? contentRecord(content.steps[index])
+              : null;
+            return (
             <li className="how-it-works__step" key={title}>
-              <div className="how-it-works__topline">
-                <span className="how-it-works__marker" aria-hidden="true"><Icon size={18} strokeWidth={1.8} /></span>
-                <span className="how-it-works__ghost-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-              </div>
+              <span className="how-it-works__marker" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
               {renderVisual(index)}
-              <h3 className="how-it-works__step-title">{t(title)}</h3>
-              <p className="how-it-works__description">{t(description)}</p>
+              <h3 className="how-it-works__step-title">{contentString(stepContent, "title", t(title))}</h3>
+              <p className="how-it-works__description">{contentString(stepContent, "description", t(description))}</p>
             </li>
-          ))}
+            );
+          })}
         </ol>
       </div>
     </section>

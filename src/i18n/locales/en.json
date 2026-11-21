@@ -9,6 +9,10 @@
     "heroTitle2": "than it seems",
     "heroSubtitle": "Find trips · Book online · Pay upon boarding"
   },
+  "maintenance": {
+    "title": "BUSNET is temporarily unavailable",
+    "description": "The site is undergoing maintenance. Please try again later."
+  },
   "backToTop": {
     "label": "Back to top"
   },
@@ -167,13 +171,79 @@
     "providerLogs": "Provider request log",
     "noProviderLogs": "No provider requests yet.",
     "searchRoutes": "Search route",
+    "searchLocations": "Search city or alias",
+    "locationsSubtitle": "Cities, localizations and provider IDs",
+    "noLocations": "No locations found.",
+    "editLocalization": "Edit localization",
+    "aliases": "Aliases (comma separated)",
+    "invalidLocation": "The Ukrainian city name is required.",
+    "scheduleDetails": "Show stops",
+    "weekday": "Weekday",
+    "dayOffset": "days",
+    "scheduleDisclaimer": "A weekly schedule is an availability candidate, not confirmation of seats or a final price.",
     "noRoutes": "No routes found.",
     "popularSubtitle": "Manage popular homepage destinations",
     "contentSubtitle": "Localized public content records",
+    "contentStructureHint": "Supported keys: finalCta, faq, howItWorks and footer. JSON controls headings and copy; FAQ uses items and support, while howItWorks uses a steps array. Missing fields keep their translated defaults.",
     "auditSubtitle": "Administrative action log",
     "noPopular": "No popular destinations yet.",
     "noContent": "Public content is not configured yet.",
     "noAudit": "No administrative actions yet.",
+    "loadFailed": "Could not load data. Try refreshing the page.",
+    "actionFailed": "The action failed. Check your access and try again.",
+    "actionSucceeded": "Changes saved.",
+    "auditWriteFailed": "Synchronization completed, but its audit entry could not be saved.",
+    "invalidSettings": "Check the settings values.",
+    "allStatuses": "All statuses",
+    "allLocales": "All locales",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "bookingDetails": "Trip details",
+    "pagination": "Results pages",
+    "previous": "Previous",
+    "next": "Next",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "delete": "Delete",
+    "confirmDeletePopular": "Delete this popular route?",
+    "confirmDeleteContent": "Delete this content entry?",
+    "unsupportedContentKey": "Choose a supported content key and enter a JSON object.",
+    "rejectCancellation": "Reject request",
+    "resolutionNote": "Decision note (optional)",
+    "unassigned": "Unassigned",
+    "installApp": "Install app",
+    "enableNotifications": "Enable notifications",
+    "notifications": "Notifications",
+    "noNotifications": "No new events.",
+    "settingsSubtitle": "BUSNET operational parameters",
+    "saveSettings": "Save settings",
+    "settings": {
+      "timezone": "Time zone",
+      "expirationMinutes": "Booking expiration, minutes",
+      "currencies": "Supported currencies (comma separated)",
+      "maxPassengers": "Maximum passengers per booking",
+      "defaultLocale": "Default locale",
+      "supportEmail": "Support email",
+      "supportPhone": "Support phone",
+      "maintenanceMode": "Maintenance mode",
+      "runtimeNote": "Settings are stored as configuration. Booking and public-site behavior still needs to be connected to these values."
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "refunded": "Refunded"
+    },
+    "cancellationStatus": {
+      "new": "New",
+      "in_progress": "In progress",
+      "resolved": "Resolved"
+    },
+    "cancellationResolution": {
+      "approved": "approved",
+      "rejected": "rejected"
+    },
     "addPopular": "Add destination",
     "route": "Route",
     "locale": "Locale",
@@ -195,6 +265,7 @@
       "cancellations": "Cancellations",
       "catalog": "Catalog",
       "routes": "Routes",
+      "locations": "Locations",
       "popular": "Popular",
       "content": "Content",
       "audit": "Audit"
@@ -206,7 +277,12 @@
       "cancellations": "Cancellation requests",
       "locations": "Cities",
       "routes": "Active routes",
-      "schedules": "Schedules"
+      "schedules": "Schedules",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "refunded": "Refunded",
+      "passengers": "Passengers",
+      "providerErrors": "Provider errors"
     },
     "table": {
       "booking": "Booking",
@@ -229,7 +305,21 @@
       "contentKey": "Content key",
       "updated": "Updated",
       "action": "Action",
-      "target": "Target"
+      "target": "Target",
+      "provider": "Provider",
+      "travelDate": "Travel date",
+      "completed": "Completed",
+      "bookingCount": "Bookings",
+      "latestBooking": "Latest booking",
+      "tripId": "Trip ID",
+      "expires": "Expires",
+      "confirmed": "Confirmed",
+      "actor": "Actor",
+      "details": "Details",
+      "assignedTo": "Assigned to",
+      "location": "Location",
+      "country": "Country",
+      "coordinates": "Coordinates"
     }
   },
   "passengerAuth": {
@@ -286,9 +376,14 @@
     "locationAmbiguous": "More than one city has this name. Please specify the city.",
     "sameLocation": "Departure and destination must be different cities.",
     "trip": "Trip",
-    "scheduleConfirmed": "Service from the weekly schedule",
     "loadingLive": "Confirming trips with the provider…",
     "availableTrips": "Available trips",
+    "noProviderTrips": "AL-TRANS found no available trips for this date.",
+    "showDetails": "Route details",
+    "hideDetails": "Hide details",
+    "bookTrip": "Book trip",
+    "stopArrival": "Arrival",
+    "stopDeparture": "Departure",
     "priceUnavailable": "Price unavailable",
     "passengerDetails": "Passenger details",
     "checkingAccount": "Checking your account…",
@@ -299,6 +394,7 @@
     "email": "Email",
     "phone": "Phone",
     "profileLoadError": "Could not load your saved contact details. Please fill in the form manually.",
+    "profilePhoneSaveError": "Could not save your phone number to your profile. Check your profile and try again.",
     "confirmBooking": "Send request to BUSNET",
     "bookingLoading": "Sending request…",
     "bookingCreated": "Request received by BUSNET",
@@ -307,7 +403,8 @@
     "total": "Total",
     "expiresAt": "Valid until",
     "bookingError": "Could not create the booking. Please try again later.",
-    "tripUnavailable": "This trip is no longer available. Please choose another."
+    "tripUnavailable": "This trip is no longer available. Please choose another.",
+    "tripPriceChanged": "The trip price has changed. Refresh your search and try again."
   },
   "popularDestinations": {
     "title": "Popular destinations",
@@ -419,6 +516,7 @@
       "saving": "Saving…",
       "saved": "Profile updated.",
       "emailConfirmation": "Changes saved. Confirm your new email address using the link we sent you.",
+      "languageChangeError": "Could not change the interface language.",
       "saveError": "Could not save your profile. Check the details and try again."
     },
     "cancellation": {

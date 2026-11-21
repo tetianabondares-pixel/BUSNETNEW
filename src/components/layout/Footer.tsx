@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { BusnetLogo } from "@/components/BusnetLogo";
 import { useTheme } from "@/theme";
+import { contentString, usePublicContent } from "@/lib/public-content";
 import "./Footer.css";
 
 const MOBILE_BREAKPOINT = "(max-width: 680px)";
@@ -22,8 +23,8 @@ const FOOTER_GROUPS = [
     id: "routes",
     title: "footer.groups.routes",
     links: [
-      { label: "footer.links.kyivWarsaw", href: "/#trip-search" },
-      { label: "footer.links.lvivKrakow", href: "/#trip-search" },
+      { label: "footer.links.kyivWarsaw", href: "/?route=kyiv-warsaw#trip-search" },
+      { label: "footer.links.lvivKrakow", href: "/?route=lviv-krakow#trip-search" },
       { label: "footer.links.schedule", href: "/#trip-search" },
       { label: "footer.links.partners", href: "/admin/login" },
     ],
@@ -43,10 +44,13 @@ const FOOTER_GROUPS = [
 export function Footer() {
   const { t } = useTranslation();
   const { resolved } = useTheme();
+  const content = usePublicContent("footer");
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.matchMedia(MOBILE_BREAKPOINT).matches,
   );
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const supportEmail = contentString(content, "supportEmail", "support@busnet.ua");
+  const supportPhone = contentString(content, "supportPhone", "");
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT);
@@ -61,7 +65,16 @@ export function Footer() {
       <div className="site-footer__content">
         <div className="site-footer__main">
           <div className="site-footer__brand">
-            <Link aria-label={t("footer.homeLabel")} className="site-footer__logo-link" to="/">
+            <Link
+              aria-label={t("footer.homeLabel")}
+              className="site-footer__logo-link"
+              onClick={(event) => {
+                if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              to="/"
+            >
               <BusnetLogo />
             </Link>
             <p className="site-footer__tagline">{t("footer.tagline")}</p>
@@ -104,17 +117,17 @@ export function Footer() {
           </nav>
 
           <aside className="site-footer__support">
-            <h2>{t("footer.support.title")}</h2>
+            <h2>{contentString(content, "supportTitle", t("footer.support.title"))}</h2>
             <p className="site-footer__online"><span /> {t("footer.support.online")}</p>
-            <a className="site-footer__phone" href="mailto:support@busnet.ua">
+            <a className="site-footer__phone" href={`mailto:${supportEmail}`}>
               <Mail size={17} aria-hidden="true" />
-              support@busnet.ua
+              {supportEmail}
             </a>
-            <a className="site-footer__chat" href="/#faq">
+            {supportPhone && <a className="site-footer__chat" href={`tel:${supportPhone}`}>
               <PhoneCall size={17} aria-hidden="true" />
-              {t("footer.support.chat")}
-            </a>
-            <p className="site-footer__hours"><Clock3 size={14} aria-hidden="true" /> {t("footer.support.hours")}</p>
+              {supportPhone}
+            </a>}
+            <p className="site-footer__hours"><Clock3 size={14} aria-hidden="true" /> {contentString(content, "supportHours", t("footer.support.hours"))}</p>
           </aside>
         </div>
 

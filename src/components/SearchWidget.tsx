@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Calendar, MapPin, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
 import { BusnetCalendar } from "@/features/search/components/DatePicker/BusnetCalendar";
@@ -21,6 +21,21 @@ const languageOf = (language: string) => language.startsWith("en") ? "en" : lang
 const localizedName = (location: ResolvedLocation, language: string) =>
   language === "en" ? (location.nameEn ?? location.nameUk) :
     language === "it" ? (location.nameIt ?? location.nameEn ?? location.nameUk) : location.nameUk;
+const FOOTER_ROUTE_PREFILLS: Record<
+  string,
+  Record<"uk" | "en" | "it", { from: string; to: string }>
+> = {
+  "kyiv-warsaw": {
+    uk: { from: "Київ", to: "Варшава" },
+    en: { from: "Kyiv", to: "Warsaw" },
+    it: { from: "Kiev", to: "Varsavia" },
+  },
+  "lviv-krakow": {
+    uk: { from: "Львів", to: "Краків" },
+    en: { from: "Lviv", to: "Krakow" },
+    it: { from: "Leopoli", to: "Cracovia" },
+  },
+};
 const rowToLocation = (row: Record<string, unknown>, language: string): ResolvedLocation => {
   const nameUk = String(row.name_uk ?? row.name ?? "");
   const nameEn = row.name_en == null ? null : String(row.name_en);
@@ -40,7 +55,9 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const { t, i18n } = useTranslation();
   const { resolved, tokens } = useTheme();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const language = languageOf(i18n.language);
+  const routePrefill = FOOTER_ROUTE_PREFILLS[searchParams.get("route") ?? ""]?.[language];
   const [fromLocation, setFromLocation] = useState<ResolvedLocation | null>(null);
   const [toLocation, setToLocation] = useState<ResolvedLocation | null>(null);
   const [fromText, setFromText] = useState("");
@@ -65,6 +82,18 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     setFromLocation(selectedRoute.from); setToLocation(selectedRoute.to);
     setFromText(selectedRoute.from.name); setToText(selectedRoute.to.name);
   }, [selectedRoute]);
+
+  useEffect(() => {
+    if (!routePrefill) return;
+    requestRef.current += 1;
+    setFromLocation(null);
+    setToLocation(null);
+    setFromText(routePrefill.from);
+    setToText(routePrefill.to);
+    setSuggestions([]);
+    setError(null);
+    setActive(null);
+  }, [routePrefill]);
 
   useEffect(() => {
     setFromLocation((location) => location ? { ...location, name: localizedName(location, language) } : null);

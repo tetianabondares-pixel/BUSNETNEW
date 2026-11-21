@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, Headset } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
+import { contentRecord, contentString, usePublicContent } from "@/lib/public-content";
 import "./FAQSection.css";
 
 const FAQ_ITEMS = ["ticket", "payment", "luggage", "border"] as const;
@@ -9,6 +10,7 @@ const FAQ_ITEMS = ["ticket", "payment", "luggage", "border"] as const;
 export function FAQSection() {
   const { t } = useTranslation();
   const { resolved } = useTheme();
+  const content = usePublicContent("faq");
   const [openItem, setOpenItem] = useState<number | null>(0);
 
   return (
@@ -21,17 +23,17 @@ export function FAQSection() {
       <div className="faq-section__content">
         <div className="faq-section__intro">
           <h2 className="faq-section__title" id="faq-title">
-            {t("faq.title")}
+            {contentString(content, "title", t("faq.title"))}
           </h2>
-          <p className="faq-section__subtitle">{t("faq.subtitle")}</p>
+          <p className="faq-section__subtitle">{contentString(content, "subtitle", t("faq.subtitle"))}</p>
           <aside className="faq-section__support">
             <div className="faq-section__support-icon">
               <Headset aria-hidden="true" size={20} />
             </div>
             <div>
-              <h3>{t("faq.support.title")}</h3>
-              <p>{t("faq.support.description")}</p>
-              <span>{t("faq.support.contactHint")}</span>
+              <h3>{contentString(contentRecord(content?.support), "title", t("faq.support.title"))}</h3>
+              <p>{contentString(contentRecord(content?.support), "description", t("faq.support.description"))}</p>
+              <span>{contentString(contentRecord(content?.support), "contactHint", t("faq.support.contactHint"))}</span>
             </div>
           </aside>
         </div>
@@ -41,6 +43,7 @@ export function FAQSection() {
             const isOpen = openItem === index;
             const buttonId = `faq-question-${item}`;
             const panelId = `faq-answer-${item}`;
+            const itemContent = contentRecord(contentRecord(content?.items)?.[item]);
 
             return (
               <article
@@ -61,7 +64,7 @@ export function FAQSection() {
                     }
                     type="button"
                   >
-                    <span>{t(`faq.items.${item}.question`)}</span>
+                    <span>{contentString(itemContent, "question", t(`faq.items.${item}.question`))}</span>
                     <span className="faq-section__icon" aria-hidden="true">
                       <ChevronDown
                         className="faq-section__chevron"
@@ -80,7 +83,7 @@ export function FAQSection() {
                   role="region"
                 >
                   <div className="faq-section__panel-inner">
-                    <p>{t(`faq.items.${item}.answer`)}</p>
+                    <p>{contentString(itemContent, "answer", t(`faq.items.${item}.answer`))}</p>
                   </div>
                 </div>
               </article>

@@ -77,7 +77,15 @@ export function Header() {
       }}
     >
       {/* Brand Logo */}
-      <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
+      <Link
+        to="/"
+        onClick={(event) => {
+          if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+        }}
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
         <BusnetLogo />
       </Link>
 

@@ -7,6 +7,17 @@ import {
   type ProviderRouteSchedule,
 } from "./schedule-import.ts";
 import { kyivLocalDateTimeToIso } from "./time-zone.js";
+import {
+  normalizeProviderTrip,
+  selectProviderTrip,
+  type NormalizedProviderTrip,
+} from "./trip-normalization.ts";
+import {
+  buildStopsFromRouteSchedule,
+  type RouteLocation,
+  type RouteSchedule,
+  type RouteScheduleStop,
+} from "./route-itinerary.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -31,6 +42,12 @@ function asRecord(value: unknown): JsonRecord | null {
 
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
+}
+
+function isValidIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 type ProviderLogContext = {
@@ -160,34 +177,79 @@ async function resolveProviderLocationId(locationId: string) {
     : { ok: false, status: 404, providerLocationId: null };
 }
 
-function normalizeTrip(value: unknown, index: number) {
-  const sequence = asRecord(value);
-  if (!sequence || sequence.canBook !== true) return null;
+async function loadRouteScheduleItinerary(
+  trip: NormalizedProviderTrip,
+  locale: string,
+) {
+  if (
+    trip.segment_count !== 1 ||
+    !trip.provider_route_id ||
+    !trip.departure_city_id ||
+    !trip.arrival_city_id
+  ) {
+    return { stops: null, errorCode: null };
+  }
 
-  const trips = asArray(sequence.trips).map(asRecord).filter(
-    (trip): trip is JsonRecord => trip !== null,
+  const projectUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!projectUrl || !serviceRoleKey) {
+    return { stops: null, errorCode: "SCHEDULE_LOOKUP_NOT_CONFIGURED" };
+  }
+  const client = createClient(projectUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: schedulesData, error: schedulesError } = await client
+    .from("provider_route_schedules")
+    .select("id, provider_route_id, direction, service_weekday")
+    .eq("provider_route_id", trip.provider_route_id)
+    .eq("active", true);
+  if (schedulesError) {
+    console.error("Provider schedule lookup failed", schedulesError.code);
+    return { stops: null, errorCode: "SCHEDULE_LOOKUP_FAILED" };
+  }
+
+  const schedules = (schedulesData ?? []) as RouteSchedule[];
+  if (schedules.length === 0) {
+    return { stops: null, errorCode: "SCHEDULE_NOT_FOUND" };
+  }
+  const scheduleIds = schedules.map((schedule) => schedule.id);
+  const { data: scheduleStopsData, error: scheduleStopsError } = await client
+    .from("provider_route_schedule_stops")
+    .select("schedule_id, location_id, stop_order, day_offset, departure_time, place")
+    .in("schedule_id", scheduleIds)
+    .order("schedule_id")
+    .order("stop_order");
+  if (scheduleStopsError) {
+    console.error("Provider schedule stops lookup failed", scheduleStopsError.code);
+    return { stops: null, errorCode: "SCHEDULE_LOOKUP_FAILED" };
+  }
+
+  const scheduleStops = (scheduleStopsData ?? []) as RouteScheduleStop[];
+  const locationIds = [...new Set(scheduleStops.map((stop) => stop.location_id))];
+  if (locationIds.length === 0) {
+    return { stops: null, errorCode: "SCHEDULE_STOPS_NOT_FOUND" };
+  }
+  const { data: locationsData, error: locationsError } = await client
+    .from("locations")
+    .select("id, provider_location_id, name_uk, name_en, name_it")
+    .in("id", locationIds)
+    .eq("active", true);
+  if (locationsError) {
+    console.error("Provider schedule locations lookup failed", locationsError.code);
+    return { stops: null, errorCode: "SCHEDULE_LOOKUP_FAILED" };
+  }
+
+  const locations = (locationsData ?? []) as RouteLocation[];
+  const stops = buildStopsFromRouteSchedule(
+    trip,
+    schedules,
+    scheduleStops,
+    locations,
+    locale,
   );
-  const firstTrip = asRecord(sequence.first_trip) ?? trips[0] ?? {};
-  const lastTrip = asRecord(sequence.last_trip) ?? trips[trips.length - 1] ?? firstTrip;
-  const id = firstTrip.id ?? sequence.id ?? `${sequence.departure_date ?? "trip"}-${index}`;
-
   return {
-    trip_id: String(id),
-    carrier: String(firstTrip.carrier_name ?? sequence.carrier_name ?? "AL-TRANS"),
-    bus_number: firstTrip.bus_number == null ? null : String(firstTrip.bus_number),
-    departure_city: String(firstTrip.departure_city ?? ""),
-    departure_place: String(firstTrip.departure_place ?? ""),
-    departure_date: String(sequence.departure_date ?? firstTrip.departure_date ?? ""),
-    departure_time: String(sequence.departure_time ?? firstTrip.departure_time ?? ""),
-    arrival_city: String(lastTrip.arrival_city ?? ""),
-    arrival_place: String(lastTrip.arrival_place ?? ""),
-    arrival_date: String(sequence.arrival_date ?? lastTrip.arrival_date ?? ""),
-    arrival_time: String(sequence.arrival_time ?? lastTrip.arrival_time ?? ""),
-    price: typeof sequence.price === "number" || typeof sequence.price === "string"
-      ? sequence.price
-      : null,
-    currency: String(sequence.currency_code ?? "UAH"),
-    can_book_with_payment_at_boarding: sequence.canBookWithPaymentAtBoarding === true,
+    stops,
+    errorCode: stops ? null : "SCHEDULE_NOT_MATCHED",
   };
 }
 
@@ -452,6 +514,7 @@ Deno.serve(async (request) => {
     const fromLocationId = String(payload.fromLocationId ?? "");
     const toLocationId = String(payload.toLocationId ?? "");
     const travelDate = String(payload.travelDate ?? "");
+    const locale = String(payload.locale ?? "uk");
     const passengersCount = payload.passengersCount ?? 1;
     const currencyCode = String(payload.currencyCode ?? "UAH");
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -464,13 +527,13 @@ Deno.serve(async (request) => {
       !Number.isInteger(passengersCount) ||
       Number(passengersCount) < 1 ||
       Number(passengersCount) > 9 ||
-      !["UAH", "EUR"].includes(currencyCode)
+      !["UAH", "EUR"].includes(currencyCode) ||
+      !["uk", "en", "it"].includes(locale)
     ) {
       return json({ providerError: true, errorCode: "INVALID_SEARCH_PARAMS", trips: [] }, 400);
     }
 
-    const date = new Date(`${travelDate}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== travelDate) {
+    if (!isValidIsoDate(travelDate)) {
       return json({ providerError: true, errorCode: "INVALID_SEARCH_DATE", trips: [] }, 400);
     }
 
@@ -508,29 +571,71 @@ Deno.serve(async (request) => {
       return json({ providerError: true, errorCode: "ALTRANS_INVALID_SEARCH_RESPONSE", trips: [] }, 502);
     }
     const trips = root.trips_sequences
-      .map(normalizeTrip)
+      .map(normalizeProviderTrip)
       .filter((trip): trip is NonNullable<typeof trip> => trip !== null);
-    return json({ providerError: false, trips, searchedAt: new Date().toISOString() });
+    const selectedTrip = selectProviderTrip(
+      trips,
+      travelDate,
+      String(fromCityId),
+      String(toCityId),
+      currencyCode,
+    );
+    if (!selectedTrip) {
+      return json({
+        providerError: false,
+        trip: null,
+        trips: [],
+        searchedAt: new Date().toISOString(),
+      });
+    }
+
+    const scheduleResult = await loadRouteScheduleItinerary(selectedTrip, locale);
+    if (scheduleResult.errorCode) {
+      console.warn("Provider itinerary uses segment endpoints only", scheduleResult.errorCode);
+    }
+    const tripData = { ...selectedTrip };
+    delete tripData.provider_route_id;
+    delete tripData.departure_city_id;
+    delete tripData.arrival_city_id;
+    delete tripData.segment_count;
+    const trip = {
+      ...tripData,
+      stops: scheduleResult.stops ?? selectedTrip.stops,
+      stops_source: scheduleResult.stops ? "provider_route_schedule" : "provider_segments",
+      stops_warning: scheduleResult.errorCode,
+    };
+    return json({
+      providerError: false,
+      trip,
+      trips: [trip],
+      searchedAt: new Date().toISOString(),
+    });
   }
 
   if (operation === "create-booking") {
     const tripId = String(payload.tripId ?? "");
+    const expectedPrice = payload.expectedPrice;
+    const expectedCurrency = String(payload.expectedCurrency ?? "");
     const fromLocationId = String(payload.fromLocationId ?? "");
     const toLocationId = String(payload.toLocationId ?? "");
     const travelDate = String(payload.travelDate ?? "");
     const locale = String(payload.locale ?? "uk");
     const passengers = Array.isArray(payload.passengers) ? payload.passengers : [];
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const hasExpectedPrice = expectedPrice !== undefined && expectedPrice !== null;
 
     if (
       !tripId ||
       !uuidPattern.test(fromLocationId) ||
       !uuidPattern.test(toLocationId) ||
       fromLocationId === toLocationId ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(travelDate) ||
+      !isValidIsoDate(travelDate) ||
       passengers.length < 1 ||
       passengers.length > 9 ||
-      !["uk", "en", "it"].includes(locale)
+      !["uk", "en", "it"].includes(locale) ||
+      (hasExpectedPrice &&
+        (typeof expectedPrice !== "number" || !Number.isFinite(expectedPrice) || expectedPrice < 0)) ||
+      (expectedCurrency !== "" && !["UAH", "EUR"].includes(expectedCurrency))
     ) {
       return json({ errorCode: "INVALID_BOOKING_PARAMS" }, 400);
     }
@@ -587,7 +692,7 @@ Deno.serve(async (request) => {
         arrival_city_id: toCityId,
         depature_date: `${travelDate}T00:00:00`,
         passengers_count: passengers.length,
-        currecny_code: "UAH",
+        currecny_code: expectedCurrency || "UAH",
         enable_external_search: false,
       }),
     }, { routeKey: `${fromLocationId}:${toLocationId}`, travelDate });
@@ -599,14 +704,35 @@ Deno.serve(async (request) => {
       return json({ errorCode: "ALTRANS_INVALID_SEARCH_RESPONSE" }, 502);
     }
     const providerTrip = searchBody.trips_sequences
-      .map(normalizeTrip)
+      .map(normalizeProviderTrip)
       .filter((trip): trip is NonNullable<typeof trip> => trip !== null)
-      .find((trip) => trip.trip_id === tripId);
+      .find((trip) =>
+        trip.trip_id === tripId &&
+        trip.departure_date === travelDate &&
+        trip.departure_city_id === String(fromCityId) &&
+        trip.arrival_city_id === String(toCityId)
+      );
     if (!providerTrip) {
       return json({ errorCode: "TRIP_UNAVAILABLE" }, 409);
     }
+    if (providerTrip.price == null || String(providerTrip.price).trim() === "") {
+      return json({ errorCode: "PRICE_CHANGED" }, 409);
+    }
+    if (!["UAH", "EUR"].includes(providerTrip.currency)) {
+      return json({ errorCode: "UNSUPPORTED_CURRENCY" }, 409);
+    }
     const price = Number(providerTrip.price);
-    if (!Number.isFinite(price) || price < 0) {
+    if (
+      !Number.isFinite(price) ||
+      price < 0 ||
+      !providerTrip.provider_route_id
+    ) {
+      return json({ errorCode: "PRICE_CHANGED" }, 409);
+    }
+    if (
+      (hasExpectedPrice && expectedPrice !== price) ||
+      (expectedCurrency && expectedCurrency !== providerTrip.currency)
+    ) {
       return json({ errorCode: "PRICE_CHANGED" }, 409);
     }
 
@@ -623,8 +749,8 @@ Deno.serve(async (request) => {
       .select("id")
       .eq("from_location_id", fromLocationId)
       .eq("to_location_id", toLocationId)
+      .eq("provider_route_id", providerTrip.provider_route_id)
       .eq("active", true)
-      .order("provider_route_id", { ascending: true })
       .limit(1)
       .maybeSingle();
     if (routeError || !route) {
@@ -663,7 +789,7 @@ Deno.serve(async (request) => {
         passenger_id: userData.user.id,
         trip_id: trip.id,
         status: "pending",
-        currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
+        currency: providerTrip.currency,
         total_amount: price * passengers.length,
         expires_at: expiresAt,
       })
@@ -700,7 +826,7 @@ Deno.serve(async (request) => {
       bookingId: booking.id,
       bookingNumber,
       status: "pending",
-      currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
+      currency: providerTrip.currency,
       totalAmount: price * passengers.length,
       expiresAt,
     });

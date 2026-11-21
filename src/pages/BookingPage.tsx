@@ -3,12 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
-import {
-  deduplicateProviderTrips,
-  deduplicateScheduledServicesByDeparture,
-  getScheduledArrivalDate,
-  type ScheduledService,
-} from "@/features/search/schedule-search";
 
 type ProviderTrip = {
   trip_id: string;
@@ -25,6 +19,14 @@ type ProviderTrip = {
   price: number | string | null;
   currency: string;
   can_book_with_payment_at_boarding: boolean;
+  stops?: Array<{
+    city: string;
+    place: string;
+    arrival_date: string | null;
+    arrival_time: string | null;
+    departure_date: string | null;
+    departure_time: string | null;
+  }>;
 };
 
 type Passenger = {
@@ -57,12 +59,13 @@ export function BookingPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [trips, setTrips] = useState<ScheduledService[]>([]);
-  const [providerTrips, setProviderTrips] = useState<ProviderTrip[]>([]);
+  const [providerTrip, setProviderTrip] = useState<ProviderTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [providerLoading, setProviderLoading] = useState(false);
+  const [providerSearched, setProviderSearched] = useState(false);
   const [error, setError] = useState("");
   const [providerError, setProviderError] = useState("");
+  const [showTripDetails, setShowTripDetails] = useState(false);
   const [routeNames, setRouteNames] = useState({ from: "", to: "" });
   const [selectedTrip, setSelectedTrip] = useState<ProviderTrip | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([{
@@ -134,7 +137,7 @@ export function BookingPage() {
           firstName: String(metadata.firstName ?? metadata.first_name ?? parsedName.firstName),
           lastName: String(metadata.lastName ?? metadata.last_name ?? parsedName.lastName),
           email: user.email ?? current[0].email,
-          phone: String(profile?.phone ?? metadata.phone ?? current[0].phone),
+          phone: String(profile?.phone || metadata.phone || current[0].phone),
         }]);
       } catch {
         if (!cancelled) setProfileLoadError(true);
@@ -146,6 +149,8 @@ export function BookingPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setError("");
+    setRouteNames({ from: "", to: "" });
     if (!fromId || !toId || !date) {
       setError(t("booking.missingSearch"));
       setLoading(false);
@@ -154,12 +159,12 @@ export function BookingPage() {
 
     setLoading(true);
     setError("");
-    setTrips([]);
-    setProviderTrips([]);
+    setProviderTrip(null);
+    setShowTripDetails(false);
     if (!isProviderTrip(pendingTrip)) setSelectedTrip(null);
     setBookingResult(null);
 
-    const searchSchedules = async () => {
+    const loadLocations = async () => {
       try {
         const { data: locations, error: locationError } = await supabase
           .from("locations")
@@ -181,82 +186,8 @@ export function BookingPage() {
               ? location.name_it ?? location.name_en ?? location.name_uk
               : location.name_uk;
 
-        const { data: routes, error: routeError } = await supabase
-          .from("routes")
-          .select("provider_route_id")
-          .eq("from_location_id", fromId)
-          .eq("to_location_id", toId)
-          .eq("active", true)
-          .not("provider_route_id", "is", null);
-        if (routeError) throw routeError;
-
-        const providerRouteIds = [...new Set(
-          (routes ?? []).map((route) => route.provider_route_id).filter(Boolean),
-        )];
-        if (providerRouteIds.length === 0) {
-          if (!cancelled) setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
-          return;
-        }
-
-        const { data: schedules, error: scheduleError } = await supabase
-          .from("provider_route_schedules")
-          .select("id, title, service_weekday")
-          .in("provider_route_id", providerRouteIds)
-          .eq("active", true);
-        if (scheduleError) throw scheduleError;
-
-        const scheduleIds = (schedules ?? []).map((schedule) => schedule.id);
-        if (scheduleIds.length === 0) {
-          if (!cancelled) setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
-          return;
-        }
-
-        const { data: stops, error: stopsError } = await supabase
-          .from("provider_route_schedule_stops")
-          .select("schedule_id, location_id, stop_order, day_offset, departure_time, place")
-          .in("schedule_id", scheduleIds)
-          .in("location_id", [fromId, toId]);
-        if (stopsError) throw stopsError;
-
-        const stopsBySchedule = new Map<string, Array<{
-          location_id: string;
-          stop_order: number;
-          day_offset: number;
-          departure_time: string;
-          place: string | null;
-        }>>();
-        for (const stop of stops ?? []) {
-          const scheduleStops = stopsBySchedule.get(stop.schedule_id) ?? [];
-          scheduleStops.push(stop);
-          stopsBySchedule.set(stop.schedule_id, scheduleStops);
-        }
-
-        const scheduledServices = (schedules ?? []).flatMap((schedule) => {
-          const scheduleStops = stopsBySchedule.get(schedule.id) ?? [];
-          const fromStop = scheduleStops.find((stop) => stop.location_id === fromId);
-          const toStop = scheduleStops.find((stop) => stop.location_id === toId);
-          if (!fromStop || !toStop) return [];
-          const arrivalDate = getScheduledArrivalDate(
-            date,
-            { stopOrder: fromStop.stop_order, dayOffset: fromStop.day_offset },
-            { stopOrder: toStop.stop_order, dayOffset: toStop.day_offset },
-            schedule.service_weekday,
-          );
-          if (!arrivalDate) return [];
-          return [{
-            id: `${schedule.id}:${date}`,
-            departureDate: date,
-            departureTime: fromStop.departure_time.slice(0, 5),
-            departurePlace: fromStop.place,
-            arrivalDate,
-            arrivalTime: toStop.departure_time.slice(0, 5),
-            arrivalPlace: toStop.place,
-          }];
-        });
-
         if (!cancelled) {
           setRouteNames({ from: displayName(fromLocation), to: displayName(toLocation) });
-          setTrips(deduplicateScheduledServicesByDeparture(scheduledServices));
         }
       } catch (caught) {
         if (cancelled) return;
@@ -268,43 +199,57 @@ export function BookingPage() {
       }
     };
 
-    void searchSchedules();
+    void loadLocations();
     return () => { cancelled = true; };
   }, [fromId, toId, date, i18n.language, pendingTrip, t]);
 
   useEffect(() => {
-    if (!fromId || !toId || !date || trips.length === 0) return;
+    setProviderTrip(null);
+    setProviderSearched(false);
+    setProviderError("");
+    if (!fromId || !toId || !date) {
+      setProviderLoading(false);
+      return;
+    }
     let cancelled = false;
     setProviderLoading(true);
-    setProviderError("");
 
-    void supabase.functions.invoke("altrans-adapter", {
-      body: {
-        operation: "search-trips",
-        fromLocationId: fromId,
-        toLocationId: toId,
-        travelDate: date,
-        passengersCount: 1,
-        currencyCode: "UAH",
-      },
-    }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
-        setProviderError(t("booking.providerError"));
-        return;
+    void (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("altrans-adapter", {
+          body: {
+            operation: "search-trips",
+            fromLocationId: fromId,
+            toLocationId: toId,
+            travelDate: date,
+            passengersCount: 1,
+            currencyCode: "UAH",
+            locale: languageOf(i18n.language),
+          },
+        });
+        if (cancelled) return;
+        if (error) {
+          setProviderError(t("booking.providerError"));
+          return;
+        }
+        const response = data as { providerError?: boolean; errorCode?: string; trip?: ProviderTrip | null } | null;
+        if (response?.providerError) {
+          setProviderError(t("booking.providerError"));
+          return;
+        }
+        setProviderTrip(response?.trip && isProviderTrip(response.trip) ? response.trip : null);
+      } catch {
+        if (!cancelled) setProviderError(t("booking.providerError"));
+      } finally {
+        if (!cancelled) {
+          setProviderSearched(true);
+          setProviderLoading(false);
+        }
       }
-      const response = data as { providerError?: boolean; errorCode?: string; trips?: ProviderTrip[] } | null;
-      if (response?.providerError) {
-        setProviderError(t("booking.providerError"));
-        return;
-      }
-      setProviderTrips(deduplicateProviderTrips(response?.trips ?? []));
-    }).finally(() => {
-      if (!cancelled) setProviderLoading(false);
-    });
+    })();
 
     return () => { cancelled = true; };
-  }, [trips, fromId, toId, date, t]);
+  }, [fromId, toId, date, t]);
 
   const updatePassenger = (field: keyof Passenger, value: string) => {
     passengerEditedRef.current = true;
@@ -332,10 +277,27 @@ export function BookingPage() {
     setBookingError("");
     setBookingResult(null);
     try {
+      const { data: updatedProfile, error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({ phone: passengers[0].phone.trim() })
+        .eq("id", userData.user.id)
+        .select("id")
+        .maybeSingle();
+      if (profileUpdateError || !updatedProfile) {
+        console.error(
+          "Passenger booking phone save failed",
+          profileUpdateError?.code ?? "PROFILE_NOT_FOUND",
+        );
+        setBookingError(t("booking.profilePhoneSaveError"));
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("altrans-adapter", {
         body: {
           operation: "create-booking",
           tripId: selectedTrip.trip_id,
+          expectedPrice: selectedTrip.price == null ? null : Number(selectedTrip.price),
+          expectedCurrency: selectedTrip.currency,
           fromLocationId: fromId,
           toLocationId: toId,
           travelDate: date,
@@ -364,6 +326,8 @@ export function BookingPage() {
         setBookingError(
           response?.errorCode === "TRIP_UNAVAILABLE"
             ? t("booking.tripUnavailable")
+            : response?.errorCode === "PRICE_CHANGED"
+              ? t("booking.tripPriceChanged")
             : t("booking.bookingError"),
         );
         return;
@@ -400,27 +364,11 @@ export function BookingPage() {
       {loading && <p style={{ color: tokens.colorTextSecondary }}>{t("booking.loading")}</p>}
       {!loading && error && <p style={{ color: tokens.colorTextSecondary }}>{error}</p>}
 
-      {!loading && !error && trips.length > 0 && (
-        <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
-          <p style={{ color: tokens.colorTextSecondary, margin: 0 }}>{t("booking.scheduleConfirmed")}</p>
-          {trips.map((trip) => (
-            <article key={trip.id} style={{ padding: "14px", borderRadius: "12px", border: `1px solid ${tokens.colorBorder}`, background: tokens.colorBgCard }}>
-              <strong>{routeNames.from} {trip.departureTime}</strong>
-              <div style={{ color: tokens.colorTextSecondary }}>
-                {trip.departurePlace ? `${trip.departurePlace} · ` : ""}{routeNames.to} · {trip.arrivalDate} {trip.arrivalTime}
-                {trip.arrivalPlace ? ` · ${trip.arrivalPlace}` : ""}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {!loading && !error && trips.length === 0 && (
-        <p style={{ color: tokens.colorTextSecondary }}>{t("booking.notFound")}</p>
-      )}
-
       {providerLoading && <p style={{ color: tokens.colorTextSecondary }}>{t("booking.loadingLive")}</p>}
       {providerError && <p style={{ color: tokens.colorWarning }}>{providerError}</p>}
+      {providerSearched && !providerLoading && !providerError && !providerTrip && (
+        <p style={{ color: tokens.colorTextSecondary }}>{t("booking.noProviderTrips")}</p>
+      )}
       {profileLoadError && selectedTrip && (
         <p role="status" style={{ color: tokens.colorWarning }}>{t("booking.profileLoadError")}</p>
       )}
@@ -439,36 +387,59 @@ export function BookingPage() {
         </div>
       )}
 
-      {!providerLoading && providerTrips.length > 0 && (
+      {!providerLoading && providerTrip && (
         <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
           <h2 style={{ fontSize: "1.1rem", margin: "8px 0 0" }}>{t("booking.availableTrips")}</h2>
-          {providerTrips.map((trip) => {
-            const price = trip.price == null ? null : Number(trip.price);
-            return (
+          <article style={{ padding: "16px", borderRadius: "14px", border: `2px solid ${tokens.colorBorder}`, background: tokens.colorBgCard, color: tokens.colorText }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+              <strong>{providerTrip.departure_time} → {providerTrip.arrival_time}</strong>
+              <strong>
+                {providerTrip.price == null
+                  ? t("booking.priceUnavailable")
+                  : `${Number(providerTrip.price)} ${providerTrip.currency}`}
+              </strong>
+            </div>
+            <div style={{ color: tokens.colorTextSecondary, marginTop: "6px" }}>
+              {providerTrip.carrier}{providerTrip.bus_number ? ` · ${providerTrip.bus_number}` : ""}
+            </div>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "14px" }}>
               <button
-                key={trip.trip_id}
                 type="button"
-                onClick={() => { setSelectedTrip(trip); setBookingResult(null); setBookingError(""); }}
-                style={{
-                  textAlign: "left",
-                  padding: "16px",
-                  borderRadius: "14px",
-                  border: `2px solid ${selectedTrip?.trip_id === trip.trip_id ? "#087DFF" : tokens.colorBorder}`,
-                  background: tokens.colorBgCard,
-                  color: tokens.colorText,
-                  cursor: "pointer",
-                }}
+                aria-expanded={showTripDetails}
+                onClick={() => setShowTripDetails((showDetails) => !showDetails)}
+                style={{ padding: "9px 14px", border: `1px solid ${tokens.colorBorder}`, borderRadius: "9px", background: "transparent", color: tokens.colorText, fontWeight: 700, cursor: "pointer" }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
-                  <strong>{trip.departure_time} → {trip.arrival_time}</strong>
-                  <strong>{price == null ? t("booking.priceUnavailable") : `${price} ${trip.currency}`}</strong>
-                </div>
-                <div style={{ color: tokens.colorTextSecondary, marginTop: "6px" }}>
-                  {trip.carrier}{trip.bus_number ? ` · ${trip.bus_number}` : ""}
-                </div>
+                {showTripDetails ? t("booking.hideDetails") : t("booking.showDetails")}
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={() => { setSelectedTrip(providerTrip); setBookingResult(null); setBookingError(""); }}
+                style={{ padding: "9px 14px", border: 0, borderRadius: "9px", background: "#087DFF", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+              >
+                {t("booking.bookTrip")}
+              </button>
+            </div>
+            {showTripDetails && (
+              <ol style={{ display: "grid", gap: "14px", margin: "18px 0 0", paddingLeft: "24px" }}>
+                {(providerTrip.stops ?? []).map((stop, index) => (
+                  <li key={`${stop.city}-${index}`} style={{ paddingLeft: "4px" }}>
+                    <strong>{stop.city}</strong>
+                    {stop.place && <div style={{ color: tokens.colorTextSecondary }}>{stop.place}</div>}
+                    {stop.arrival_time && (
+                      <div style={{ color: tokens.colorTextSecondary }}>
+                        {t("booking.stopArrival")}: {[stop.arrival_date, stop.arrival_time].filter(Boolean).join(" ")}
+                      </div>
+                    )}
+                    {stop.departure_time && (
+                      <div style={{ color: tokens.colorTextSecondary }}>
+                        {t("booking.stopDeparture")}: {[stop.departure_date, stop.departure_time].filter(Boolean).join(" ")}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </article>
         </div>
       )}
 

@@ -2,11 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Check, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
+import { contentString, usePublicContent } from "@/lib/public-content";
 import "./FinalCta.css";
 
 export function FinalCta() {
   const { t } = useTranslation();
   const { resolved } = useTheme();
+  const content = usePublicContent("finalCta");
   const navigate = useNavigate();
 
   const focusSearch = () => {
@@ -25,17 +27,17 @@ export function FinalCta() {
       <div className="final-cta__glow final-cta__glow--two" aria-hidden="true" />
       <div className="final-cta__inner">
         <div className="final-cta__copy">
-          <h2 id="final-cta-title">{t("finalCta.title")}</h2>
-          <p>{t("finalCta.subtitle")}</p>
+          <h2 id="final-cta-title">{contentString(content, "title", t("finalCta.title"))}</h2>
+          <p>{contentString(content, "subtitle", t("finalCta.subtitle"))}</p>
           <ul className="final-cta__benefits" aria-label={t("finalCta.benefitsLabel")}>
-            <li><Check size={15} aria-hidden="true" /> {t("finalCta.routes")}</li>
-            <li><Check size={15} aria-hidden="true" /> {t("finalCta.cancellation")}</li>
-            <li><Check size={15} aria-hidden="true" /> {t("finalCta.support")}</li>
+            <li><Check size={15} aria-hidden="true" /> {contentString(content, "routes", t("finalCta.routes"))}</li>
+            <li><Check size={15} aria-hidden="true" /> {contentString(content, "cancellation", t("finalCta.cancellation"))}</li>
+            <li><Check size={15} aria-hidden="true" /> {contentString(content, "support", t("finalCta.support"))}</li>
           </ul>
         </div>
         <button className="final-cta__button" type="button" onClick={focusSearch}>
           <Search size={19} aria-hidden="true" />
-          <span>{t("finalCta.action")}</span>
+          <span>{contentString(content, "action", t("finalCta.action"))}</span>
           <ArrowRight className="final-cta__arrow" size={18} aria-hidden="true" />
         </button>
       </div>

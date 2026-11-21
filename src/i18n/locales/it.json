@@ -9,6 +9,10 @@
     "heroTitle2": "di quanto pensi",
     "heroSubtitle": "Trova il viaggio · Prenota online · Paga alla salita"
   },
+  "maintenance": {
+    "title": "BUSNET è temporaneamente non disponibile",
+    "description": "Il sito è in manutenzione. Riprova più tardi."
+  },
   "backToTop": {
     "label": "Torna all'inizio"
   },
@@ -164,13 +168,79 @@
     "providerLogs": "Registro richieste del fornitore",
     "noProviderLogs": "Nessuna richiesta al fornitore.",
     "searchRoutes": "Cerca tratta",
+    "searchLocations": "Cerca città o alias",
+    "locationsSubtitle": "Città, localizzazioni e ID fornitore",
+    "noLocations": "Nessuna località trovata.",
+    "editLocalization": "Modifica localizzazione",
+    "aliases": "Alias (separati da virgola)",
+    "invalidLocation": "Il nome ucraino della città è obbligatorio.",
+    "scheduleDetails": "Mostra fermate",
+    "weekday": "Giorno",
+    "dayOffset": "giorni",
+    "scheduleDisclaimer": "Un orario settimanale è un candidato di disponibilità, non una conferma dei posti o del prezzo finale.",
     "noRoutes": "Nessuna tratta trovata.",
     "popularSubtitle": "Gestisci le destinazioni popolari della home",
     "contentSubtitle": "Contenuti pubblici localizzati",
+    "contentStructureHint": "Chiavi supportate: finalCta, faq, howItWorks e footer. Il JSON configura titoli e testi; FAQ usa items e support, howItWorks un array steps. I campi mancanti mantengono le traduzioni predefinite.",
     "auditSubtitle": "Registro delle azioni amministrative",
     "noPopular": "Nessuna destinazione popolare.",
     "noContent": "Contenuto pubblico non configurato.",
     "noAudit": "Nessuna azione amministrativa.",
+    "loadFailed": "Impossibile caricare i dati. Aggiorna la pagina e riprova.",
+    "actionFailed": "Operazione non riuscita. Verifica i permessi e riprova.",
+    "actionSucceeded": "Modifiche salvate.",
+    "auditWriteFailed": "Sincronizzazione completata, ma non è stato possibile salvare l'evento di audit.",
+    "invalidSettings": "Controlla i valori delle impostazioni.",
+    "allStatuses": "Tutti gli stati",
+    "allLocales": "Tutte le lingue",
+    "fromDate": "Dalla data",
+    "toDate": "Alla data",
+    "bookingDetails": "Dettagli del viaggio",
+    "pagination": "Pagine dei risultati",
+    "previous": "Precedente",
+    "next": "Successiva",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "delete": "Elimina",
+    "confirmDeletePopular": "Eliminare questa tratta popolare?",
+    "confirmDeleteContent": "Eliminare questo contenuto?",
+    "unsupportedContentKey": "Scegli una chiave supportata e inserisci un oggetto JSON.",
+    "rejectCancellation": "Rifiuta richiesta",
+    "resolutionNote": "Nota decisione (facoltativa)",
+    "unassigned": "Non assegnata",
+    "installApp": "Installa app",
+    "enableNotifications": "Attiva notifiche",
+    "notifications": "Notifiche",
+    "noNotifications": "Nessun nuovo evento.",
+    "settingsSubtitle": "Parametri operativi BUSNET",
+    "saveSettings": "Salva impostazioni",
+    "settings": {
+      "timezone": "Fuso orario",
+      "expirationMinutes": "Scadenza prenotazione, minuti",
+      "currencies": "Valute supportate (separate da virgola)",
+      "maxPassengers": "Numero massimo di passeggeri",
+      "defaultLocale": "Lingua predefinita",
+      "supportEmail": "Email supporto",
+      "supportPhone": "Telefono supporto",
+      "maintenanceMode": "Modalità manutenzione",
+      "runtimeNote": "Le impostazioni vengono salvate. Il comportamento di prenotazione e del sito pubblico deve ancora essere collegato a questi valori."
+    },
+    "status": {
+      "pending": "In attesa",
+      "confirmed": "Confermata",
+      "cancelled": "Annullata",
+      "expired": "Scaduta",
+      "refunded": "Rimborsata"
+    },
+    "cancellationStatus": {
+      "new": "Nuova",
+      "in_progress": "In esame",
+      "resolved": "Risolta"
+    },
+    "cancellationResolution": {
+      "approved": "approvata",
+      "rejected": "rifiutata"
+    },
     "addPopular": "Aggiungi destinazione",
     "route": "Tratta",
     "locale": "Lingua",
@@ -192,6 +262,7 @@
       "cancellations": "Annullamenti",
       "catalog": "Catalogo",
       "routes": "Tratte",
+      "locations": "Località",
       "popular": "Popolari",
       "content": "Contenuti",
       "audit": "Audit"
@@ -203,7 +274,12 @@
       "cancellations": "Richieste di annullamento",
       "locations": "Città",
       "routes": "Tratte attive",
-      "schedules": "Orari"
+      "schedules": "Orari",
+      "cancelled": "Annullate",
+      "expired": "Scadute",
+      "refunded": "Rimborsate",
+      "passengers": "Passeggeri",
+      "providerErrors": "Errori fornitore"
     },
     "table": {
       "booking": "Prenotazione",
@@ -226,7 +302,21 @@
       "contentKey": "Chiave contenuto",
       "updated": "Aggiornato",
       "action": "Azione",
-      "target": "Oggetto"
+      "target": "Oggetto",
+      "provider": "Fornitore",
+      "travelDate": "Data viaggio",
+      "completed": "Completata",
+      "bookingCount": "Prenotazioni",
+      "latestBooking": "Ultima prenotazione",
+      "tripId": "ID viaggio",
+      "expires": "Scade",
+      "confirmed": "Confermata",
+      "actor": "Autore",
+      "details": "Dettagli",
+      "assignedTo": "Assegnata a",
+      "location": "Località",
+      "country": "Paese",
+      "coordinates": "Coordinate"
     }
   },
   "passengerAuth": {
@@ -283,9 +373,14 @@
     "locationAmbiguous": "Più città hanno questo nome. Specifica la città.",
     "sameLocation": "La partenza e la destinazione devono essere città diverse.",
     "trip": "Viaggio",
-    "scheduleConfirmed": "Corsa dall'orario settimanale",
     "loadingLive": "Conferma dei viaggi con il fornitore…",
     "availableTrips": "Viaggi disponibili",
+    "noProviderTrips": "AL-TRANS non ha trovato corse disponibili per questa data.",
+    "showDetails": "Dettagli del percorso",
+    "hideDetails": "Nascondi dettagli",
+    "bookTrip": "Prenota",
+    "stopArrival": "Arrivo",
+    "stopDeparture": "Partenza",
     "priceUnavailable": "Prezzo non disponibile",
     "passengerDetails": "Dati del passeggero",
     "checkingAccount": "Verifica dell’accesso…",
@@ -296,6 +391,7 @@
     "email": "Email",
     "phone": "Telefono",
     "profileLoadError": "Impossibile caricare i dati di contatto salvati. Compila il modulo manualmente.",
+    "profilePhoneSaveError": "Impossibile salvare il numero di telefono nel profilo. Controlla il profilo e riprova.",
     "confirmBooking": "Invia la richiesta a BUSNET",
     "bookingLoading": "Invio della richiesta…",
     "bookingCreated": "Richiesta ricevuta da BUSNET",
@@ -304,7 +400,8 @@
     "total": "Totale",
     "expiresAt": "Valida fino al",
     "bookingError": "Impossibile creare la prenotazione. Riprova più tardi.",
-    "tripUnavailable": "Questo viaggio non è più disponibile. Scegline un altro."
+    "tripUnavailable": "Questo viaggio non è più disponibile. Scegline un altro.",
+    "tripPriceChanged": "Il prezzo del viaggio è cambiato. Aggiorna la ricerca e riprova."
   },
   "popularDestinations": {
     "title": "Destinazioni popolari",
@@ -416,6 +513,7 @@
       "saving": "Salvataggio…",
       "saved": "Profilo aggiornato.",
       "emailConfirmation": "Modifiche salvate. Conferma il nuovo indirizzo email tramite il link inviato.",
+      "languageChangeError": "Impossibile cambiare la lingua dell’interfaccia.",
       "saveError": "Impossibile salvare il profilo. Controlla i dati e riprova."
     },
     "cancellation": {
