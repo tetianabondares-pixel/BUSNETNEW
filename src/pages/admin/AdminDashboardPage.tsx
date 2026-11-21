@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -44,7 +44,7 @@ const ADMIN_PATHS: Record<string, Tab> = {
 const ROLE_TABS: Record<AdminRole, Tab[]> = {
   super_admin: ["overview", "bookings", "passengers", "cancellations", "catalog", "routes", "locations", "popular", "content", "audit", "settings"],
   admin: ["overview", "bookings", "passengers", "cancellations", "catalog", "routes", "locations", "popular", "content", "audit", "settings"],
-  content_manager: ["popular", "content"],
+  content_manager: ["locations", "popular", "content"],
   support: ["overview", "bookings", "passengers", "cancellations", "audit"],
   provider_operator: ["catalog", "routes", "locations"],
 };
@@ -270,6 +270,8 @@ export function AdminDashboardPage() {
   const [routeSearch, setRouteSearch] = useState("");
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [locationSearch, setLocationSearch] = useState("");
+  const [editingLocationId, setEditingLocationId] = useState("");
+  const [locationDraft, setLocationDraft] = useState({ name_uk: "", name_en: "", name_it: "", aliases: "" });
   const [popularRoutes, setPopularRoutes] = useState<PopularRouteRow[]>([]);
   const [publicContent, setPublicContent] = useState<PublicContentRow[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditRow[]>([]);
@@ -283,10 +285,20 @@ export function AdminDashboardPage() {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
+  const [bookingEditing, setBookingEditing] = useState(false);
+  const [bookingEditDraft, setBookingEditDraft] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+  });
+  const [bookingEditSaving, setBookingEditSaving] = useState(false);
+  const [cancellationRequestReason, setCancellationRequestReason] = useState("");
+  const [cancellationRequestSaving, setCancellationRequestSaving] = useState(false);
   const [passengerComment, setPassengerComment] = useState("");
   const [passengerRating, setPassengerRating] = useState(0);
   const [tripCompleted, setTripCompleted] = useState(false);
   const [interactionSaving, setInteractionSaving] = useState(false);
+  const interactionLoadRequestRef = useRef(0);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [settingsDraft, setSettingsDraft] = useState({
     timezone: "Europe/Kyiv",
@@ -373,7 +385,7 @@ export function AdminDashboardPage() {
         super_admin: [loadStats, loadBookings, loadNotifications, loadPassengers, loadCancellations, loadSupportAgents, loadProviderLogs, loadRoutes, loadLocations, loadPopularRoutes, loadPublicContent, loadAuditLogs, loadSettings],
         admin: [loadStats, loadBookings, loadNotifications, loadPassengers, loadCancellations, loadSupportAgents, loadProviderLogs, loadRoutes, loadLocations, loadPopularRoutes, loadPublicContent, loadAuditLogs, loadSettings],
         support: [loadStats, loadBookings, loadNotifications, loadPassengers, loadCancellations, loadSupportAgents, loadAuditLogs],
-        content_manager: [loadPopularRoutes, loadPublicContent],
+        content_manager: [loadLocations, loadPopularRoutes, loadPublicContent],
         provider_operator: [loadProviderLogs, loadRoutes, loadLocations],
       };
       await Promise.allSettled((roleSections[profile.role as AdminRole] ?? []).map((load) => load()));
@@ -702,6 +714,39 @@ export function AdminDashboardPage() {
     }
     setLoadErrors((current) => ({ ...current, locations: undefined }));
     setLocations(data as unknown as LocationRow[]);
+  };
+
+  const beginLocationEdit = (locationRow: LocationRow) => {
+    setEditingLocationId(locationRow.id);
+    setLocationDraft({
+      name_uk: locationRow.name_uk,
+      name_en: locationRow.name_en ?? "",
+      name_it: locationRow.name_it ?? "",
+      aliases: locationRow.aliases.join(", "),
+    });
+  };
+
+  const saveLocationLocalization = async (locationId: string) => {
+    const nameUk = locationDraft.name_uk.trim();
+    const aliases = [...new Set(locationDraft.aliases.split(",").map((alias) => alias.trim()).filter(Boolean))];
+    if (!nameUk) {
+      setActionMessage(t("admin.invalidLocation"));
+      return;
+    }
+    const { error } = await supabase.from("locations").update({
+      name_uk: nameUk,
+      name_en: locationDraft.name_en.trim() || null,
+      name_it: locationDraft.name_it.trim() || null,
+      aliases,
+      normalized_name: nameUk.normalize("NFC").toLocaleLowerCase("uk-UA"),
+    }).eq("id", locationId);
+    if (error) {
+      setActionMessage(t("admin.actionFailed"));
+      return;
+    }
+    setEditingLocationId("");
+    setActionMessage(t("admin.actionSucceeded"));
+    await loadLocations();
   };
 
   const loadPopularRoutes = async () => {
@@ -1087,7 +1132,19 @@ export function AdminDashboardPage() {
   };
 
   const openBooking = (booking: BookingRow) => {
+    const passenger = booking.booking_passengers?.[0];
+    const requestId = ++interactionLoadRequestRef.current;
     setSelectedBooking(booking);
+    setBookingEditing(false);
+    setBookingEditDraft({
+      fullName: passenger?.full_name ?? "",
+      email: passenger?.email ?? "",
+      phone: passenger?.phone ?? "",
+    });
+    setCancellationRequestReason("");
+    setPassengerComment("");
+    setPassengerRating(0);
+    setTripCompleted(false);
     void (async () => {
       const { data } = await supabase
         .from("passenger_interactions")
@@ -1096,6 +1153,7 @@ export function AdminDashboardPage() {
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (requestId !== interactionLoadRequestRef.current) return;
       setTripCompleted(Boolean(data?.trip_completed));
       setPassengerRating(Number(data?.rating ?? 0));
       setPassengerComment(String(data?.comment ?? ""));
@@ -1145,6 +1203,53 @@ export function AdminDashboardPage() {
       return;
     }
     setActionMessage(t("admin.actionSucceeded"));
+  };
+
+  const saveBookingPassenger = async () => {
+    if (!selectedBooking) return;
+    setBookingEditSaving(true);
+    const { error } = await supabase.rpc("admin_update_booking_passenger", {
+      p_booking_id: selectedBooking.id,
+      p_full_name: bookingEditDraft.fullName.trim(),
+      p_email: bookingEditDraft.email.trim() || null,
+      p_phone: bookingEditDraft.phone.trim() || null,
+    });
+    setBookingEditSaving(false);
+    if (error) {
+      setActionMessage(t("admin.actionFailed"));
+      return;
+    }
+    setSelectedBooking((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        booking_passengers: [{
+          full_name: bookingEditDraft.fullName.trim(),
+          email: bookingEditDraft.email.trim() || null,
+          phone: bookingEditDraft.phone.trim() || null,
+        }],
+      };
+    });
+    setBookingEditing(false);
+    setActionMessage(t("admin.actionSucceeded"));
+    await Promise.all([loadBookings(), loadPassengers()]);
+  };
+
+  const requestBookingCancellation = async () => {
+    if (!selectedBooking) return;
+    setCancellationRequestSaving(true);
+    const { error } = await supabase.rpc("admin_request_booking_cancellation", {
+      p_booking_id: selectedBooking.id,
+      p_reason: cancellationRequestReason.trim() || null,
+    });
+    setCancellationRequestSaving(false);
+    if (error) {
+      setActionMessage(t("admin.actionFailed"));
+      return;
+    }
+    setCancellationRequestReason("");
+    setActionMessage("Запит на скасування передано диспетчеру");
+    await Promise.all([loadCancellations(), loadBookings(), loadStats(), loadAuditLogs()]);
   };
 
   const installApp = async () => {
@@ -1217,7 +1322,7 @@ export function AdminDashboardPage() {
     { id: "cancellations", label: t("admin.tabs.cancellations"), icon: TicketCheck, roles: ["super_admin", "admin", "support"] },
     { id: "catalog", label: t("admin.tabs.catalog"), icon: RefreshCw, roles: ["super_admin", "admin", "provider_operator"] },
     { id: "routes", label: t("admin.tabs.routes"), icon: MapIcon, roles: ["super_admin", "admin", "provider_operator"] },
-    { id: "locations", label: t("admin.tabs.locations"), icon: MapIcon, roles: ["super_admin", "admin", "provider_operator"] },
+    { id: "locations", label: t("admin.tabs.locations"), icon: MapIcon, roles: ["super_admin", "admin", "content_manager", "provider_operator"] },
     { id: "popular", label: t("admin.tabs.popular"), icon: BookOpen, roles: ["super_admin", "admin", "content_manager"] },
     { id: "content", label: t("admin.tabs.content"), icon: Settings, roles: ["super_admin", "admin", "content_manager"] },
     { id: "audit", label: t("admin.tabs.audit"), icon: Users, roles: ["super_admin", "admin", "support"] },
@@ -1333,7 +1438,7 @@ export function AdminDashboardPage() {
               </div>
               {loadErrors.bookings
                 ? <p className="admin-dashboard__error" role="alert">{loadErrors.bookings}</p>
-                : <BookingTable bookings={bookings.slice(0, 5)} onStatusChange={updateBookingStatus} onOpen={openBooking} t={t} />}
+                : <BookingTable bookings={bookings.slice(0, 5)} onStatusChange={updateBookingStatus} onOpen={openBooking} canManageStatus={["super_admin", "admin"].includes(role)} t={t} />}
             </div>
           </>
         )}
@@ -1362,7 +1467,7 @@ export function AdminDashboardPage() {
             <div className="admin-dashboard__panel">
               {loadErrors.bookings
                 ? <p className="admin-dashboard__error" role="alert">{loadErrors.bookings}</p>
-                : <BookingTable bookings={filteredBookings} onStatusChange={updateBookingStatus} onOpen={openBooking} t={t} />}
+                : <BookingTable bookings={filteredBookings} onStatusChange={updateBookingStatus} onOpen={openBooking} canManageStatus={["super_admin", "admin"].includes(role)} t={t} />}
               <Pagination page={bookingPage} total={bookingTotal} pageSize={50} onPageChange={setBookingPage} t={t} />
             </div>
           </>
@@ -1609,7 +1714,28 @@ export function AdminDashboardPage() {
                     <tbody>
                       {filteredLocations.map((locationRow) => (
                         <tr key={locationRow.id}>
-                          <td><strong>{locationRow.name_uk}</strong><span>{locationRow.aliases.join(", ") || "—"}</span></td>
+                          <td>
+                            <strong>{locationRow.name_uk}</strong>
+                            <span>{locationRow.aliases.join(", ") || "—"}</span>
+                            {["super_admin", "admin", "content_manager"].includes(role) && (
+                              <details onToggle={(event) => {
+                                if (event.currentTarget.open && editingLocationId !== locationRow.id) {
+                                  beginLocationEdit(locationRow);
+                                }
+                              }}>
+                                <summary>{t("admin.editLocalization")}</summary>
+                                {editingLocationId === locationRow.id && (
+                                  <div className="admin-dashboard__location-editor">
+                                    <label>UK<input value={locationDraft.name_uk} onChange={(event) => setLocationDraft((current) => ({ ...current, name_uk: event.target.value }))} /></label>
+                                    <label>EN<input value={locationDraft.name_en} onChange={(event) => setLocationDraft((current) => ({ ...current, name_en: event.target.value }))} /></label>
+                                    <label>IT<input value={locationDraft.name_it} onChange={(event) => setLocationDraft((current) => ({ ...current, name_it: event.target.value }))} /></label>
+                                    <label>{t("admin.aliases")}<input value={locationDraft.aliases} onChange={(event) => setLocationDraft((current) => ({ ...current, aliases: event.target.value }))} /></label>
+                                    <button type="button" onClick={() => void saveLocationLocalization(locationRow.id)}>{t("admin.saveContent")}</button>
+                                  </div>
+                                )}
+                              </details>
+                            )}
+                          </td>
                           <td>{locationRow.name_uk} / {locationRow.name_en ?? "—"} / {locationRow.name_it ?? "—"}</td>
                           <td>{locationRow.provider_location_id ?? "—"}</td>
                           <td>{locationRow.country_code ?? "—"}</td>
@@ -1861,7 +1987,7 @@ export function AdminDashboardPage() {
                     </div>
 
                     <div className="admin-dashboard__modal-actions">
-                      {selectedBooking.status === "pending" && (
+                      {["super_admin", "admin"].includes(role) && selectedBooking.status === "pending" && (
                         <button
                           type="button"
                           onClick={() => void updateBookingStatus(selectedBooking.id, "confirmed").then((ok) => {
@@ -1871,20 +1997,70 @@ export function AdminDashboardPage() {
                           Підтвердити бронювання
                         </button>
                       )}
-                      {["pending", "confirmed"].includes(selectedBooking.status) && (
+                      {["super_admin", "admin"].includes(role) && ["pending", "confirmed"].includes(selectedBooking.status) && (
                         <button
                           className="is-danger"
                           type="button"
-                          onClick={() => {
-                            if (window.confirm("Скасувати бронювання та змінити його статус на «Скасовано»?")) {
-                              void updateBookingStatus(selectedBooking.id, "cancelled").then((ok) => {
-                                if (ok) setSelectedBooking((current) => current ? { ...current, status: "cancelled" } : null);
-                              });
-                            }
-                          }}
+                          onClick={() => void requestBookingCancellation()}
                         >
-                          Скасувати бронювання
+                          Запросити скасування
                         </button>
+                      )}
+                    </div>
+
+                    {["pending", "confirmed"].includes(selectedBooking.status) && (
+                      <div className="admin-dashboard__cancellation-request">
+                        <label>
+                          Причина скасування для диспетчера
+                          <textarea
+                            maxLength={1000}
+                            onChange={(event) => setCancellationRequestReason(event.target.value)}
+                            placeholder="Наприклад: пасажир попросив перенести або скасувати поїздку"
+                            value={cancellationRequestReason}
+                          />
+                        </label>
+                        {cancellationRequestSaving && <p>Створюємо запит...</p>}
+                      </div>
+                    )}
+
+                    <div className="admin-dashboard__booking-edit">
+                      {!bookingEditing ? (
+                        <button type="button" onClick={() => setBookingEditing(true)}>
+                          Редагувати пасажира
+                        </button>
+                      ) : (
+                        <>
+                          <h3>Редагування пасажира</h3>
+                          <label>
+                            Ім’я та прізвище
+                            <input
+                              value={bookingEditDraft.fullName}
+                              onChange={(event) => setBookingEditDraft((current) => ({ ...current, fullName: event.target.value }))}
+                            />
+                          </label>
+                          <label>
+                            Email
+                            <input
+                              type="email"
+                              value={bookingEditDraft.email}
+                              onChange={(event) => setBookingEditDraft((current) => ({ ...current, email: event.target.value }))}
+                            />
+                          </label>
+                          <label>
+                            Телефон
+                            <input
+                              type="tel"
+                              value={bookingEditDraft.phone}
+                              onChange={(event) => setBookingEditDraft((current) => ({ ...current, phone: event.target.value }))}
+                            />
+                          </label>
+                          <div className="admin-dashboard__modal-actions">
+                            <button type="button" disabled={bookingEditSaving} onClick={() => void saveBookingPassenger()}>
+                              {bookingEditSaving ? "Збереження..." : "Зберегти"}
+                            </button>
+                            <button type="button" onClick={() => setBookingEditing(false)}>Скасувати редагування</button>
+                          </div>
+                        </>
                       )}
                     </div>
 
@@ -1943,11 +2119,13 @@ function BookingTable({
   bookings,
   onStatusChange,
   onOpen,
+  canManageStatus,
   t,
 }: {
   bookings: BookingRow[];
   onStatusChange: (id: string, status: BookingRow["status"]) => Promise<boolean>;
   onOpen: (booking: BookingRow) => void;
+  canManageStatus: boolean;
   t: (key: string) => string;
 }) {
   if (bookings.length === 0) return <p className="admin-dashboard__empty">{t("admin.noBookings")}</p>;
@@ -1983,13 +2161,13 @@ function BookingTable({
                   <div className="admin-dashboard__actions">
                     <button type="button" onClick={() => onOpen(booking)}>Відкрити</button>
                   </div>
-                  {booking.status === "pending" && (
+                  {canManageStatus && booking.status === "pending" && (
                     <div className="admin-dashboard__actions">
                       <button type="button" onClick={() => void onStatusChange(booking.id, "confirmed")}>{t("admin.confirm")}</button>
                       <button type="button" onClick={() => void onStatusChange(booking.id, "cancelled")}>{t("admin.cancel")}</button>
                     </div>
                   )}
-                  {booking.status === "confirmed" && (
+                  {canManageStatus && booking.status === "confirmed" && (
                     <button type="button" onClick={() => void onStatusChange(booking.id, "cancelled")}>{t("admin.cancel")}</button>
                   )}
                 </td>

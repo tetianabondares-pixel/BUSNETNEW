@@ -893,6 +893,47 @@ html[data-theme="dark"] .admin-dashboard__table tr.is-selected {
   font-size: .95rem;
 }
 
+.admin-dashboard__cancellation-request,
+.admin-dashboard__booking-edit {
+  display: grid;
+  gap: .75rem;
+  margin: 0 1.25rem 1.25rem;
+  padding: 1rem;
+  border: 1px solid #e6edf6;
+  border-radius: 14px;
+}
+
+.admin-dashboard__booking-edit h3 {
+  margin: 0;
+  font-size: .95rem;
+}
+
+.admin-dashboard__cancellation-request label,
+.admin-dashboard__booking-edit label {
+  display: grid;
+  gap: .45rem;
+  color: #475467;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.admin-dashboard__cancellation-request textarea,
+.admin-dashboard__booking-edit input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: .75rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  background: #fff;
+  color: #101828;
+}
+
+.admin-dashboard__cancellation-request textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
 .admin-dashboard__passenger-review label {
   display: grid;
   gap: .45rem;
