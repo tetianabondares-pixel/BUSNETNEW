@@ -1333,9 +1333,18 @@ export function AdminDashboardPage() {
   return (
     <main className="admin-dashboard">
       <aside className="admin-dashboard__sidebar">
-        <div>
-          <p className="admin-dashboard__eyebrow">BUSNET UA</p>
-          <h1>{t("admin.dashboard")}</h1>
+        <div className="admin-dashboard__brand">
+          <img
+            src="/icons/busnet-192.png"
+            alt=""
+            aria-hidden="true"
+            width={40}
+            height={40}
+          />
+          <div>
+            <p className="admin-dashboard__eyebrow">BUSNET UA</p>
+            <h1>{t("admin.dashboard")}</h1>
+          </div>
         </div>
         <nav aria-label={t("admin.navigation")}>
           {navItems.map(({ id, label, icon: Icon }) => (

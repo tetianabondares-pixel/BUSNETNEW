@@ -23,49 +23,32 @@ export function BusnetLogo({ className = "" }: Props) {
         userSelect: "none",
       }}
     >
-      {/* Aerodynamic Bus Icon with Tech Orbit */}
       <div
         style={{
-          width: "40px",
-          height: "40px",
+          width: "48px",
+          height: "48px",
           borderRadius: "10px",
-          background: isDark
-            ? "rgba(8, 125, 255, 0.12)"
-            : "rgba(8, 125, 255, 0.08)",
+          background: "#fff",
           border: `1px solid ${isDark ? "rgba(56, 189, 248, 0.25)" : "rgba(8, 125, 255, 0.2)"}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "grid",
+          placeItems: "center",
+          overflow: "hidden",
           boxShadow: isDark
             ? "0 0 16px rgba(8, 125, 255, 0.2)"
             : "0 2px 8px rgba(8, 125, 255, 0.1)",
           transition: "all 200ms ease",
         }}
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={isDark ? "#38BDF8" : "#087DFF"}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {/* Aerodynamic Bus Body */}
-          <path d="M 4 6 C 4 4.5 5.5 3.5 7 3.5 H 17 C 19 3.5 20.5 5 21 7.5 L 21.5 13 C 21.5 14.5 20.5 15.5 19 15.5 H 5 C 4 15.5 3.5 14.8 3.5 14 V 7 C 3.5 6.5 3.7 6.2 4 6 Z" />
-          {/* Windshield & Windows */}
-          <path d="M 6 6.5 H 11 V 10.5 H 5 V 7.5 C 5 7 5.5 6.5 6 6.5 Z" />
-          <path d="M 13 6.5 H 18.5 C 19.2 6.5 19.8 7.2 20 8 L 20 10.5 H 13 V 6.5 Z" />
-          {/* Headlight */}
-          <circle cx="19.5" cy="13.5" r="0.8" fill={isDark ? "#38BDF8" : "#087DFF"} />
-          {/* Wheels */}
-          <circle cx="7" cy="16.5" r="2" fill={isDark ? "#050912" : "#FFFFFF"} strokeWidth="1.8" />
-          <circle cx="17" cy="16.5" r="2" fill={isDark ? "#050912" : "#FFFFFF"} strokeWidth="1.8" />
-        </svg>
+        <img
+          src="/icons/busnet-192.png"
+          alt=""
+          aria-hidden="true"
+          width={48}
+          height={48}
+          style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+        />
       </div>
 
-      {/* Typography */}
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem", lineHeight: 1.1 }}>
           <span

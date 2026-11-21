@@ -1,5 +1,12 @@
-const CACHE_NAME = "busnet-shell-v1";
-const SHELL_ASSETS = ["/", "/manifest.webmanifest", "/icons/busnet.svg"];
+const CACHE_NAME = "busnet-shell-v2";
+const SHELL_ASSETS = [
+  "/",
+  "/manifest.webmanifest",
+  "/icons/busnet-192.png",
+  "/icons/busnet-512.png",
+  "/icons/busnet-maskable-512.png",
+  "/icons/busnet-favicon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)));
