@@ -8,6 +8,8 @@ This handoff is for the AI/operator with access to the BUSNET Supabase project.
 - The project shown in the screenshot is `BUSNET NEW`, production branch `main`, project reference `htgvcoshbnvoseigtgd`.
 - No Supabase data, migrations, secrets, Edge Function deployments, or AL-TRANS bookings were changed or created in this local task.
 - Update from the owner on 2026-11-22: the separate `admin_dashboard_workflows` migration was applied and checked in production. Supabase recorded it under a version different from local timestamp `20261121100000`. The owner did not run write-RPC tests or Security Advisors. This report does not verify or deploy the AL-TRANS Edge Function changes described below.
+- Root cause confirmed on 2026-11-22: production `altrans-adapter` is ACTIVE v11 with `verify_jwt=true`; its deployed source returns `{ providerError: false, trips: [...] }`. The current production frontend checks only `trip`, then shows the localized “no trips” message. The local `BookingPage` now accepts either the new singular `trip` or the legacy `trips` array, so the frontend can be deployed without replacing the Edge Function.
+- The production Vercel HTML last inspected referenced `index-t90wGe1v.js` and `index-C5QPYLl3.css`; the local build after the compatibility fix generated `index-BKnrbuoP.js` and `index-DbXSyZOS.css`. Verify the production asset and route search after deploying the frontend. Do not deploy the Edge Function as part of a Vercel deployment.
 - Do not deploy the local function over production until its current deployed source, schema, JWT settings, and route schedule data have been checked. The production function may contain changes not present in this worktree.
 - Do not expose AL-TRANS keys, Supabase JWTs, service-role keys, or passenger/provider personal data in responses or logs.
 - Do not run `busnet-fresh/al_trans_routes_import.sql` against this project. It targets a different `public.routes` schema and includes route deletions.
@@ -30,6 +32,8 @@ The following changes were made in this worktree:
   - Reads existing `provider_route_schedules`, `provider_route_schedule_stops`, and `locations` data to enrich a single-segment result; falls back to provider-confirmed segment endpoints if no schedule can be used.
   - Rechecks the exact date and city pair in `create-booking`, matches the database route by the selected provider route ID, and rejects missing prices/unsupported currencies instead of silently substituting UAH.
   - Does not call an AL-TRANS booking-creation endpoint. `create-booking` still creates a BUSNET pending request only.
+- To deploy the local Edge Function, include `index.ts` and all imported local modules: `city-localizations.ts`, `schedule-import.ts`, `time-zone.js`, `trip-normalization.ts`, and `route-itinerary.ts`. Do not upload `index.ts` alone.
+- `tests/fixtures/altrans-route-97-2026-11-24.json` is a sanitized, one-sequence AL-TRANS search sample for trip 30626 (route 97, 24.11.2026). Contact phone numbers, coordinates, images, and navigation keys are intentionally excluded.
 - `src/pages/BookingPage.tsx` sends the current UI locale for stop-name localization.
 - `tests/altrans-trip-normalization.test.mjs` covers actual provider date/time fields, exact-date/city filtering, same-currency price selection, and schedule-derived stops without invented arrivals.
 

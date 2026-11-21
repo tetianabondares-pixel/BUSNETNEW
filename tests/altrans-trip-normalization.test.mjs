@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   chooseCanonicalTrip,
@@ -8,6 +9,31 @@ import {
 import {
   buildStopsFromRouteSchedule,
 } from "../supabase/functions/altrans-adapter/route-itinerary.ts";
+
+const altransRoute97Sample = JSON.parse(readFileSync(
+  new URL("./fixtures/altrans-route-97-2026-11-24.json", import.meta.url),
+  "utf8",
+));
+
+test("normalizes the supplied AL-TRANS route-97 search response", () => {
+  const trips = altransRoute97Sample.trips_sequences
+    .map(normalizeProviderTrip)
+    .filter((trip) => trip !== null);
+  const trip = selectProviderTrip(
+    trips,
+    "2026-11-24",
+    "1",
+    "41",
+    "UAH",
+  );
+
+  assert.equal(trip?.trip_id, "30626");
+  assert.equal(trip?.provider_route_id, "97");
+  assert.equal(trip?.departure_date, "2026-11-24");
+  assert.equal(trip?.arrival_date, "2026-11-25");
+  assert.equal(trip?.price, 120);
+  assert.equal(trip?.currency, "EUR");
+});
 
 test("normalizes a provider itinerary into ordered stops and merges a matching transfer", () => {
   const trip = normalizeProviderTrip({

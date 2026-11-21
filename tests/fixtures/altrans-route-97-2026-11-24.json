@@ -1,0 +1,33 @@
+{
+  "trips_sequences": [
+    {
+      "canBook": true,
+      "canBookWithPaymentAtBoarding": true,
+      "departure_date_ddmmyyyy": "24.11.2026",
+      "departure_time_hhmm": "09:30",
+      "price": 120,
+      "currency_code": "EUR",
+      "trips": [
+        {
+          "id": 30626,
+          "route_id": 97,
+          "departure_city_id": 1,
+          "departure_city": "Львів",
+          "departure_place": "Львівський автовокзал, вул. Стрийська, 109 (1-2 пл.)",
+          "departure_date": "24.11.2026",
+          "departure_date_ddmmyyyy": "24.11.2026",
+          "departure_time": "09:30:00",
+          "departure_time_hhmm": "09:30",
+          "arrival_city_id": 41,
+          "arrival_city": "Рим",
+          "arrival_place": "Vicolo di Ponte Mammolo, 2 (неподалік метро Rebibbia)",
+          "arrival_date": "25.11.2026",
+          "arrival_date_ddmmyyyy": "25.11.2026",
+          "arrival_time": "14:35:00",
+          "arrival_time_hhmm": "14:35",
+          "carrier_name": "AL-TRANS"
+        }
+      ]
+    }
+  ]
+}

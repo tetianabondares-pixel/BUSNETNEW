@@ -232,12 +232,20 @@ export function BookingPage() {
           setProviderError(t("booking.providerError"));
           return;
         }
-        const response = data as { providerError?: boolean; errorCode?: string; trip?: ProviderTrip | null } | null;
+        const response = data as {
+          providerError?: boolean;
+          errorCode?: string;
+          trip?: unknown;
+          trips?: unknown[];
+        } | null;
         if (response?.providerError) {
           setProviderError(t("booking.providerError"));
           return;
         }
-        setProviderTrip(response?.trip && isProviderTrip(response.trip) ? response.trip : null);
+        const providerTrip = response && isProviderTrip(response.trip)
+          ? response.trip
+          : response?.trips?.find(isProviderTrip) ?? null;
+        setProviderTrip(providerTrip);
       } catch {
         if (!cancelled) setProviderError(t("booking.providerError"));
       } finally {
