@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LogOut, X } from "lucide-react";
+import { Check, ChevronDown, LogOut, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/theme";
 import "./PassengerAccountPage.css";
@@ -74,6 +82,12 @@ function isProfileLocale(value: unknown): value is ProfileForm["locale"] {
   return value === "uk" || value === "en" || value === "it";
 }
 
+const profileLanguages: Array<{ value: ProfileForm["locale"]; labelKey: string }> = [
+  { value: "uk", labelKey: "account.profile.languages.uk" },
+  { value: "en", labelKey: "account.profile.languages.en" },
+  { value: "it", labelKey: "account.profile.languages.it" },
+];
+
 export function PassengerAccountPage() {
   const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
@@ -94,7 +108,11 @@ export function PassengerAccountPage() {
   const [cancellationReason, setCancellationReason] = useState("");
   const [cancellationError, setCancellationError] = useState("");
   const [sendingCancellation, setSendingCancellation] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const cancellationReasonRef = useRef<HTMLTextAreaElement>(null);
+  const languageMenuRef = useRef<HTMLDivElement>(null);
+  const languageTriggerRef = useRef<HTMLButtonElement>(null);
+  const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const loadAccount = useCallback(async () => {
     setLoading(true);
@@ -122,12 +140,15 @@ export function PassengerAccountPage() {
       const accountProfile: ProfileForm = {
         fullName: profileData?.full_name ?? "",
         email: user.email ?? profileData?.email ?? "",
-        phone: String(profileData?.phone ?? user.user_metadata?.phone ?? ""),
+        phone: String(profileData?.phone || user.user_metadata?.phone || ""),
         locale: isProfileLocale(preferredLocale)
           ? preferredLocale
           : metadataLocale,
       };
       setProfile(accountProfile);
+      if (i18n.resolvedLanguage !== accountProfile.locale) {
+        await i18n.changeLanguage(accountProfile.locale);
+      }
 
       if (profileData && user.email && profileData.email !== user.email) {
         const { error } = await supabase
@@ -221,7 +242,7 @@ export function PassengerAccountPage() {
     } finally {
       setLoading(false);
     }
-  }, [i18n.language]);
+  }, [i18n]);
 
   useEffect(() => {
     void loadAccount();
@@ -229,13 +250,30 @@ export function PassengerAccountPage() {
 
   useEffect(() => {
     if (!cancellationBooking) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") setCancellationBooking(null);
     };
     document.addEventListener("keydown", closeOnEscape);
     window.requestAnimationFrame(() => cancellationReasonRef.current?.focus());
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [cancellationBooking]);
+
+  useEffect(() => {
+    if (!languageMenuOpen) return;
+    const selectedIndex = profileLanguages.findIndex(({ value }) => value === profile.locale);
+    languageOptionRefs.current[selectedIndex]?.focus();
+  }, [languageMenuOpen, profile.locale]);
+
+  useEffect(() => {
+    if (!languageMenuOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!languageMenuRef.current?.contains(event.target as Node)) {
+        setLanguageMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [languageMenuOpen]);
 
   const { upcomingBookings, pastBookings } = useMemo(() => {
     const upcoming: AccountBooking[] = [];
@@ -319,6 +357,37 @@ export function PassengerAccountPage() {
       return;
     }
     navigate("/login", { replace: true });
+  };
+
+  const selectLanguage = (nextLocale: ProfileForm["locale"]) => {
+    setProfile((current) => ({ ...current, locale: nextLocale }));
+    setLanguageMenuOpen(false);
+    setProfileError("");
+    setProfileMessage("");
+    void i18n.changeLanguage(nextLocale).catch(() => {
+      setProfileError(t("account.profile.languageChangeError"));
+    });
+    window.requestAnimationFrame(() => languageTriggerRef.current?.focus());
+  };
+
+  const handleLanguageMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = languageOptionRefs.current.indexOf(
+      event.target as HTMLButtonElement,
+    );
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setLanguageMenuOpen(false);
+      languageTriggerRef.current?.focus();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = (currentIndex + direction + profileLanguages.length) % profileLanguages.length;
+      languageOptionRefs.current[nextIndex]?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const nextIndex = event.key === "Home" ? 0 : profileLanguages.length - 1;
+      languageOptionRefs.current[nextIndex]?.focus();
+    }
   };
 
   const dateTime = (value: string | null) => value
@@ -507,20 +576,64 @@ export function PassengerAccountPage() {
                   value={profile.phone}
                 />
               </label>
-              <label>
-                {t("account.profile.language")}
-                <select
-                  onChange={(event) => setProfile((current) => ({
-                    ...current,
-                    locale: event.target.value as ProfileForm["locale"],
-                  }))}
-                  value={profile.locale}
-                >
-                  <option value="uk">{t("account.profile.languages.uk")}</option>
-                  <option value="en">{t("account.profile.languages.en")}</option>
-                  <option value="it">{t("account.profile.languages.it")}</option>
-                </select>
-              </label>
+              <div className="passenger-account__language-field">
+                <span className="passenger-account__field-label" id="account-language-label">
+                  {t("account.profile.language")}
+                </span>
+                <div className="passenger-account__language-control" ref={languageMenuRef}>
+                  <button
+                    aria-controls="account-language-options"
+                    aria-expanded={languageMenuOpen}
+                    aria-haspopup="listbox"
+                    aria-labelledby="account-language-label account-language-value"
+                    className="passenger-account__language-trigger"
+                    id="account-language-trigger"
+                    onClick={() => setLanguageMenuOpen((isOpen) => !isOpen)}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                        event.preventDefault();
+                        setLanguageMenuOpen(true);
+                      }
+                    }}
+                    ref={languageTriggerRef}
+                    type="button"
+                  >
+                    <span id="account-language-value">
+                      {t(`account.profile.languages.${profile.locale}`)}
+                    </span>
+                    <ChevronDown aria-hidden="true" size={18} />
+                  </button>
+                  <div
+                    aria-labelledby="account-language-label"
+                    className="passenger-account__language-options"
+                    hidden={!languageMenuOpen}
+                    id="account-language-options"
+                    onBlur={(event) => {
+                      const nextTarget = event.relatedTarget;
+                      if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+                        setLanguageMenuOpen(false);
+                      }
+                    }}
+                    onKeyDown={handleLanguageMenuKeyDown}
+                    role="listbox"
+                  >
+                    {profileLanguages.map(({ value, labelKey }, index) => (
+                      <button
+                        aria-selected={profile.locale === value}
+                        className="passenger-account__language-option"
+                        key={value}
+                        onClick={() => selectLanguage(value)}
+                        ref={(element) => { languageOptionRefs.current[index] = element; }}
+                        role="option"
+                        type="button"
+                      >
+                        <span>{t(labelKey)}</span>
+                        {profile.locale === value && <Check aria-hidden="true" size={16} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
               {profileError && <p className="passenger-account__form-error" role="alert">{profileError}</p>}
               {profileMessage && <p className="passenger-account__form-success" role="status">{profileMessage}</p>}
               <button className="passenger-account__primary-button" disabled={savingProfile} type="submit">
