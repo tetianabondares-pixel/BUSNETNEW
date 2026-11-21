@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
 import {
+  deduplicateProviderTrips,
   deduplicateScheduledServicesByDeparture,
   getScheduledArrivalDate,
   type ScheduledService,
@@ -27,14 +28,24 @@ type ProviderTrip = {
 };
 
 type Passenger = {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
-  nationality: string;
-  documentType: string;
-  documentNumber: string;
-  seatNumber: string;
 };
+
+function splitFullName(value: string) {
+  const [firstName = "", ...lastNameParts] = value.trim().split(/\s+/);
+  return { firstName, lastName: lastNameParts.join(" ") };
+}
+
+function isProviderTrip(value: unknown): value is ProviderTrip {
+  if (!value || typeof value !== "object") return false;
+  const trip = value as Record<string, unknown>;
+  return typeof trip.trip_id === "string" &&
+    typeof trip.departure_time === "string" &&
+    typeof trip.arrival_time === "string";
+}
 
 function languageOf(language: string): "uk" | "en" | "it" {
   return language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
@@ -43,6 +54,8 @@ function languageOf(language: string): "uk" | "en" | "it" {
 export function BookingPage() {
   const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [trips, setTrips] = useState<ScheduledService[]>([]);
   const [providerTrips, setProviderTrips] = useState<ProviderTrip[]>([]);
@@ -53,33 +66,81 @@ export function BookingPage() {
   const [routeNames, setRouteNames] = useState({ from: "", to: "" });
   const [selectedTrip, setSelectedTrip] = useState<ProviderTrip | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([{
-    fullName: "", email: "", phone: "", nationality: "", documentType: "",
-    documentNumber: "", seatNumber: "",
+    firstName: "", lastName: "", email: "", phone: "",
   }]);
+  const [profileLoadError, setProfileLoadError] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const passengerEditedRef = useRef(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingResult, setBookingResult] = useState<{
     bookingNumber: string;
     totalAmount: number;
     currency: string;
-    expiresAt: string;
+    expiresAt: string | null;
   } | null>(null);
   const [bookingError, setBookingError] = useState("");
 
   const fromId = searchParams.get("fromId")?.trim() ?? "";
   const toId = searchParams.get("toId")?.trim() ?? "";
   const date = searchParams.get("date")?.trim() ?? "";
+  const pendingTrip = (location.state as { pendingTrip?: unknown } | null)?.pendingTrip;
+
+  useEffect(() => {
+    if (isProviderTrip(pendingTrip)) setSelectedTrip(pendingTrip);
+  }, [pendingTrip]);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!active) return;
+      setIsAuthenticated(!sessionError && Boolean(data.session));
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setIsAuthenticated(Boolean(session));
+      setAuthLoading(false);
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled && data.user) {
+    const loadPassengerProfile = async () => {
+      try {
+        const { data, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const user = data.user;
+        if (!user || cancelled) return;
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("full_name,phone")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profileError && !cancelled) setProfileLoadError(true);
+        if (cancelled || passengerEditedRef.current) return;
+
+        const metadata = user.user_metadata ?? {};
+        const metadataName = String(metadata.full_name ?? metadata.name ?? "");
+        const profileName = profile?.full_name ?? metadataName;
+        const parsedName = splitFullName(profileName);
         setPassengers((current) => [{
           ...current[0],
-          fullName: String(data.user?.user_metadata?.full_name ?? current[0].fullName),
-          email: data.user?.email ?? current[0].email,
+          firstName: String(metadata.firstName ?? metadata.first_name ?? parsedName.firstName),
+          lastName: String(metadata.lastName ?? metadata.last_name ?? parsedName.lastName),
+          email: user.email ?? current[0].email,
+          phone: String(profile?.phone ?? metadata.phone ?? current[0].phone),
         }]);
+      } catch {
+        if (!cancelled) setProfileLoadError(true);
       }
-    });
+    };
+    void loadPassengerProfile();
     return () => { cancelled = true; };
   }, []);
 
@@ -95,7 +156,7 @@ export function BookingPage() {
     setError("");
     setTrips([]);
     setProviderTrips([]);
-    setSelectedTrip(null);
+    if (!isProviderTrip(pendingTrip)) setSelectedTrip(null);
     setBookingResult(null);
 
     const searchSchedules = async () => {
@@ -209,7 +270,7 @@ export function BookingPage() {
 
     void searchSchedules();
     return () => { cancelled = true; };
-  }, [fromId, toId, date, i18n.language, t]);
+  }, [fromId, toId, date, i18n.language, pendingTrip, t]);
 
   useEffect(() => {
     if (!fromId || !toId || !date || trips.length === 0) return;
@@ -237,7 +298,7 @@ export function BookingPage() {
         setProviderError(t("booking.providerError"));
         return;
       }
-      setProviderTrips(response?.trips ?? []);
+      setProviderTrips(deduplicateProviderTrips(response?.trips ?? []));
     }).finally(() => {
       if (!cancelled) setProviderLoading(false);
     });
@@ -246,53 +307,79 @@ export function BookingPage() {
   }, [trips, fromId, toId, date, t]);
 
   const updatePassenger = (field: keyof Passenger, value: string) => {
+    passengerEditedRef.current = true;
     setPassengers((current) => [{ ...current[0], [field]: value }]);
   };
 
   const submitBooking = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedTrip) return;
-    setBookingLoading(true);
-    setBookingError("");
-    setBookingResult(null);
-    const { data, error } = await supabase.functions.invoke("altrans-adapter", {
-      body: {
-        operation: "create-booking",
-        tripId: selectedTrip.trip_id,
-        fromLocationId: fromId,
-        toLocationId: toId,
-        travelDate: date,
-        locale: languageOf(i18n.language),
-        passengers,
-      },
-    });
-    setBookingLoading(false);
-    if (error) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
       setBookingError(t("booking.bookingError"));
       return;
     }
-    const response = data as {
-      errorCode?: string;
-      bookingId?: string;
-      bookingNumber?: string;
-      totalAmount?: number;
-      currency?: string;
-      expiresAt?: string;
-    };
-    if (!response.bookingNumber) {
-      setBookingError(
-        response.errorCode === "TRIP_UNAVAILABLE"
-          ? t("booking.tripUnavailable")
-          : t("booking.bookingError"),
-      );
+    if (!userData.user) {
+      navigate("/auth", {
+        state: {
+          from: { pathname: location.pathname, search: location.search, hash: location.hash },
+          pendingTrip: selectedTrip,
+        },
+      });
       return;
     }
-    setBookingResult({
-      bookingNumber: response.bookingNumber,
-      totalAmount: response.totalAmount ?? 0,
-      currency: response.currency ?? "UAH",
-      expiresAt: response.expiresAt ?? "",
-    });
+    setBookingLoading(true);
+    setBookingError("");
+    setBookingResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("altrans-adapter", {
+        body: {
+          operation: "create-booking",
+          tripId: selectedTrip.trip_id,
+          fromLocationId: fromId,
+          toLocationId: toId,
+          travelDate: date,
+          locale: languageOf(i18n.language),
+          passengers: passengers.map((passenger) => ({
+            fullName: `${passenger.firstName} ${passenger.lastName}`.trim(),
+            email: passenger.email,
+            phone: passenger.phone,
+          })),
+        },
+      });
+      if (error) {
+        console.error("Booking request failed", error);
+        setBookingError(t("booking.bookingError"));
+        return;
+      }
+      const response = data as {
+        errorCode?: string;
+        bookingId?: string;
+        bookingNumber?: string;
+        totalAmount?: number;
+        currency?: string;
+        expiresAt?: string | null;
+      };
+      if (!response?.bookingNumber) {
+        setBookingError(
+          response?.errorCode === "TRIP_UNAVAILABLE"
+            ? t("booking.tripUnavailable")
+            : t("booking.bookingError"),
+        );
+        return;
+      }
+      setBookingResult({
+        bookingNumber: response.bookingNumber,
+        totalAmount: response.totalAmount ?? 0,
+        currency: response.currency ?? "UAH",
+        expiresAt: response.expiresAt ?? null,
+      });
+    } catch (caught) {
+      console.error("Booking request failed", caught);
+      setBookingError(t("booking.bookingError"));
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const inputStyle = {
@@ -334,6 +421,23 @@ export function BookingPage() {
 
       {providerLoading && <p style={{ color: tokens.colorTextSecondary }}>{t("booking.loadingLive")}</p>}
       {providerError && <p style={{ color: tokens.colorWarning }}>{providerError}</p>}
+      {profileLoadError && selectedTrip && (
+        <p role="status" style={{ color: tokens.colorWarning }}>{t("booking.profileLoadError")}</p>
+      )}
+      {selectedTrip && authLoading && <p role="status">{t("booking.checkingAccount")}</p>}
+      {selectedTrip && !authLoading && !isAuthenticated && (
+        <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "10px", padding: "16px", borderRadius: "12px", border: `1px solid ${tokens.colorBorder}`, background: tokens.colorBgCard }}>
+          <p style={{ margin: 0, color: tokens.colorTextSecondary }}>{t("booking.signInToBook")}</p>
+          <button type="button" onClick={() => navigate("/auth", {
+            state: {
+              from: { pathname: location.pathname, search: location.search, hash: location.hash },
+              pendingTrip: selectedTrip,
+            },
+          })} style={{ padding: "12px", border: 0, borderRadius: "10px", background: "#087DFF", color: "#fff", fontWeight: 700 }}>
+            {t("booking.signInAction")}
+          </button>
+        </div>
+      )}
 
       {!providerLoading && providerTrips.length > 0 && (
         <div style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px" }}>
@@ -368,23 +472,20 @@ export function BookingPage() {
         </div>
       )}
 
-      {selectedTrip && (
+      {selectedTrip && isAuthenticated && (
         <form onSubmit={submitBooking} style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px", padding: "18px", borderRadius: "14px", border: `1px solid ${tokens.colorBorder}`, background: tokens.colorBgCard, boxSizing: "border-box" }}>
           <h2 style={{ fontSize: "1.1rem", margin: 0 }}>{t("booking.passengerDetails")}</h2>
           {([
-            ["fullName", "fullName"],
+            ["firstName", "firstName"],
+            ["lastName", "lastName"],
             ["email", "email"],
             ["phone", "phone"],
-            ["nationality", "nationality"],
-            ["documentType", "documentType"],
-            ["documentNumber", "documentNumber"],
-            ["seatNumber", "seatNumber"],
           ] as const).map(([field, key]) => (
             <label key={field} style={{ display: "grid", gap: "6px", color: tokens.colorTextSecondary }}>
               {t(`booking.${key}`)}
               <input
-                required={field !== "seatNumber" && field !== "email"}
-                type={field === "email" ? "email" : "text"}
+                required={field !== "email"}
+                type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
                 value={passengers[0][field]}
                 onChange={(event) => updatePassenger(field, event.target.value)}
                 style={inputStyle}
@@ -401,6 +502,7 @@ export function BookingPage() {
       {bookingResult && (
         <div role="status" style={{ width: "100%", maxWidth: "760px", padding: "18px", borderRadius: "14px", border: "1px solid #22C55E", background: tokens.colorBgCard, boxSizing: "border-box" }}>
           <strong>{t("booking.bookingCreated")}</strong>
+          <p>{t("booking.pendingAdminConfirmation")}</p>
           <div>{t("booking.bookingNumber")}: {bookingResult.bookingNumber}</div>
           <div>{t("booking.total")}: {bookingResult.totalAmount} {bookingResult.currency}</div>
           {bookingResult.expiresAt && <div style={{ color: tokens.colorTextSecondary }}>{t("booking.expiresAt")}: {new Date(bookingResult.expiresAt).toLocaleString()}</div>}

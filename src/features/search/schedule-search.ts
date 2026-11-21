@@ -63,3 +63,40 @@ export function deduplicateScheduledServicesByDeparture(
     ),
   );
 }
+
+type ProviderTripOption = {
+  departure_date: string;
+  departure_time: string;
+  arrival_date: string;
+  arrival_time: string;
+  price: number | string | null;
+  currency: string;
+};
+
+export function deduplicateProviderTrips<T extends ProviderTripOption>(
+  trips: readonly T[],
+): T[] {
+  const uniqueTrips = new Map<string, T>();
+
+  for (const trip of trips) {
+    const rawPrice = trip.price == null ? "" : String(trip.price).trim();
+    const numericPrice = Number(rawPrice);
+    const price = rawPrice === ""
+      ? ""
+      : Number.isFinite(numericPrice)
+        ? String(numericPrice)
+        : rawPrice;
+    const key = JSON.stringify([
+      trip.departure_date,
+      trip.departure_time,
+      trip.arrival_date,
+      trip.arrival_time,
+      price,
+      trip.currency.toUpperCase(),
+    ]);
+
+    if (!uniqueTrips.has(key)) uniqueTrips.set(key, trip);
+  }
+
+  return [...uniqueTrips.values()];
+}

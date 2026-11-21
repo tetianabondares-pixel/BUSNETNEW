@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  deduplicateProviderTrips,
   deduplicateScheduledServicesByDeparture,
   getScheduledArrivalDate,
 } from "../src/features/search/schedule-search.ts";
@@ -62,4 +63,41 @@ test("deduplicates overlapping providers and keeps the confirmed arrival time", 
     result.map(({ id, arrivalTime }) => [id, arrivalTime]),
     [["route-99", "08:15"], ["next-service", "09:00"]],
   );
+});
+
+test("deduplicates provider vehicle variants with the same trip details", () => {
+  const result = deduplicateProviderTrips([
+    {
+      trip_id: "bus-1",
+      bus_number: "B04204HA",
+      departure_date: "2026-11-25",
+      departure_time: "22:30:00",
+      arrival_date: "2026-11-26",
+      arrival_time: "09:40:00",
+      price: "7280.00",
+      currency: "UAH",
+    },
+    {
+      trip_id: "bus-2",
+      bus_number: "BC4204PP",
+      departure_date: "2026-11-25",
+      departure_time: "22:30:00",
+      arrival_date: "2026-11-26",
+      arrival_time: "09:40:00",
+      price: 7280,
+      currency: "UAH",
+    },
+    {
+      trip_id: "later-trip",
+      bus_number: "BC4204PM",
+      departure_date: "2026-11-25",
+      departure_time: "23:00:00",
+      arrival_date: "2026-11-26",
+      arrival_time: "10:10:00",
+      price: 7280,
+      currency: "UAH",
+    },
+  ]);
+
+  assert.deepEqual(result.map(({ trip_id }) => trip_id), ["bus-1", "later-trip"]);
 });

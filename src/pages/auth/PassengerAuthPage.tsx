@@ -28,6 +28,7 @@ export function PassengerAuthPage() {
 
   const [showRecovery, setShowRecovery] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -104,9 +105,15 @@ export function PassengerAuthPage() {
             emailRedirectTo: `${window.location.origin}/login`,
             data: {
               full_name: fullName.trim(),
+              phone: phone.trim() || null,
               firstName,
               lastName,
               role: "passenger",
+              preferred_locale: i18n.language?.startsWith("it")
+                ? "it"
+                : i18n.language?.startsWith("en")
+                  ? "en"
+                  : "uk",
               preferred_language: i18n.language?.startsWith("it")
                 ? "it"
                 : i18n.language?.startsWith("en")
@@ -118,7 +125,7 @@ export function PassengerAuthPage() {
         if (error) throw error;
 
         if (data.session) {
-          navigate(getPostAuthPath(), { replace: true });
+          navigate(getPostAuthPath(), { replace: true, state: getPostAuthState() });
         } else {
           setNotice(t("passengerAuth.registrationSent"));
         }
@@ -130,7 +137,7 @@ export function PassengerAuthPage() {
         password,
       });
       if (error) throw error;
-      navigate(getPostAuthPath(), { replace: true });
+      navigate(getPostAuthPath(), { replace: true, state: getPostAuthState() });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t("passengerAuth.serverError");
@@ -156,6 +163,11 @@ export function PassengerAuthPage() {
       return "/account";
     }
     return `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`;
+  };
+
+  const getPostAuthState = () => {
+    const state = location.state as { pendingTrip?: unknown } | null;
+    return state?.pendingTrip ? { pendingTrip: state.pendingTrip } : undefined;
   };
 
   const changeView = (nextView: AuthView) => {
@@ -215,6 +227,22 @@ export function PassengerAuthPage() {
                   style={inputStyle}
                 />
                 {renderError("fullName")}
+              </div>
+            )}
+
+            {isRegister && (
+              <div className="passenger-auth__field">
+                <label htmlFor="phone">{t("passengerAuth.phone")}</label>
+                <input
+                  autoComplete="tel"
+                  id="phone"
+                  maxLength={32}
+                  name="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  style={inputStyle}
+                />
               </div>
             )}
 
@@ -389,14 +417,14 @@ export function PassengerAuthPage() {
           ) : isRegister ? (
             <p className="passenger-auth__switch" style={{ color: tokens.colorTextSecondary }}>
               {t("passengerAuth.loginPrompt")}{" "}
-              <Link to="/login" onClick={() => changeView("login")}>
+              <Link to="/login" state={location.state} onClick={() => changeView("login")}>
                 {t("passengerAuth.loginLink")}
               </Link>
             </p>
           ) : (
             <p className="passenger-auth__switch" style={{ color: tokens.colorTextSecondary }}>
               {t("passengerAuth.registerPrompt")}{" "}
-              <Link to="/register" onClick={() => changeView("register")}>
+              <Link to="/register" state={location.state} onClick={() => changeView("register")}>
                 {t("passengerAuth.registerLink")}
               </Link>
             </p>

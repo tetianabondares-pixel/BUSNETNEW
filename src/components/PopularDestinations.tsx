@@ -127,6 +127,7 @@ export function PopularDestinations({
   return (
     <section
       className="popular-destinations"
+      id="routes"
       data-theme={isDark ? "dark" : "light"}
       aria-labelledby="popular-destinations-title"
     >

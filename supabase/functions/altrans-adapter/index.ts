@@ -6,6 +6,7 @@ import {
   normalizeProviderSchedule,
   type ProviderRouteSchedule,
 } from "./schedule-import.ts";
+import { kyivLocalDateTimeToIso } from "./time-zone.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -32,11 +33,63 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-async function providerRequest(path: string, init: RequestInit) {
+type ProviderLogContext = {
+  routeKey?: string;
+  travelDate?: string;
+};
+
+async function logProviderRequest(
+  operation: string,
+  status: number,
+  errorCode: string | null,
+  context: ProviderLogContext,
+) {
+  const projectUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!projectUrl || !serviceRoleKey) {
+    console.error("Provider request log unavailable", { operation });
+    return;
+  }
+
+  try {
+    const adminClient = createClient(projectUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error } = await adminClient.from("provider_request_logs").insert({
+      provider: "AL-TRANS",
+      operation,
+      route_key: context.routeKey ?? null,
+      travel_date: context.travelDate ?? null,
+      status: errorCode ? "error" : "success",
+      response_code: status,
+      cache_hit: false,
+      error_code: errorCode,
+      completed_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error("Provider request log insert failed", {
+        operation,
+        errorCode: error.code,
+      });
+    }
+  } catch (error) {
+    console.error("Provider request log failed", {
+      operation,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+  }
+}
+
+async function providerRequest(
+  path: string,
+  init: RequestInit,
+  context: ProviderLogContext = {},
+) {
   const base = (Deno.env.get("ALTRANS_API_BASE") ?? "https://al-trans.com.ua").replace(/\/+$/, "");
   const apiKey = Deno.env.get("ALTRANS_API_KEY");
 
   if (!apiKey) {
+    await logProviderRequest(path, 503, "ALTRANS_NOT_CONFIGURED", context);
     return { ok: false, status: 503, body: null, errorCode: "ALTRANS_NOT_CONFIGURED" };
   }
 
@@ -58,20 +111,24 @@ async function providerRequest(path: string, init: RequestInit) {
     try {
       body = text ? JSON.parse(text) : null;
     } catch {
+      await logProviderRequest(path, 502, "ALTRANS_INVALID_RESPONSE", context);
       return { ok: false, status: 502, body: null, errorCode: "ALTRANS_INVALID_RESPONSE" };
     }
 
-    return {
+    const result = {
       ok: response.ok,
       status: response.status,
       body,
       errorCode: response.ok ? null : "ALTRANS_UNAVAILABLE",
     };
+    await logProviderRequest(path, result.status, result.errorCode, context);
+    return result;
   } catch (error) {
     console.error("AL-TRANS request failed", {
       path,
       error: error instanceof Error ? error.name : "unknown",
     });
+    await logProviderRequest(path, 502, "ALTRANS_UNAVAILABLE", context);
     return { ok: false, status: 502, body: null, errorCode: "ALTRANS_UNAVAILABLE" };
   } finally {
     clearTimeout(timeout);
@@ -211,7 +268,7 @@ async function syncCatalog(request: Request) {
     const details = await providerRequest("/api/v2/references/route_details_key", {
       method: "POST",
       body: JSON.stringify({ key: navigationKey }),
-    });
+    }, { routeKey: navigationKey });
     const detailsBody = asRecord(details.body);
     if (!details.ok || !detailsBody || detailsBody.success !== true) {
       errors.push(`${navigationKey}:${details.errorCode ?? "INVALID_ROUTE_DETAILS"}`);
@@ -380,7 +437,7 @@ Deno.serve(async (request) => {
     const result = await providerRequest("/api/v2/references/route_details_key", {
       method: "POST",
       body: JSON.stringify({ key }),
-    });
+    }, { routeKey: key });
     if (!result.ok) {
       return json({ providerError: true, errorCode: result.errorCode }, result.status);
     }
@@ -441,7 +498,7 @@ Deno.serve(async (request) => {
         currecny_code: currencyCode,
         enable_external_search: false,
       }),
-    });
+    }, { routeKey: `${fromLocationId}:${toLocationId}`, travelDate });
     if (!result.ok) {
       return json({ providerError: true, errorCode: result.errorCode, trips: [] }, result.status);
     }
@@ -483,16 +540,31 @@ Deno.serve(async (request) => {
       if (
         !passenger ||
         String(passenger.fullName ?? "").trim().length < 2 ||
-        String(passenger.phone ?? "").trim().length < 7 ||
-        String(passenger.nationality ?? "").trim().length < 2 ||
-        String(passenger.documentType ?? "").trim().length < 2 ||
-        String(passenger.documentNumber ?? "").trim().length < 2
+        String(passenger.phone ?? "").trim().length < 7
       ) {
         return json({ errorCode: "INVALID_PASSENGER" }, 400);
       }
       if (passenger.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(passenger.email))) {
         return json({ errorCode: "INVALID_PASSENGER_EMAIL" }, 400);
       }
+    }
+
+    const projectUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const authorization = request.headers.get("Authorization");
+    if (!projectUrl || !anonKey) {
+      return json({ errorCode: "BOOKING_NOT_CONFIGURED" }, 503);
+    }
+    if (!authorization) {
+      return json({ errorCode: "AUTHENTICATION_REQUIRED" }, 401);
+    }
+    const authClient = createClient(projectUrl, anonKey, {
+      global: { headers: { Authorization: authorization } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: userData, error: userError } = await authClient.auth.getUser();
+    if (userError || !userData.user) {
+      return json({ errorCode: "AUTHENTICATION_REQUIRED" }, 401);
     }
 
     const [fromLocation, toLocation] = await Promise.all([
@@ -518,7 +590,7 @@ Deno.serve(async (request) => {
         currecny_code: "UAH",
         enable_external_search: false,
       }),
-    });
+    }, { routeKey: `${fromLocationId}:${toLocationId}`, travelDate });
     if (!search.ok) {
       return json({ errorCode: "PROVIDER_UNAVAILABLE" }, 502);
     }
@@ -538,9 +610,8 @@ Deno.serve(async (request) => {
       return json({ errorCode: "PRICE_CHANGED" }, 409);
     }
 
-    const projectUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!projectUrl || !serviceRoleKey) {
+    if (!serviceRoleKey) {
       return json({ errorCode: "BOOKING_NOT_CONFIGURED" }, 503);
     }
     const adminClient = createClient(projectUrl, serviceRoleKey, {
@@ -553,18 +624,15 @@ Deno.serve(async (request) => {
       .eq("from_location_id", fromLocationId)
       .eq("to_location_id", toLocationId)
       .eq("active", true)
+      .order("provider_route_id", { ascending: true })
+      .limit(1)
       .maybeSingle();
     if (routeError || !route) {
       return json({ errorCode: "TRIP_NOT_FOUND" }, 404);
     }
 
-    const toIso = (date: string, time: string) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-      const parsed = new Date(`${date}T${time.length === 5 ? `${time}:00` : time}+02:00`);
-      return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-    };
-    const departureAt = toIso(providerTrip.departure_date, providerTrip.departure_time);
-    const arrivalAt = toIso(providerTrip.arrival_date, providerTrip.arrival_time);
+    const departureAt = kyivLocalDateTimeToIso(providerTrip.departure_date, providerTrip.departure_time);
+    const arrivalAt = kyivLocalDateTimeToIso(providerTrip.arrival_date, providerTrip.arrival_time);
     if (!departureAt) {
       return json({ errorCode: "TRIP_UNAVAILABLE" }, 409);
     }
@@ -586,41 +654,13 @@ Deno.serve(async (request) => {
       return json({ errorCode: "TRIP_NOT_FOUND" }, 500);
     }
 
-    const { error: priceError } = await adminClient
-      .from("trip_prices")
-      .upsert({
-        trip_id: trip.id,
-        currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
-        price,
-        seats_available: passengers.length,
-        source: "provider",
-        confirmed_at: new Date().toISOString(),
-      }, { onConflict: "trip_id" });
-    if (priceError) {
-      console.error("Booking price upsert failed", priceError.code);
-      return json({ errorCode: "TRIP_UNAVAILABLE" }, 500);
-    }
-
-    const authorization = request.headers.get("Authorization");
-    let passengerId: string | null = null;
-    if (authorization) {
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-      if (anonKey) {
-        const authClient = createClient(projectUrl, anonKey, {
-          global: { headers: { Authorization: authorization } },
-        });
-        const { data: userData } = await authClient.auth.getUser();
-        passengerId = userData.user?.id ?? null;
-      }
-    }
-
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const expiresAt = null;
     const bookingNumber = `BUS-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const { data: booking, error: bookingError } = await adminClient
       .from("bookings")
       .insert({
         booking_number: bookingNumber,
-        passenger_id: passengerId,
+        passenger_id: userData.user.id,
         trip_id: trip.id,
         status: "pending",
         currency: providerTrip.currency === "EUR" ? "EUR" : "UAH",
@@ -641,10 +681,10 @@ Deno.serve(async (request) => {
         full_name: String(passenger.fullName).trim(),
         email: passenger.email ? String(passenger.email).trim() : null,
         phone: String(passenger.phone).trim(),
-        seat_number: passenger.seatNumber ? String(passenger.seatNumber).trim() : null,
-        nationality: String(passenger.nationality).trim(),
-        document_type: String(passenger.documentType).trim(),
-        document_number: String(passenger.documentNumber).trim(),
+        seat_number: null,
+        nationality: null,
+        document_type: null,
+        document_number: null,
       };
     });
     const { error: passengersError } = await adminClient

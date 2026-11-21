@@ -51,9 +51,9 @@ export function Header() {
   };
 
   const navItems = [
-    { label: t("nav.routes"), href: "#routes" },
-    { label: t("nav.partners"), href: "#partners" },
-    { label: t("nav.faq"), href: "#faq" },
+    { label: t("nav.routes"), href: isLandingPage ? "#routes" : "/#routes" },
+    { label: t("nav.partners"), href: "mailto:support@busnet.ua?subject=BUSNET%20partnership" },
+    { label: t("nav.faq"), href: isLandingPage ? "#faq" : "/#faq" },
   ];
 
   return (

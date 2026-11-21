@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { LogOut, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/theme";
@@ -76,6 +77,7 @@ function isProfileLocale(value: unknown): value is ProfileForm["locale"] {
 export function PassengerAccountPage() {
   const { t, i18n } = useTranslation();
   const { tokens } = useTheme();
+  const navigate = useNavigate();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const [now] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<"trips" | "profile">("trips");
@@ -103,9 +105,15 @@ export function PassengerAccountPage() {
       const user = userData.user;
       if (!user) throw new Error("AUTH_REQUIRED");
 
+      const metadataLocale = isProfileLocale(user.user_metadata?.preferred_locale)
+        ? user.user_metadata.preferred_locale
+        : isProfileLocale(user.user_metadata?.preferred_language)
+          ? user.user_metadata.preferred_language
+          : languageOf(i18n.language);
+
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name,email,phone,preferred_locale")
+        .select("full_name,email,preferred_locale,phone")
         .eq("id", user.id)
         .maybeSingle();
       if (profileError) throw profileError;
@@ -114,10 +122,10 @@ export function PassengerAccountPage() {
       const accountProfile: ProfileForm = {
         fullName: profileData?.full_name ?? "",
         email: user.email ?? profileData?.email ?? "",
-        phone: profileData?.phone ?? "",
+        phone: String(profileData?.phone ?? user.user_metadata?.phone ?? ""),
         locale: isProfileLocale(preferredLocale)
           ? preferredLocale
-          : languageOf(i18n.language),
+          : metadataLocale,
       };
       setProfile(accountProfile);
 
@@ -264,7 +272,7 @@ export function PassengerAccountPage() {
         .update({
           full_name: profile.fullName.trim(),
           email: currentEmail,
-          phone: profile.phone.trim(),
+          phone: profile.phone.trim() || null,
           preferred_locale: profile.locale,
         })
         .eq("id", userData.user.id);
@@ -308,7 +316,9 @@ export function PassengerAccountPage() {
     if (error) {
       setSigningOut(false);
       setActionError(t("account.signOutError"));
+      return;
     }
+    navigate("/login", { replace: true });
   };
 
   const dateTime = (value: string | null) => value

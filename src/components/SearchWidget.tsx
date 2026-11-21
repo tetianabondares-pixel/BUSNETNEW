@@ -170,8 +170,13 @@ export function SearchWidget({ selectedRoute = null }: Props) {
       event.preventDefault();
       setHighlighted((current) => event.key === "ArrowDown"
         ? Math.min(current + 1, suggestions.length - 1) : Math.max(current - 1, -1));
-    } else if (event.key === "Enter" && highlighted >= 0) {
-      event.preventDefault(); select(field, suggestions[highlighted]);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      if (highlighted >= 0) select(field, suggestions[highlighted]);
+      else {
+        setActive(null);
+        handleSearch();
+      }
     } else if (event.key === "Escape" || event.key === "Tab") setActive(null);
   };
   const swap = () => {
