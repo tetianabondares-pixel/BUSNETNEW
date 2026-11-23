@@ -13,6 +13,7 @@ import {
 } from "../../supabase/functions/altrans-adapter/route-itinerary";
 import type { NormalizedProviderTrip } from "../../supabase/functions/altrans-adapter/trip-normalization";
 import "./BookingPage.css";
+import "./TripRequestCard.css";
 
 type ProviderStop = {
   city: string;
@@ -256,6 +257,12 @@ export function BookingPage() {
   const [bookingError, setBookingError] = useState("");
   const [needsTripRefresh, setNeedsTripRefresh] = useState(false);
   const [shareMessage, setShareMessage] = useState<"shared" | "copied" | "shareFailed" | null>(null);
+  const [tripRequestName, setTripRequestName] = useState("");
+  const [tripRequestPhone, setTripRequestPhone] = useState("");
+  const [tripRequestLoading, setTripRequestLoading] = useState(false);
+  const [tripRequestError, setTripRequestError] = useState("");
+  const [tripRequestSubmitted, setTripRequestSubmitted] = useState(false);
+  const [tripRequestSeconds, setTripRequestSeconds] = useState(120);
 
   const fromId = searchParams.get("fromId")?.trim() ?? "";
   const toId = searchParams.get("toId")?.trim() ?? "";
@@ -293,6 +300,14 @@ export function BookingPage() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!tripRequestSubmitted || tripRequestSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setTripRequestSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [tripRequestSubmitted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -513,6 +528,38 @@ export function BookingPage() {
     setProviderSearchRevision((revision) => revision + 1);
   };
 
+  const submitTripRequest = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!fromId || !toId || !date) return;
+    if (tripRequestName.trim().length < 2 || tripRequestPhone.trim().length < 7) {
+      setTripRequestError(t("booking.tripRequestFillFields"));
+      return;
+    }
+
+    setTripRequestLoading(true);
+    setTripRequestError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("trip-request", {
+        body: {
+          fromLocationId: fromId,
+          toLocationId: toId,
+          travelDate: date,
+          fullName: tripRequestName.trim(),
+          phone: tripRequestPhone.trim(),
+          locale: languageOf(i18n.language),
+        },
+      });
+      if (error || !(data as { requestReceived?: boolean } | null)?.requestReceived) throw error ?? new Error("TRIP_REQUEST_FAILED");
+      setTripRequestSubmitted(true);
+      setTripRequestSeconds(120);
+    } catch (caught) {
+      console.error("Trip search request failed", caught);
+      setTripRequestError(t("booking.tripRequestError"));
+    } finally {
+      setTripRequestLoading(false);
+    }
+  };
+
   const submitBooking = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedTrip) return;
@@ -682,7 +729,7 @@ export function BookingPage() {
 
   return (
     <section className="booking-page" style={{ color: tokens.colorText }}>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>{t("booking.title")}</h1>
+      <h1 className="booking-page__title">{t("booking.title")}</h1>
       {routeNames.from && routeNames.to && (
         <p className="booking-page__route" style={{ color: tokens.colorTextSecondary }}>
           {routeNames.from} → {routeNames.to} · {date}
@@ -692,11 +739,15 @@ export function BookingPage() {
       {(loading || providerLoading) && (
         <div className="booking-searching" role="status" aria-live="polite">
           <div className="booking-searching__route" aria-hidden="true">
-            <MapPin className="booking-searching__pin" size={20} />
+            <span className="booking-searching__stop booking-searching__stop--origin">
+              <MapPin className="booking-searching__pin" size={20} />
+            </span>
             <div className="booking-searching__road">
               <span className="booking-searching__bus"><BusFront size={22} /></span>
             </div>
-            <MapPin className="booking-searching__pin" size={20} />
+            <span className="booking-searching__stop booking-searching__stop--destination">
+              <MapPin className="booking-searching__pin" size={20} />
+            </span>
           </div>
           <p className="booking-searching__message">{t("booking.searchingTrip")}</p>
           <div className="booking-searching__preview" aria-hidden="true">
@@ -709,8 +760,58 @@ export function BookingPage() {
       {!loading && error && <p style={{ color: tokens.colorTextSecondary }}>{error}</p>}
 
       {!providerLoading && providerError && <p style={{ color: tokens.colorWarning }}>{providerError}</p>}
-      {providerSearched && !providerLoading && !providerError && !providerTrip && (
-        <p style={{ color: tokens.colorTextSecondary }}>{t("booking.noProviderTrips")}</p>
+      {providerSearched && !providerLoading && !providerTrip && (
+        <div className="trip-request-card">
+          <div className="trip-request-card__title">{t("booking.noTripTitle")}</div>
+          <p className="trip-request-card__subtitle">{t("booking.noTripSubtitle")}</p>
+          <div className="trip-request-card__route" aria-label={t("booking.tripRequestRoute")}>
+            <span>{routeNames.from || t("booking.tripRequestFrom")}</span>
+            <span>{routeNames.to || t("booking.tripRequestTo")}</span>
+            <time>{date}</time>
+          </div>
+
+          {tripRequestSubmitted ? (
+            <div className="trip-request-card__success" role="status" aria-live="polite">
+              <strong>{t("booking.tripRequestSent")}</strong>
+              <p>{t("booking.tripRequestWaiting")}</p>
+              <div className="trip-request-card__countdown">
+                <span>{t("booking.tripRequestCountdown")}</span>
+                <strong>
+                  {`${Math.floor(tripRequestSeconds / 60)}:${String(tripRequestSeconds % 60).padStart(2, "0")}`}
+                </strong>
+              </div>
+            </div>
+          ) : (
+            <form className="trip-request-card__form" onSubmit={submitTripRequest}>
+              <label>
+                <span>{t("booking.tripRequestName")}</span>
+                <input
+                  autoComplete="name"
+                  value={tripRequestName}
+                  onChange={(event) => setTripRequestName(event.target.value)}
+                  placeholder={t("booking.tripRequestNamePlaceholder")}
+                  maxLength={100}
+                />
+              </label>
+              <label>
+                <span>{t("booking.tripRequestPhone")}</span>
+                <input
+                  autoComplete="tel"
+                  inputMode="tel"
+                  type="tel"
+                  value={tripRequestPhone}
+                  onChange={(event) => setTripRequestPhone(event.target.value)}
+                  placeholder="+380 XX XXX-XX-XX"
+                  maxLength={32}
+                />
+              </label>
+              {tripRequestError && <p className="trip-request-card__error" role="alert">{tripRequestError}</p>}
+              <button type="submit" disabled={tripRequestLoading}>
+                {tripRequestLoading ? t("booking.tripRequestSending") : t("booking.tripRequestSubmit")}
+              </button>
+            </form>
+          )}
+        </div>
       )}
       {profileLoadError && selectedTrip && (
         <p role="status" style={{ color: tokens.colorWarning }}>{t("booking.profileLoadError")}</p>
