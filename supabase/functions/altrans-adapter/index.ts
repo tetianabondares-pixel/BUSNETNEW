@@ -44,6 +44,14 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function isValidIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -649,7 +657,10 @@ Deno.serve(async (request) => {
       ) {
         return json({ errorCode: "INVALID_PASSENGER" }, 400);
       }
-      if (passenger.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(passenger.email))) {
+      if (
+        !passenger.email ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(passenger.email))
+      ) {
         return json({ errorCode: "INVALID_PASSENGER_EMAIL" }, 400);
       }
     }
@@ -660,16 +671,17 @@ Deno.serve(async (request) => {
     if (!projectUrl || !anonKey) {
       return json({ errorCode: "BOOKING_NOT_CONFIGURED" }, 503);
     }
-    if (!authorization) {
-      return json({ errorCode: "AUTHENTICATION_REQUIRED" }, 401);
-    }
-    const authClient = createClient(projectUrl, anonKey, {
-      global: { headers: { Authorization: authorization } },
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    const { data: userData, error: userError } = await authClient.auth.getUser();
-    if (userError || !userData.user) {
-      return json({ errorCode: "AUTHENTICATION_REQUIRED" }, 401);
+
+    let passengerUserId: string | null = null;
+    if (authorization) {
+      const authClient = createClient(projectUrl, anonKey, {
+        global: { headers: { Authorization: authorization } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: userData, error: userError } = await authClient.auth.getUser();
+      if (!userError && userData.user) {
+        passengerUserId = userData.user.id;
+      }
     }
 
     const [fromLocation, toLocation] = await Promise.all([
@@ -782,16 +794,25 @@ Deno.serve(async (request) => {
 
     const expiresAt = null;
     const bookingNumber = `BUS-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+    const claimToken = passengerUserId
+      ? null
+      : `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
+    const claimTokenHash = claimToken ? await sha256Hex(claimToken) : null;
+    const claimExpiresAt = claimToken
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      : null;
     const { data: booking, error: bookingError } = await adminClient
       .from("bookings")
       .insert({
         booking_number: bookingNumber,
-        passenger_id: userData.user.id,
+        passenger_id: passengerUserId,
         trip_id: trip.id,
         status: "pending",
         currency: providerTrip.currency,
         total_amount: price * passengers.length,
         expires_at: expiresAt,
+        guest_claim_token_hash: claimTokenHash,
+        guest_claim_expires_at: claimExpiresAt,
       })
       .select("id")
       .single();
@@ -829,6 +850,7 @@ Deno.serve(async (request) => {
       currency: providerTrip.currency,
       totalAmount: price * passengers.length,
       expiresAt,
+      claimToken,
     });
   }
 

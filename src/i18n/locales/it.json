@@ -25,6 +25,11 @@
     "signOut": "Esci",
     "account": "Il mio account"
   },
+  "header": {
+    "languageSelector": "Selettore della lingua",
+    "switchToLightTheme": "Attiva il tema chiaro",
+    "switchToDarkTheme": "Attiva il tema scuro"
+  },
   "search": {
     "fromLabel": "Da:",
     "fromDefault": "Kyiv",
@@ -42,7 +47,15 @@
     "locationLoadError": "Impossibile caricare le località.",
     "noLocations": "Nessuna città trovata.",
     "loading": "Caricamento città...",
-    "swap": "Inverti le città"
+    "swap": "Inverti le città",
+    "retry": "Riprova",
+    "validation": {
+      "origin": "Seleziona una città di partenza dai suggerimenti.",
+      "destination": "Seleziona una città di destinazione dai suggerimenti.",
+      "sameLocation": "La partenza e la destinazione devono essere città diverse.",
+      "unavailableLocation": "Non ci sono corse disponibili per una delle città selezionate.",
+      "pastDate": "Scegli oggi o una data futura."
+    }
   },
   "calendar": {
     "regionLabel": "Scegli la data di viaggio",
@@ -326,6 +339,9 @@
     "registerSubtitle": "Crea un account passeggeri BUSNET.",
     "recoveryTitle": "Reimposta la password",
     "recoverySubtitle": "Inserisci l'indirizzo email associato al tuo account.",
+    "resetTitle": "Scegli una nuova password",
+    "resetSubtitle": "Crea una nuova password per il tuo account.",
+    "newPassword": "Nuova password",
     "fullName": "Nome e cognome",
     "phone": "Telefono (facoltativo)",
     "email": "Email",
@@ -334,6 +350,7 @@
     "loginAction": "Accedi",
     "registerAction": "Crea account",
     "recoveryAction": "Invia istruzioni",
+    "resetAction": "Salva password",
     "loading": "Attendi…",
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
@@ -359,12 +376,13 @@
     "passwordWeak": "La password non soddisfa i requisiti.",
     "passwordMismatch": "Le password non coincidono.",
     "nameTooShort": "Inserisci nome e cognome.",
+    "claimFailed": "Impossibile collegare la prenotazione a questa email.",
     "authStatusLabel": "Stato dell'autenticazione"
   },
   "booking": {
     "title": "Risultati della ricerca",
     "placeholder": "Ricerca viaggi",
-    "loading": "Caricamento delle corse programmate…",
+    "searchingTrip": "Stiamo cercando il viaggio migliore per te",
     "notFound": "Nessuna corsa programmata per la data selezionata. Scegli un'altra data evidenziata nel calendario.",
     "missingSearch": "Inserisci città e data per cercare.",
     "searchError": "Impossibile caricare i viaggi. Riprova più tardi.",
@@ -373,11 +391,12 @@
     "locationAmbiguous": "Più città hanno questo nome. Specifica la città.",
     "sameLocation": "La partenza e la destinazione devono essere città diverse.",
     "trip": "Viaggio",
-    "loadingLive": "Conferma dei viaggi con il fornitore…",
     "availableTrips": "Viaggi disponibili",
     "noProviderTrips": "AL-TRANS non ha trovato corse disponibili per questa data.",
     "showDetails": "Dettagli del percorso",
     "hideDetails": "Nascondi dettagli",
+    "itineraryLimited": "Sono mostrate solo le fermate principali perché l'orario completo non è disponibile.",
+    "itineraryError": "Impossibile caricare l'orario completo delle fermate.",
     "bookTrip": "Prenota",
     "stopArrival": "Arrivo",
     "stopDeparture": "Partenza",
@@ -401,7 +420,22 @@
     "expiresAt": "Valida fino al",
     "bookingError": "Impossibile creare la prenotazione. Riprova più tardi.",
     "tripUnavailable": "Questo viaggio non è più disponibile. Scegline un altro.",
-    "tripPriceChanged": "Il prezzo del viaggio è cambiato. Aggiorna la ricerca e riprova."
+    "tripPriceChanged": "Il prezzo del viaggio è cambiato. Aggiorna la ricerca e riprova.",
+    "refreshTripSearch": "Aggiorna la ricerca del viaggio",
+    "fillPassengerFields": "Inserisci nome, cognome, email e telefono del passeggero.",
+    "activateAccountHint": "Puoi creare un account con questa email e collegare la prenotazione.",
+    "activateAccount": "Crea account e collega",
+    "openAccount": "Apri account",
+    "downloadTicket": "Scarica biglietto",
+    "shareTicket": "Condividi",
+    "shared": "Dettagli condivisi.",
+    "copied": "Dettagli copiati negli appunti.",
+    "shareFailed": "Impossibile condividere o copiare i dettagli.",
+    "ticketTitle": "Dettagli prenotazione",
+    "route": "Tratta",
+    "date": "Data",
+    "carrier": "Vettore",
+    "ticketNotConfirmed": "Questi sono i dettagli della prenotazione, non un biglietto di imbarco. Lo stato finale viene confermato dopo l'approvazione."
   },
   "popularDestinations": {
     "title": "Destinazioni popolari",

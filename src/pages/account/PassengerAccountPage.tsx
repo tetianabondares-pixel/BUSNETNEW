@@ -93,7 +93,7 @@ export function PassengerAccountPage() {
   const { tokens } = useTheme();
   const navigate = useNavigate();
   const locale = i18n.resolvedLanguage ?? i18n.language;
-  const [now] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<"trips" | "profile">("trips");
   const [bookings, setBookings] = useState<AccountBooking[]>([]);
   const [profile, setProfile] = useState<ProfileForm>(emptyProfile);
@@ -114,6 +114,16 @@ export function PassengerAccountPage() {
   const languageTriggerRef = useRef<HTMLButtonElement>(null);
   const languageOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  useEffect(() => {
+    const refreshNow = () => setNow(Date.now());
+    const intervalId = window.setInterval(refreshNow, 30_000);
+    window.addEventListener("focus", refreshNow);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshNow);
+    };
+  }, []);
+
   const loadAccount = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
@@ -122,6 +132,24 @@ export function PassengerAccountPage() {
       if (userError) throw userError;
       const user = userData.user;
       if (!user) throw new Error("AUTH_REQUIRED");
+
+      try {
+        const stored = JSON.parse(localStorage.getItem("busnet_pending_claim") ?? "null");
+        if (stored?.bookingId && stored?.claimToken) {
+          const { data: claimed, error: claimError } = await supabase.rpc(
+            "claim_guest_booking",
+            {
+              p_booking_id: stored.bookingId,
+              p_claim_token: stored.claimToken,
+            },
+          );
+          if (!claimError && claimed === true) {
+            localStorage.removeItem("busnet_pending_claim");
+          }
+        }
+      } catch {
+        // Guest claim data is optional and may be absent or invalid.
+      }
 
       const metadataLocale = isProfileLocale(user.user_metadata?.preferred_locale)
         ? user.user_metadata.preferred_locale
@@ -488,6 +516,7 @@ export function PassengerAccountPage() {
 
         <div className="passenger-account__tabs" role="tablist" aria-label={t("account.tabsLabel")}>
           <button
+            aria-controls="account-panel-trips"
             aria-selected={activeTab === "trips"}
             className={activeTab === "trips" ? "is-active" : ""}
             id="account-tab-trips"
@@ -498,6 +527,7 @@ export function PassengerAccountPage() {
             {t("account.trips.title")}
           </button>
           <button
+            aria-controls="account-panel-profile"
             aria-selected={activeTab === "profile"}
             className={activeTab === "profile" ? "is-active" : ""}
             id="account-tab-profile"
@@ -509,8 +539,14 @@ export function PassengerAccountPage() {
           </button>
         </div>
 
-        {activeTab === "trips" ? (
-          <div aria-labelledby="account-tab-trips" className="passenger-account__panel" role="tabpanel">
+        <div
+          aria-labelledby="account-tab-trips"
+          className="passenger-account__panel"
+          hidden={activeTab !== "trips"}
+          id="account-panel-trips"
+          role="tabpanel"
+          tabIndex={0}
+        >
             {loading && <p className="passenger-account__message">{t("account.loading")}</p>}
             {!loading && loadError && (
               <div className="passenger-account__message passenger-account__message--error" role="alert">
@@ -542,9 +578,15 @@ export function PassengerAccountPage() {
                 </section>
               </div>
             )}
-          </div>
-        ) : (
-          <div aria-labelledby="account-tab-profile" className="passenger-account__panel" role="tabpanel">
+        </div>
+        <div
+          aria-labelledby="account-tab-profile"
+          className="passenger-account__panel"
+          hidden={activeTab !== "profile"}
+          id="account-panel-profile"
+          role="tabpanel"
+          tabIndex={0}
+        >
             <form className="passenger-account__profile-form" onSubmit={saveProfile}>
               <label>
                 {t("account.profile.fullName")}
@@ -640,8 +682,7 @@ export function PassengerAccountPage() {
                 {t(savingProfile ? "account.profile.saving" : "account.profile.save")}
               </button>
             </form>
-          </div>
-        )}
+        </div>
       </div>
 
       {cancellationBooking && (

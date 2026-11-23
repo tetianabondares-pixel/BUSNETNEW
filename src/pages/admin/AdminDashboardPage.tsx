@@ -299,6 +299,8 @@ export function AdminDashboardPage() {
   const [tripCompleted, setTripCompleted] = useState(false);
   const [interactionSaving, setInteractionSaving] = useState(false);
   const interactionLoadRequestRef = useRef(0);
+  const bookingLoadRequestRef = useRef(0);
+  const passengerLoadRequestRef = useRef(0);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [settingsDraft, setSettingsDraft] = useState({
     timezone: "Europe/Kyiv",
@@ -466,6 +468,7 @@ export function AdminDashboardPage() {
   };
 
   const loadBookings = async () => {
+    const requestId = ++bookingLoadRequestRef.current;
     const { data, error } = await supabase.rpc("admin_search_bookings", {
       p_query: bookingSearch || null,
       p_status: bookingStatusFilter || null,
@@ -474,6 +477,7 @@ export function AdminDashboardPage() {
       p_page: bookingPage,
       p_page_size: 50,
     });
+    if (requestId !== bookingLoadRequestRef.current) return;
     if (error || !data) {
       setLoadErrors((current) => ({ ...current, bookings: t("admin.loadFailed") }));
       setBookings([]);
@@ -502,12 +506,14 @@ export function AdminDashboardPage() {
   };
 
   const loadPassengers = async () => {
+    const requestId = ++passengerLoadRequestRef.current;
     const { data, error } = await supabase.rpc("admin_search_passengers", {
       p_query: passengerSearch || null,
       p_locale: passengerLocaleFilter || null,
       p_page: passengerPage,
       p_page_size: 50,
     });
+    if (requestId !== passengerLoadRequestRef.current) return;
     if (error || !data) {
       setLoadErrors((current) => ({ ...current, passengers: t("admin.loadFailed") }));
       setPassengers([]);

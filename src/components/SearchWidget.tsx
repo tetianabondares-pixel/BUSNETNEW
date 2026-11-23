@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
 import { BusnetCalendar } from "@/features/search/components/DatePicker/BusnetCalendar";
+import { getKyivToday } from "@/features/search/components/DatePicker/calendar.utils";
 import type { ResolvedLocation } from "@/features/search/location.types";
 import "@/features/search/components/DatePicker/BusnetCalendar.css";
 
@@ -14,9 +15,10 @@ export interface SearchRouteSelection {
 }
 
 type Field = "from" | "to";
+type SearchValidationError = "origin" | "destination" | "sameLocation" | "unavailableLocation" | "pastDate";
 type Props = { selectedRoute?: SearchRouteSelection | null };
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const todayISO = getKyivToday;
 const languageOf = (language: string) => language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
 const localizedName = (location: ResolvedLocation, language: string) =>
   language === "en" ? (location.nameEn ?? location.nameUk) :
@@ -67,6 +69,8 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const [suggestions, setSuggestions] = useState<ResolvedLocation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<"rpc" | "empty" | null>(null);
+  const [validationError, setValidationError] = useState<SearchValidationError | null>(null);
+  const [retrySearch, setRetrySearch] = useState(0);
   const [highlighted, setHighlighted] = useState(-1);
   const [composing, setComposing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,6 +85,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     if (!selectedRoute) return;
     setFromLocation(selectedRoute.from); setToLocation(selectedRoute.to);
     setFromText(selectedRoute.from.name); setToText(selectedRoute.to.name);
+    setValidationError(null);
   }, [selectedRoute]);
 
   useEffect(() => {
@@ -92,6 +97,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     setToText(routePrefill.to);
     setSuggestions([]);
     setError(null);
+    setValidationError(null);
     setActive(null);
   }, [routePrefill]);
 
@@ -167,7 +173,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
       setHighlighted(-1);
     }, text.trim().length ? 220 : 0);
     return () => window.clearTimeout(timer);
-  }, [active, fromText, toText, fromLocation?.id, toLocation?.id, language]);
+  }, [active, fromText, toText, fromLocation?.id, toLocation?.id, language, retrySearch]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -183,12 +189,14 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const select = (field: Field, location: ResolvedLocation) => {
     if (field === "from") { setFromLocation(location); setFromText(location.name); }
     else { setToLocation(location); setToText(location.name); }
+    setValidationError(null);
     setSuggestions([]); setActive(null); setHighlighted(-1);
   };
   const edit = (field: Field, value: string) => {
     requestRef.current += 1;
     setSuggestions([]);
     setError(null);
+    setValidationError(null);
     if (field === "from") { setFromText(value); setFromLocation(null); }
     else { setToText(value); setToLocation(null); }
     setActive(field);
@@ -210,11 +218,19 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   };
   const swap = () => {
     const oldFrom = fromLocation; setFromLocation(toLocation); setToLocation(oldFrom);
-    const oldText = fromText; setFromText(toText); setToText(oldText); setSuggestions([]);
+    const oldText = fromText; setFromText(toText); setToText(oldText);
+    setSuggestions([]); setValidationError(null);
   };
   const handleSearch = () => {
-    if (!fromLocation || !toLocation || fromLocation.id === toLocation.id ||
-      !fromLocation.providerLocationId || !toLocation.providerLocationId || dateISO < todayISO()) return;
+    if (!fromLocation) { setValidationError("origin"); return; }
+    if (!toLocation) { setValidationError("destination"); return; }
+    if (fromLocation.id === toLocation.id) { setValidationError("sameLocation"); return; }
+    if (!fromLocation.providerLocationId || !toLocation.providerLocationId) {
+      setValidationError("unavailableLocation");
+      return;
+    }
+    if (dateISO < todayISO()) { setValidationError("pastDate"); return; }
+    setValidationError(null);
     navigate(`/booking?fromId=${encodeURIComponent(fromLocation.id)}&toId=${encodeURIComponent(toLocation.id)}&date=${encodeURIComponent(dateISO)}`);
   };
   const renderField = (field: Field) => {
@@ -247,7 +263,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   };
   const isDark = resolved === "dark";
   return <div id="trip-search" ref={containerRef} style={{ position: "relative", zIndex: 15, width: "100%", maxWidth: 680 }}>
-    <div ref={panelRef} className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16, background: isDark ? "rgba(7,15,27,.88)" : "rgba(255,255,255,.92)", boxShadow: tokens.shadowCard }}>
+    <div ref={panelRef} className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16 }}>
       {renderField("from")}
       <button type="button" className="search-widget-swap" onClick={swap} aria-label={t("search.swap")}><ArrowLeftRight size={13} /></button>
       {renderField("to")}
@@ -257,20 +273,34 @@ export function SearchWidget({ selectedRoute = null }: Props) {
       </button>
       <button type="button" className="search-widget-submit" onClick={handleSearch} aria-label={t("search.submit")} style={{ height: 40, padding: "0 14px", border: 0, borderRadius: 11, background: "#087DFF", color: "#fff" }}><Search size={15} /></button>
     </div>
-    {(active === "from" || active === "to") && <div id={`search-${active}-list`} role="listbox"
+    {validationError && (
+      <p role="alert" style={{ margin: "8px 4px 0", color: tokens.colorWarning, fontSize: "0.875rem" }}>
+        {t(`search.validation.${validationError}`)}
+      </p>
+    )}
+    {(active === "from" || active === "to") && <div
       className={`search-widget-popover search-widget-popover--${active}`}
-      style={{ ...popoverStyle, background: isDark ? "#0B1422" : "#fff", boxShadow: tokens.shadowCard }}>
+      style={popoverStyle}>
       {loading && <div role="status" style={{ padding: 10 }}>{t("search.loading")}</div>}
-      {!loading && error === "rpc" && <div style={{ padding: 10 }}>{t("search.locationLoadError")}</div>}
-      {!loading && error === "empty" && <div style={{ padding: 10 }}>{t("search.noLocations")}</div>}
-      {!loading && !error && suggestions.map((location, index) => <button type="button" role="option"
-        className="search-widget-option" id={`search-${active}-option-${index}`}
-        aria-selected={highlighted === index} key={location.id}
-        onMouseDown={(event) => event.preventDefault()} onClick={() => select(active, location)}
-        style={{ background: highlighted === index ? (isDark ? "#17263a" : "#eef5ff") : "transparent", color: isDark ? "#fff" : "#101828" }}>
-        {location.name}{location.countryCode ? ` · ${location.countryCode}` : ""}
-      </button>)}
+      {!loading && error === "rpc" && (
+        <div role="alert" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 10 }}>
+          <span>{t("search.locationLoadError")}</span>
+          <button type="button" onClick={() => setRetrySearch((value) => value + 1)}>
+            {t("search.retry")}
+          </button>
+        </div>
+      )}
+      {!loading && error === "empty" && <div role="status" style={{ padding: 10 }}>{t("search.noLocations")}</div>}
+      <div id={`search-${active}-list`} role="listbox">
+        {!loading && !error && suggestions.map((location, index) => <button type="button" role="option"
+          className="search-widget-option" id={`search-${active}-option-${index}`}
+          aria-selected={highlighted === index} key={location.id}
+          onMouseDown={(event) => event.preventDefault()} onClick={() => select(active, location)}
+          style={{ background: highlighted === index ? (isDark ? "#17263a" : "#eef5ff") : "transparent", color: isDark ? "#fff" : "#101828" }}>
+          {location.name}{location.countryCode ? ` · ${location.countryCode}` : ""}
+        </button>)}
+      </div>
     </div>}
-    <BusnetCalendar open={active === "date"} selectedDate={dateISO} fromLocationId={fromLocation?.id ?? null} toLocationId={toLocation?.id ?? null} onChange={setDateISO} onClose={() => setActive(null)} triggerRef={dateTriggerRef} />
+    <BusnetCalendar open={active === "date"} selectedDate={dateISO} fromLocationId={fromLocation?.id ?? null} toLocationId={toLocation?.id ?? null} onChange={(nextDate) => { setDateISO(nextDate); setValidationError(null); }} onClose={() => setActive(null)} triggerRef={dateTriggerRef} />
   </div>;
 }

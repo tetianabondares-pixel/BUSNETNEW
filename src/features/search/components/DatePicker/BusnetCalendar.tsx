@@ -149,7 +149,8 @@ export function BusnetCalendar({
 
   const previousDisabled = visibleMonth.getFullYear() === parseDateKey(today).getFullYear() &&
     visibleMonth.getMonth() === parseDateKey(today).getMonth();
-  const nextDisabled = !isWithinSearchLimit(`${year}-${String(month).padStart(2, "0")}-28`, today);
+  const nextMonthKey = toDateKey(new Date(year, month, 1, 12));
+  const nextDisabled = !isWithinSearchLimit(nextMonthKey, today);
 
   const changeMonth = (offset: number) => {
     const next = new Date(year, month - 1 + offset, 1, 12);

@@ -1,0 +1,162 @@
+.booking-page {
+  display: flex;
+  width: 100%;
+  min-height: 50vh;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.booking-page__route {
+  text-align: center;
+}
+
+.booking-searching {
+  display: grid;
+  width: min(100%, 560px);
+  justify-items: center;
+  gap: 1.1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(8, 125, 255, 0.14);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fff, #f4f8ff);
+  box-shadow: 0 12px 36px rgba(27, 73, 132, 0.08);
+}
+
+.booking-searching__route {
+  display: flex;
+  width: min(100%, 260px);
+  align-items: center;
+  gap: 0.65rem;
+  color: #087dff;
+}
+
+.booking-searching__pin:last-child {
+  color: #27a879;
+}
+
+.booking-searching__road {
+  position: relative;
+  height: 2px;
+  flex: 1;
+  border-radius: 999px;
+  background: repeating-linear-gradient(90deg, #b8d5fa 0 7px, transparent 7px 12px);
+}
+
+.booking-searching__bus {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #d6e8ff;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(8, 125, 255, 0.16);
+  transform: translate(-50%, -50%);
+  animation: booking-bus-travel 2.4s ease-in-out infinite;
+}
+
+.booking-searching__message {
+  color: #344054;
+  font-size: 1rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.booking-searching__preview {
+  display: grid;
+  width: 100%;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e8eef7;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.booking-searching__skeleton {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #edf2f8 20%, #f8faff 45%, #edf2f8 70%);
+  background-size: 220% 100%;
+  animation: booking-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.booking-searching__skeleton--title {
+  width: 56%;
+  height: 16px;
+}
+
+.booking-searching__skeleton--details {
+  width: 78%;
+}
+
+.booking-searching__skeleton--price {
+  width: 32%;
+}
+
+html[data-theme="dark"] .booking-searching {
+  border-color: rgba(56, 189, 248, 0.2);
+  background: linear-gradient(145deg, #101c2d, #0b1422);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .booking-searching__message {
+  color: #e8f1ff;
+}
+
+html[data-theme="dark"] .booking-searching__preview {
+  border-color: #24354a;
+  background: rgba(5, 9, 18, 0.5);
+}
+
+html[data-theme="dark"] .booking-searching__skeleton {
+  background: linear-gradient(90deg, #1a2a3d 20%, #263a52 45%, #1a2a3d 70%);
+  background-size: 220% 100%;
+}
+
+@keyframes booking-bus-travel {
+  0%, 100% { left: 0; }
+  50% { left: 100%; }
+}
+
+@keyframes booking-skeleton-shimmer {
+  to { background-position: -220% 0; }
+}
+
+@media (max-width: 480px) {
+  .booking-page {
+    padding: 2rem 1rem;
+  }
+
+  .booking-searching {
+    padding: 1.25rem 1rem;
+  }
+
+  .booking-page__trip-summary,
+  .booking-page__trip-actions,
+  .booking-page__booking-actions {
+    flex-wrap: wrap;
+  }
+
+  .booking-page__trip-summary {
+    align-items: flex-start;
+  }
+
+  .booking-page__trip-summary strong,
+  .booking-page__trip-summary > strong:first-child,
+  .booking-page__trip-actions button,
+  .booking-page__booking-actions button {
+    max-width: 100%;
+  }
+
+  .booking-page__trip-actions button,
+  .booking-page__booking-actions button {
+    flex: 1 1 8rem;
+  }
+}

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +6,7 @@ import { useTheme } from "@/theme";
 import { supabase } from "@/lib/supabase";
 import "./PassengerAuth.css";
 
-type AuthView = "login" | "register" | "recovery";
+type AuthView = "login" | "register" | "recovery" | "reset";
 type FieldName = "fullName" | "email" | "password" | "confirmPassword";
 
 const passwordRules = [
@@ -27,6 +27,7 @@ export function PassengerAuthPage() {
   const navigate = useNavigate();
 
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showReset, setShowReset] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -38,18 +39,78 @@ export function PassengerAuthPage() {
   const [notice, setNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setShowRecovery(false);
+        setShowReset(true);
+        setErrors({});
+        setNotice("");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    let stored: {
+      email?: string;
+      fullName?: string;
+      phone?: string;
+    } | null = null;
+    try {
+      stored = JSON.parse(localStorage.getItem("busnet_pending_claim") ?? "null");
+    } catch {
+      stored = null;
+    }
+    const pending = location.state as {
+      pendingBooking?: { bookingId: string; claimToken: string };
+      pendingPassenger?: { email?: string; fullName?: string; phone?: string };
+    } | null;
+    const passenger = pending?.pendingPassenger ?? stored;
+    if (passenger?.email) setEmail(passenger.email);
+    if (passenger?.fullName) setFullName(passenger.fullName);
+    if (passenger?.phone) setPhone(passenger.phone);
+  }, [location.state]);
+
   const isRegister = location.pathname === "/register";
   const isRecovery = showRecovery;
-  const title = isRecovery
-    ? t("passengerAuth.recoveryTitle")
-    : isRegister
-      ? t("passengerAuth.registerTitle")
-      : t("passengerAuth.loginTitle");
-  const subtitle = isRecovery
-    ? t("passengerAuth.recoverySubtitle")
-    : isRegister
-      ? t("passengerAuth.registerSubtitle")
-      : t("passengerAuth.loginSubtitle");
+  const isReset = showReset;
+  const title = isReset
+    ? t("passengerAuth.resetTitle")
+    : isRecovery
+      ? t("passengerAuth.recoveryTitle")
+      : isRegister
+        ? t("passengerAuth.registerTitle")
+        : t("passengerAuth.loginTitle");
+  const subtitle = isReset
+    ? t("passengerAuth.resetSubtitle")
+    : isRecovery
+      ? t("passengerAuth.recoverySubtitle")
+      : isRegister
+        ? t("passengerAuth.registerSubtitle")
+        : t("passengerAuth.loginSubtitle");
+
+  const claimPendingBooking = async () => {
+    const pendingState = location.state as {
+      pendingBooking?: { bookingId: string; claimToken: string };
+    } | null;
+    let pending = pendingState?.pendingBooking;
+    if (!pending) {
+      try {
+        pending = JSON.parse(localStorage.getItem("busnet_pending_claim") ?? "null");
+      } catch {
+        pending = undefined;
+      }
+    }
+    if (!pending?.bookingId || !pending.claimToken) return false;
+    const { data, error } = await supabase.rpc("claim_guest_booking", {
+      p_booking_id: pending.bookingId,
+      p_claim_token: pending.claimToken,
+    });
+    if (error || data !== true) throw new Error("CLAIM_FAILED");
+    localStorage.removeItem("busnet_pending_claim");
+    return true;
+  };
 
   const validate = () => {
     const nextErrors: Partial<Record<FieldName, string>> = {};
@@ -58,19 +119,19 @@ export function PassengerAuthPage() {
         fullName.trim() ? "passengerAuth.nameTooShort" : "passengerAuth.required",
       );
     }
-    if (!email.trim()) {
+    if (!isReset && !email.trim()) {
       nextErrors.email = t("passengerAuth.required");
-    } else if (!isValidEmail(email.trim())) {
+    } else if (!isReset && !isValidEmail(email.trim())) {
       nextErrors.email = t("passengerAuth.invalidEmail");
     }
     if (!isRecovery && !password) {
       nextErrors.password = t("passengerAuth.required");
-    } else if (isRegister && passwordRules.some((rule) => !rule.test(password))) {
+    } else if ((isRegister || isReset) && passwordRules.some((rule) => !rule.test(password))) {
       nextErrors.password = t("passengerAuth.passwordWeak");
     }
-    if (isRegister && !confirmPassword) {
+    if ((isRegister || isReset) && !confirmPassword) {
       nextErrors.confirmPassword = t("passengerAuth.required");
-    } else if (isRegister && password !== confirmPassword) {
+    } else if ((isRegister || isReset) && password !== confirmPassword) {
       nextErrors.confirmPassword = t("passengerAuth.passwordMismatch");
     }
     setErrors(nextErrors);
@@ -84,6 +145,13 @@ export function PassengerAuthPage() {
 
     setIsSubmitting(true);
     try {
+      if (isReset) {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        navigate("/account", { replace: true });
+        return;
+      }
+
       if (isRecovery) {
         const { error } = await supabase.auth.resetPasswordForEmail(
           email.trim(),
@@ -125,6 +193,11 @@ export function PassengerAuthPage() {
         if (error) throw error;
 
         if (data.session) {
+          try {
+            await claimPendingBooking();
+          } catch {
+            setNotice(t("passengerAuth.claimFailed"));
+          }
           navigate(getPostAuthPath(), { replace: true, state: getPostAuthState() });
         } else {
           setNotice(t("passengerAuth.registrationSent"));
@@ -137,6 +210,11 @@ export function PassengerAuthPage() {
         password,
       });
       if (error) throw error;
+      try {
+        await claimPendingBooking();
+      } catch {
+        setNotice(t("passengerAuth.claimFailed"));
+      }
       navigate(getPostAuthPath(), { replace: true, state: getPostAuthState() });
     } catch (error) {
       const message =
@@ -172,6 +250,7 @@ export function PassengerAuthPage() {
 
   const changeView = (nextView: AuthView) => {
     setShowRecovery(nextView === "recovery");
+    setShowReset(nextView === "reset");
     setErrors({});
     setNotice("");
     setPassword("");
@@ -246,29 +325,33 @@ export function PassengerAuthPage() {
               </div>
             )}
 
-            <div className="passenger-auth__field">
-              <label htmlFor="email">{t("passengerAuth.email")}</label>
-              <input
-                autoComplete="email"
-                id="email"
-                name="email"
-                type="email"
-                inputMode="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                aria-invalid={Boolean(errors.email)}
-                aria-describedby={errors.email ? "email-error" : undefined}
-                style={inputStyle}
-              />
-              {renderError("email")}
-            </div>
+            {!isReset && (
+              <div className="passenger-auth__field">
+                <label htmlFor="email">{t("passengerAuth.email")}</label>
+                <input
+                  autoComplete="email"
+                  id="email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby={errors.email ? "email-error" : undefined}
+                  style={inputStyle}
+                />
+                {renderError("email")}
+              </div>
+            )}
 
             {!isRecovery && (
               <div className="passenger-auth__field">
-                <label htmlFor="password">{t("passengerAuth.password")}</label>
+                <label htmlFor="password">
+                  {isReset ? t("passengerAuth.newPassword") : t("passengerAuth.password")}
+                </label>
                 <div className="passenger-auth__password-input">
                   <input
-                    autoComplete={isRegister ? "new-password" : "current-password"}
+                    autoComplete={isRegister || isReset ? "new-password" : "current-password"}
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
@@ -278,7 +361,7 @@ export function PassengerAuthPage() {
                     aria-describedby={
                       [
                         errors.password ? "password-error" : null,
-                        isRegister ? "password-requirements" : null,
+                        isRegister || isReset ? "password-requirements" : null,
                       ]
                         .filter(Boolean)
                         .join(" ") || undefined
@@ -300,7 +383,7 @@ export function PassengerAuthPage() {
                 </div>
                 {renderError("password")}
 
-                {isRegister && (
+                {(isRegister || isReset) && (
                   <div
                     className="passenger-auth__requirements"
                     id="password-requirements"
@@ -325,7 +408,7 @@ export function PassengerAuthPage() {
               </div>
             )}
 
-            {isRegister && (
+            {(isRegister || isReset) && (
               <div className="passenger-auth__field">
                 <label htmlFor="confirmPassword">
                   {t("passengerAuth.confirmPassword")}
@@ -387,16 +470,18 @@ export function PassengerAuthPage() {
               {isSubmitting
                 ? t("passengerAuth.loading")
                 : t(
-                    isRecovery
-                      ? "passengerAuth.recoveryAction"
-                      : isRegister
-                        ? "passengerAuth.registerAction"
-                        : "passengerAuth.loginAction",
+                    isReset
+                      ? "passengerAuth.resetAction"
+                      : isRecovery
+                        ? "passengerAuth.recoveryAction"
+                        : isRegister
+                          ? "passengerAuth.registerAction"
+                          : "passengerAuth.loginAction",
                   )}
             </button>
           </form>
 
-          {!isRegister && !isRecovery && (
+          {!isRegister && !isRecovery && !isReset && (
             <button
               className="passenger-auth__text-link"
               onClick={() => changeView("recovery")}
@@ -406,7 +491,7 @@ export function PassengerAuthPage() {
             </button>
           )}
 
-          {isRecovery ? (
+          {isRecovery || isReset ? (
             <button
               className="passenger-auth__text-link"
               onClick={() => changeView("login")}

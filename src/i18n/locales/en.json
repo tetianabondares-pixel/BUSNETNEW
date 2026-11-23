@@ -28,6 +28,11 @@
     "signOut": "Sign out",
     "account": "My account"
   },
+  "header": {
+    "languageSelector": "Language selector",
+    "switchToLightTheme": "Switch to light theme",
+    "switchToDarkTheme": "Switch to dark theme"
+  },
   "search": {
     "fromLabel": "From:",
     "fromDefault": "Kyiv",
@@ -45,7 +50,15 @@
     "locationLoadError": "Could not load locations.",
     "noLocations": "No cities found.",
     "loading": "Loading cities...",
-    "swap": "Swap cities"
+    "swap": "Swap cities",
+    "retry": "Try again",
+    "validation": {
+      "origin": "Select a departure city from the suggestions.",
+      "destination": "Select a destination city from the suggestions.",
+      "sameLocation": "Departure and destination must be different cities.",
+      "unavailableLocation": "Trips are not available for one of the selected cities.",
+      "pastDate": "Choose today or a future date."
+    }
   },
   "calendar": {
     "regionLabel": "Choose travel date",
@@ -329,6 +342,9 @@
     "registerSubtitle": "Create a BUSNET passenger account.",
     "recoveryTitle": "Reset your password",
     "recoverySubtitle": "Enter the email address linked to your account.",
+    "resetTitle": "Choose a new password",
+    "resetSubtitle": "Create a new password for your account.",
+    "newPassword": "New password",
     "fullName": "Full name",
     "phone": "Phone (optional)",
     "email": "Email",
@@ -337,6 +353,7 @@
     "loginAction": "Sign in",
     "registerAction": "Create account",
     "recoveryAction": "Send instructions",
+    "resetAction": "Save password",
     "loading": "Please wait…",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
@@ -362,12 +379,13 @@
     "passwordWeak": "The password does not meet the requirements.",
     "passwordMismatch": "The passwords do not match.",
     "nameTooShort": "Enter your full name.",
+    "claimFailed": "The booking could not be linked to this email.",
     "authStatusLabel": "Authentication status"
   },
   "booking": {
     "title": "Search results",
     "placeholder": "Searching trips",
-    "loading": "Loading scheduled trips…",
+    "searchingTrip": "Finding the best trip for your journey",
     "notFound": "No service is scheduled for the selected date. Choose another date marked in the calendar.",
     "missingSearch": "Enter cities and a date to search.",
     "searchError": "Could not load trips. Please try again later.",
@@ -376,11 +394,12 @@
     "locationAmbiguous": "More than one city has this name. Please specify the city.",
     "sameLocation": "Departure and destination must be different cities.",
     "trip": "Trip",
-    "loadingLive": "Confirming trips with the provider…",
     "availableTrips": "Available trips",
     "noProviderTrips": "AL-TRANS found no available trips for this date.",
     "showDetails": "Route details",
     "hideDetails": "Hide details",
+    "itineraryLimited": "Only the main stops are shown because the full route schedule is unavailable.",
+    "itineraryError": "Could not load the full stop schedule.",
     "bookTrip": "Book trip",
     "stopArrival": "Arrival",
     "stopDeparture": "Departure",
@@ -404,7 +423,22 @@
     "expiresAt": "Valid until",
     "bookingError": "Could not create the booking. Please try again later.",
     "tripUnavailable": "This trip is no longer available. Please choose another.",
-    "tripPriceChanged": "The trip price has changed. Refresh your search and try again."
+    "tripPriceChanged": "The trip price has changed. Refresh your search and try again.",
+    "refreshTripSearch": "Refresh trip search",
+    "fillPassengerFields": "Enter the passenger's first name, last name, email and phone.",
+    "activateAccountHint": "You can create an account with this email and link this booking to your account.",
+    "activateAccount": "Create account and link",
+    "openAccount": "Open account",
+    "downloadTicket": "Download ticket",
+    "shareTicket": "Share",
+    "shared": "Details shared.",
+    "copied": "Details copied to the clipboard.",
+    "shareFailed": "Could not share or copy the details.",
+    "ticketTitle": "Booking details",
+    "route": "Route",
+    "date": "Date",
+    "carrier": "Carrier",
+    "ticketNotConfirmed": "These are booking details, not a boarding ticket. Final status is confirmed after approval."
   },
   "popularDestinations": {
     "title": "Popular destinations",

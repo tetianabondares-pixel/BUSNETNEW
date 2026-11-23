@@ -63,7 +63,7 @@ export function Header() {
           ? "app-header--passenger-auth"
           : isLandingPage
             ? "app-header--landing"
-            : undefined
+            : "app-header--standard"
       }
       style={{
         position: "relative",
@@ -121,11 +121,16 @@ export function Header() {
       {/* Right Controls: Languages, Theme Switcher, Login Button */}
       <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
         {/* Language Switcher */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+        <div
+          aria-label={t("header.languageSelector")}
+          role="group"
+          style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+        >
           {languages.map((lang) => {
             const isActive = currentLang === lang;
             return (
               <button
+                aria-pressed={isActive}
                 key={lang}
                 onClick={() => setLanguage(lang)}
                 style={{
@@ -162,8 +167,8 @@ export function Header() {
         {/* Theme Mode Toggle (Night 🌙 / Day ☀️) */}
         <button
           onClick={toggleTheme}
-          title={isDark ? "Увімкнути денну тему (Daylight)" : "Увімкнути нічну тему (Dark Tech)"}
-          aria-label="Toggle Theme"
+          title={t(isDark ? "header.switchToLightTheme" : "header.switchToDarkTheme")}
+          aria-label={t(isDark ? "header.switchToLightTheme" : "header.switchToDarkTheme")}
           style={{
             display: "flex",
             alignItems: "center",
