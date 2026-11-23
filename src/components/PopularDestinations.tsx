@@ -21,9 +21,12 @@ export function PopularDestinations({
 }: PopularDestinationsProps) {
   const { t, i18n } = useTranslation();
   const [destinations, setDestinations] = useState<PopularDestination[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setDestinations([]);
     const locale = i18n.language?.startsWith("en")
       ? "en"
       : i18n.language?.startsWith("it")
@@ -67,7 +70,11 @@ export function PopularDestinations({
         }
       }
 
-      if (cancelled || routePairs.length === 0) return;
+      if (cancelled) return;
+      if (routePairs.length === 0) {
+        setDestinations([]);
+        return;
+      }
 
       const locationIds = [...new Set(routePairs.flatMap((row) =>
         [row.from_location_id, row.to_location_id],
@@ -78,7 +85,11 @@ export function PopularDestinations({
         .in("id", locationIds)
         .eq("active", true);
 
-      if (cancelled || locationsError || !locations) return;
+      if (cancelled) return;
+      if (locationsError || !locations) {
+        setDestinations([]);
+        return;
+      }
       const byId = new Map(locations.map((location) => [location.id, location]));
       const nextDestinations = routePairs.map((row) => {
         const from = byId.get(row.from_location_id);
@@ -106,7 +117,9 @@ export function PopularDestinations({
       if (!cancelled) setDestinations(nextDestinations);
     };
 
-    void loadDestinations();
+    void loadDestinations().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
 
     return () => {
       cancelled = true;
@@ -124,12 +137,15 @@ export function PopularDestinations({
     });
   };
 
+  if (!loading && destinations.length === 0) return null;
+
   return (
     <section
       className="popular-destinations"
       id="routes"
       data-theme={isDark ? "dark" : "light"}
       aria-labelledby="popular-destinations-title"
+      aria-busy={loading}
     >
       <div className="popular-destinations__content">
         <h2
@@ -142,46 +158,66 @@ export function PopularDestinations({
           {t("popularDestinations.subtitle")}
         </p>
 
-        <div className="popular-destinations__grid">
-          {destinations.map((destination) => (
-            <button
-              className="popular-destinations__card"
-              key={`${destination.from.id}:${destination.to.id}`}
-              type="button"
-              aria-label={t("popularDestinations.chooseRoute", {
-                from: destination.from.name,
-                to: destination.to.name,
-              })}
-              onClick={() => handleSelect(destination)}
-            >
-              <Landmark
-                className="popular-destinations__city-icon"
-                aria-hidden="true"
-                size={22}
-                strokeWidth={1.5}
-              />
-              <span className="popular-destinations__details">
-                <span className="popular-destinations__cities">
-                  <span>{destination.from.name}</span>
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="popular-destinations__route-arrow"
-                    size={15}
-                  />
-                  <span>{destination.to.name}</span>
+        {loading ? (
+          <div
+            className="popular-destinations__grid popular-destinations__skeleton-grid"
+            aria-hidden="true"
+          >
+            {Array.from({ length: 4 }, (_, index) => (
+              <div
+                className="popular-destinations__skeleton-card"
+                key={index}
+              >
+                <span className="popular-destinations__skeleton-icon" />
+                <span className="popular-destinations__skeleton-details">
+                  <span className="popular-destinations__skeleton-line" />
+                  <span className="popular-destinations__skeleton-line popular-destinations__skeleton-line--short" />
                 </span>
-                <span className="popular-destinations__action">
-                  <span>{t("popularDestinations.selectRoute")}</span>
-                  <ChevronRight
-                    className="popular-destinations__action-icon"
-                    aria-hidden="true"
-                    size={15}
-                  />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="popular-destinations__grid">
+            {destinations.map((destination) => (
+              <button
+                className="popular-destinations__card"
+                key={`${destination.from.id}:${destination.to.id}`}
+                type="button"
+                aria-label={t("popularDestinations.chooseRoute", {
+                  from: destination.from.name,
+                  to: destination.to.name,
+                })}
+                onClick={() => handleSelect(destination)}
+              >
+                <Landmark
+                  className="popular-destinations__city-icon"
+                  aria-hidden="true"
+                  size={22}
+                  strokeWidth={1.5}
+                />
+                <span className="popular-destinations__details">
+                  <span className="popular-destinations__cities">
+                    <span>{destination.from.name}</span>
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="popular-destinations__route-arrow"
+                      size={15}
+                    />
+                    <span>{destination.to.name}</span>
+                  </span>
+                  <span className="popular-destinations__action">
+                    <span>{t("popularDestinations.selectRoute")}</span>
+                    <ChevronRight
+                      className="popular-destinations__action-icon"
+                      aria-hidden="true"
+                      size={15}
+                    />
+                  </span>
                 </span>
-              </span>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

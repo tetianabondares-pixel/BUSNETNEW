@@ -125,7 +125,7 @@ export function HomePage() {
             flexDirection: "column",
             justifyContent: "center",
             padding: "2rem 3rem 4.5rem",
-            maxWidth: "760px",
+            maxWidth: "820px",
           }}
         >
           {/* Upper Kicker */}
@@ -161,7 +161,7 @@ export function HomePage() {
           {/* Main Headline */}
           <h1
             style={{
-              fontSize: "clamp(2.5rem, 4.4vw, 3.4rem)",
+              fontSize: "clamp(3rem, 4.8vw, 4rem)",
               fontWeight: 650,
               letterSpacing: "-0.045em",
               lineHeight: 1.05,

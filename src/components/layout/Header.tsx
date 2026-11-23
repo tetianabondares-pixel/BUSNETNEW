@@ -86,7 +86,7 @@ export function Header() {
         }}
         style={{ textDecoration: "none", color: "inherit" }}
       >
-        <BusnetLogo />
+        <BusnetLogo className="busnet-logo" />
       </Link>
 
       {/* Center Navigation */}

@@ -74,7 +74,6 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const [highlighted, setHighlighted] = useState(-1);
   const [composing, setComposing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const fromFieldRef = useRef<HTMLDivElement>(null);
   const toFieldRef = useRef<HTMLDivElement>(null);
   const dateTriggerRef = useRef<HTMLButtonElement>(null);
@@ -112,12 +111,10 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     if (active !== "from" && active !== "to") return;
     const updatePosition = () => {
       const container = containerRef.current;
-      const panel = panelRef.current;
       const field = active === "from" ? fromFieldRef.current : toFieldRef.current;
-      if (!container || !panel || !field) return;
+      if (!container || !field) return;
 
       const containerRect = container.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
       const fieldRect = field.getBoundingClientRect();
       const narrow = window.matchMedia("(max-width: 640px)").matches;
       const width = narrow
@@ -130,9 +127,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
             (active === "to" ? width : 0),
           containerRect.width - width,
         ));
-      const top = narrow
-        ? panelRect.bottom - containerRect.top + 8
-        : fieldRect.bottom - containerRect.top + 8;
+      const top = fieldRect.bottom - containerRect.top + 8;
       setPopoverStyle({ left, top, width });
     };
 
@@ -152,7 +147,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     const toId = toLocation?.id;
     const requestId = ++requestRef.current;
     const timer = window.setTimeout(async () => {
-      if (text.trim().length === 1) {
+      if (text.trim().length < 2) {
         setSuggestions([]);
         setError(null);
         setLoading(false);
@@ -244,7 +239,7 @@ export function SearchWidget({ selectedRoute = null }: Props) {
         <label htmlFor={inputId} style={{ fontSize: 10, color: resolved === "dark" ? "#8B9AAF" : "#8A98A9" }}>
           {t(`search.${field}Label`)}
         </label>
-        <input id={inputId} role="combobox" aria-autocomplete="list" aria-expanded={active === field}
+        <input id={inputId} role="combobox" aria-autocomplete="list" aria-expanded={active === field && text.trim().length >= 2}
           aria-controls={`${inputId}-list`} aria-activedescendant={highlighted >= 0 ? `${inputId}-option-${highlighted}` : undefined}
           name={`busnet-${field}-city`} autoComplete="off" autoCorrect="off" spellCheck={false}
           value={text} onFocus={() => {
@@ -262,8 +257,8 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     </div>;
   };
   const isDark = resolved === "dark";
-  return <div id="trip-search" ref={containerRef} style={{ position: "relative", zIndex: 15, width: "100%", maxWidth: 680 }}>
-    <div ref={panelRef} className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16 }}>
+  return <div id="trip-search" ref={containerRef} style={{ position: "relative", zIndex: 15, width: "100%", maxWidth: 720 }}>
+    <div className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 56, padding: "4px 6px 4px 14px", borderRadius: 16 }}>
       {renderField("from")}
       <button type="button" className="search-widget-swap" onClick={swap} aria-label={t("search.swap")}><ArrowLeftRight size={13} /></button>
       {renderField("to")}
@@ -278,7 +273,8 @@ export function SearchWidget({ selectedRoute = null }: Props) {
         {t(`search.validation.${validationError}`)}
       </p>
     )}
-    {(active === "from" || active === "to") && <div
+    {(active === "from" || active === "to") &&
+      (active === "from" ? fromText : toText).trim().length >= 2 && <div
       className={`search-widget-popover search-widget-popover--${active}`}
       style={popoverStyle}>
       {loading && <div role="status" style={{ padding: 10 }}>{t("search.loading")}</div>}

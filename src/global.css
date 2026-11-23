@@ -324,7 +324,36 @@ html[data-theme="dark"] .search-widget-option:focus-visible {
   .app-header--landing,
   .app-header--passenger-auth,
   .app-header--standard {
-    padding: 0.65rem 0.8rem !important;
+    min-height: 72px;
+    padding: 0.55rem 0.8rem 0.45rem !important;
+  }
+
+  .app-header--landing > a:first-child,
+  .app-header--passenger-auth > a:first-child,
+  .app-header--standard > a:first-child {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .app-header--landing .busnet-logo,
+  .app-header--passenger-auth .busnet-logo,
+  .app-header--standard .busnet-logo {
+    gap: 0;
+  }
+
+  .app-header--landing .busnet-logo > div:first-child,
+  .app-header--passenger-auth .busnet-logo > div:first-child,
+  .app-header--standard .busnet-logo > div:first-child {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 8px !important;
+  }
+
+  .app-header--landing .busnet-logo > div:last-child,
+  .app-header--passenger-auth .busnet-logo > div:last-child,
+  .app-header--standard .busnet-logo > div:last-child {
+    display: none !important;
   }
 
   .app-header--landing > div:last-child > div:first-child,
@@ -340,7 +369,7 @@ html[data-theme="dark"] .search-widget-option:focus-visible {
     justify-content: flex-start !important;
     width: 100%;
     max-width: none !important;
-    padding: clamp(2.25rem, 7vh, 4.5rem) 1rem 2.25rem !important;
+    padding: clamp(1.75rem, 5vh, 3rem) 1rem 2.25rem !important;
   }
 
   .home-hero__content h1 {
@@ -382,8 +411,8 @@ html[data-theme="dark"] .search-widget-option:focus-visible {
   .search-widget-swap {
     grid-column: 2;
     align-self: center;
-    width: 36px !important;
-    height: 36px !important;
+    width: 44px !important;
+    height: 44px !important;
     margin: 0 auto !important;
   }
 
@@ -433,11 +462,13 @@ html[data-theme="dark"] .search-widget-option:focus-visible {
 
 @media (max-width: 420px) {
   .app-header--landing > div:last-child > a:last-child span,
+  .app-header--landing > div:last-child > button:last-child span,
   .app-header--standard > div:last-child > button:last-child span {
     display: none;
   }
 
   .app-header--landing > div:last-child > a:last-child,
+  .app-header--landing > div:last-child > button:last-child,
   .app-header--standard > div:last-child > button:last-child {
     width: 34px;
     height: 34px;
