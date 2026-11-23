@@ -4,10 +4,11 @@
     "nameSuffix": "UA",
     "tagline": "Più che semplici viaggi",
     "heroKicker": "VIAGGI IN PULLMAN IN EUROPA",
-    "heroTitle1": "L'Europa è",
+    "heroTitle1": "L'Europa, in autobus",
     "heroTitleAccent": "più vicina,",
     "heroTitle2": "di quanto pensi",
-    "heroSubtitle": "Trova il viaggio · Prenota online · Paga alla salita"
+    "heroSubtitle": "Scegli tratta e data per vedere i viaggi disponibili.",
+    "routeCaption": "Tratte più richieste"
   },
   "maintenance": {
     "title": "BUSNET è temporaneamente non disponibile",
@@ -22,6 +23,7 @@
     "faq": "FAQ",
     "login": "Accedi",
     "passengerLogin": "Accesso passeggeri",
+    "backToLanding": "Pagina iniziale",
     "signOut": "Esci",
     "account": "Il mio account"
   },
@@ -37,7 +39,7 @@
     "toPlaceholder": "Inserisci città",
     "dateLabel": "Data:",
     "dateDefault": "Oggi",
-    "submit": "Cerca",
+    "submit": "Trova una corsa",
     "today": "Oggi",
     "tomorrow": "Domani",
     "selectDate": "Seleziona la data",
@@ -46,7 +48,6 @@
     "cityPlaceholder": "Città",
     "locationLoadError": "Impossibile caricare le località.",
     "noLocations": "Nessuna città trovata.",
-    "loading": "Caricamento città...",
     "swap": "Inverti le città",
     "retry": "Riprova",
     "validation": {
@@ -401,7 +402,13 @@
     "stopArrival": "Arrivo",
     "stopDeparture": "Partenza",
     "priceUnavailable": "Prezzo non disponibile",
-    "passengerDetails": "Dati del passeggero",
+    "passengerDetails": "Dati dei passeggeri",
+    "passengerNumber": "Passeggero {{number}}",
+    "contactShared": "Inserisci i recapiti della prenotazione per il primo passeggero.",
+    "addPassenger": "Aggiungi un passeggero",
+    "removePassenger": "Rimuovi il passeggero {{number}}",
+    "removePassengerLabel": "Rimuovi",
+    "passengerLimit": "Massimo 9 passeggeri per prenotazione.",
     "checkingAccount": "Verifica dell’accesso…",
     "signInToBook": "Accedi o registrati prima, così la richiesta verrà salvata nelle tue prenotazioni.",
     "signInAction": "Accedi o registrati",

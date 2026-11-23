@@ -147,8 +147,10 @@ export function BusnetCalendar({
     [firstGridDate],
   );
 
-  const previousDisabled = visibleMonth.getFullYear() === parseDateKey(today).getFullYear() &&
-    visibleMonth.getMonth() === parseDateKey(today).getMonth();
+  const todayDate = parseDateKey(today);
+  const currentMonthStart = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1, 12);
+  const previousDisabled = visibleMonth.getFullYear() === todayDate.getFullYear() &&
+    visibleMonth.getMonth() === todayDate.getMonth();
   const nextMonthKey = toDateKey(new Date(year, month, 1, 12));
   const nextDisabled = !isWithinSearchLimit(nextMonthKey, today);
 
@@ -156,7 +158,7 @@ export function BusnetCalendar({
     const next = new Date(year, month - 1 + offset, 1, 12);
     const candidateKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
     if (!isWithinSearchLimit(candidateKey, today) && offset > 0) return;
-    if (parseDateKey(candidateKey).getTime() < parseDateKey(today).getTime() && offset < 0) return;
+    if (next.getTime() < currentMonthStart.getTime() && offset < 0) return;
     setVisibleMonth(next);
   };
 

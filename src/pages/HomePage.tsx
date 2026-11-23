@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme";
 import { Header } from "@/components/layout/Header";
 import { SearchWidget } from "@/components/SearchWidget";
-import { TrustStats } from "@/components/TrustStats";
 import {
   PopularDestinations,
   type PopularDestination,
@@ -27,182 +26,49 @@ export function HomePage() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "flex-start",
         padding: 0,
         backgroundColor: tokens.colorBg,
         color: tokens.colorText,
         transition: "background-color 300ms ease, color 300ms ease",
       }}
     >
-      {/* Outer Cinematic Tech Container matching the Mockups */}
-      <div
-        className="home-hero"
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: "none",
-          minHeight: "100vh",
-          borderRadius: 0,
-          overflow: "visible",
-          border: "none",
-          boxShadow: "none",
-          display: "flex",
-          flexDirection: "column",
-          background: isDark ? "#050912" : "#F4F7FB",
-        }}
+      <section
+        className="home-hero__stage"
+        data-theme={resolved}
+        aria-labelledby="home-hero-title"
       >
-        {/* Crossfade both images so theme changes do not replace the background abruptly. */}
-        <div
-          className="home-hero__background"
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: "url(/images/busnet-kyiv-background-day.png)",
-            backgroundSize: "cover",
-            backgroundPosition: "right center",
-            backgroundRepeat: "no-repeat",
-            opacity: isDark ? 0 : 1,
-            filter: isDark ? "blur(8px)" : "blur(0)",
-            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1), filter 850ms cubic-bezier(0.22, 1, 0.36, 1)",
-            zIndex: 1,
-          }}
-          aria-hidden="true"
-        />
-        <div
-          className="home-hero__background"
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: "url(/images/busnet-kyiv-background-night.png)",
-            backgroundSize: "cover",
-            backgroundPosition: "right calc(50% + 42px)",
-            backgroundRepeat: "no-repeat",
-            opacity: isDark ? 0.95 : 0,
-            filter: isDark ? "blur(0)" : "blur(8px)",
-            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1), filter 850ms cubic-bezier(0.22, 1, 0.36, 1)",
-            zIndex: 1,
-          }}
-          aria-hidden="true"
-        />
+        <div className="home-hero__glow" aria-hidden="true" />
+        <div className="home-hero__route-art" aria-hidden="true">
+          <svg viewBox="0 0 560 460" fill="none">
+            <path className="home-hero__route-line" d="M92 310C165 288 168 174 260 195s107 116 208 51" />
+            <path className="home-hero__route-line home-hero__route-line--secondary" d="M92 310C170 366 241 357 301 292s90-113 167-126" />
+            <circle className="home-hero__route-node" cx="92" cy="310" r="7" />
+            <circle className="home-hero__route-node" cx="260" cy="195" r="7" />
+            <circle className="home-hero__route-node" cx="301" cy="292" r="7" />
+            <circle className="home-hero__route-node home-hero__route-node--end" cx="468" cy="167" r="7" />
+            <circle className="home-hero__route-node home-hero__route-node--end" cx="468" cy="246" r="7" />
+            <circle className="home-hero__route-halo" cx="92" cy="310" r="20" />
+            <text x="69" y="350">KYIV</text>
+            <text x="226" y="175">WARSAW</text>
+            <text x="275" y="330">PRAGUE</text>
+            <text x="444" y="146">BERLIN</text>
+            <text x="446" y="278">MILAN</text>
+          </svg>
+          <div className="home-hero__route-caption">
+            <span />
+            {t("app.routeCaption")}
+          </div>
+        </div>
 
-        {/* Crossfade theme-specific shading with the images. */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(90deg, rgba(244,247,251,0.96) 0%, rgba(244,247,251,0.86) 35%, rgba(244,247,251,0.5) 60%, rgba(244,247,251,0.12) 100%), linear-gradient(180deg, rgba(244,247,251,0.5) 0%, transparent 20%, transparent 75%, rgba(244,247,251,0.8) 100%)",
-            opacity: isDark ? 0 : 1,
-            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1)",
-            zIndex: 2,
-            pointerEvents: "none",
-          }}
-          aria-hidden="true"
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(90deg, rgba(5,9,18,0.96) 0%, rgba(5,9,18,0.85) 35%, rgba(5,9,18,0.55) 58%, rgba(5,9,18,0.15) 100%), linear-gradient(180deg, rgba(5,9,18,0.6) 0%, transparent 20%, transparent 75%, rgba(5,9,18,0.85) 100%)",
-            opacity: isDark ? 1 : 0,
-            transition: "opacity 850ms cubic-bezier(0.22, 1, 0.36, 1)",
-            zIndex: 2,
-            pointerEvents: "none",
-          }}
-          aria-hidden="true"
-        />
-
-        {/* Layer 4: Global Header */}
         <Header />
 
-        {/* Layer 5: Hero Content (Left-aligned, Asymmetrical composition) */}
-        <div
-          className="home-hero__content"
-          style={{
-            position: "relative",
-            zIndex: 10,
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            padding: "2rem 3rem 4.5rem",
-            maxWidth: "820px",
-          }}
-        >
-          {/* Upper Kicker */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "1rem",
-            }}
-          >
-            <span
-              style={{
-                width: "4px",
-                height: "4px",
-                borderRadius: "50%",
-                background: isDark ? "#38BDF8" : "#087DFF",
-              }}
-            />
-            <span
-              style={{
-                fontSize: "0.68rem",
-                fontWeight: 600,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: isDark ? "#8B9AAF" : "#7A8A9D",
-              }}
-            >
-              {t("app.heroKicker")}
-            </span>
-          </div>
-
-          {/* Main Headline */}
-          <h1
-            style={{
-              fontSize: "clamp(3rem, 4.8vw, 4rem)",
-              fontWeight: 650,
-              letterSpacing: "-0.045em",
-              lineHeight: 1.05,
-              color: isDark ? "#FFFFFF" : "#101828",
-              marginBottom: "1rem",
-              textWrap: "balance",
-            }}
-          >
-            {t("app.heroTitle1")}{" "}
-            <span
-              style={{
-                color: isDark ? "#38BDF8" : "#087DFF",
-              }}
-            >
-              {t("app.heroTitleAccent")}
-            </span>
-            <br />
-            {t("app.heroTitle2")}
-          </h1>
-
-          {/* Subtitle */}
-          <p
-            style={{
-              fontSize: "0.96rem",
-              lineHeight: 1.5,
-              fontWeight: 500,
-              color: isDark ? "#B6C2D2" : "#53647A",
-              marginBottom: "2rem",
-              maxWidth: "520px",
-            }}
-          >
-            {t("app.heroSubtitle")}
-          </p>
-
-          {/* Interactive Search Widget */}
+        <div className="home-hero__content">
+          <h1 id="home-hero-title">{t("app.heroTitle1")}</h1>
+          <p>{t("app.heroSubtitle")}</p>
           <SearchWidget selectedRoute={selectedRoute} />
-
-          {/* Trust Metrics */}
-          <TrustStats />
         </div>
-      </div>
+      </section>
+
       <PopularDestinations
         isDark={isDark}
         onSelectDestination={(destination) =>

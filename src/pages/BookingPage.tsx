@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { BusFront, MapPin } from "lucide-react";
+import { BusFront, MapPin, Plus, X } from "lucide-react";
 import { useTheme } from "@/theme";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -102,6 +102,10 @@ async function getFunctionErrorCode(error: unknown): Promise<string | null> {
 
 function languageOf(language: string): "uk" | "en" | "it" {
   return language.startsWith("en") ? "en" : language.startsWith("it") ? "it" : "uk";
+}
+
+function emptyPassenger(): Passenger {
+  return { firstName: "", lastName: "", email: "", phone: "" };
 }
 
 function escapeHtml(value: string | number | null | undefined) {
@@ -235,9 +239,7 @@ export function BookingPage() {
   const [showTripDetails, setShowTripDetails] = useState(false);
   const [routeNames, setRouteNames] = useState({ from: "", to: "" });
   const [selectedTrip, setSelectedTrip] = useState<ProviderTrip | null>(null);
-  const [passengers, setPassengers] = useState<Passenger[]>([{
-    firstName: "", lastName: "", email: "", phone: "",
-  }]);
+  const [passengers, setPassengers] = useState<Passenger[]>([emptyPassenger()]);
   const [profileLoadError, setProfileLoadError] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -259,6 +261,7 @@ export function BookingPage() {
   const toId = searchParams.get("toId")?.trim() ?? "";
   const date = searchParams.get("date")?.trim() ?? "";
   const pendingTrip = (location.state as { pendingTrip?: unknown } | null)?.pendingTrip;
+
   const bookingReady = Boolean(
     selectedTrip &&
     providerTrip &&
@@ -318,7 +321,7 @@ export function BookingPage() {
           lastName: String(metadata.lastName ?? metadata.last_name ?? parsedName.lastName),
           email: user.email ?? current[0].email,
           phone: String(profile?.phone || metadata.phone || current[0].phone),
-        }]);
+        }, ...current.slice(1)]);
       } catch {
         if (!cancelled) setProfileLoadError(true);
       }
@@ -490,9 +493,20 @@ export function BookingPage() {
     return () => { cancelled = true; };
   }, [fromId, toId, date, pendingTrip, providerSearchRevision, t]);
 
-  const updatePassenger = (field: keyof Passenger, value: string) => {
+  const updatePassenger = (index: number, field: keyof Passenger, value: string) => {
     passengerEditedRef.current = true;
-    setPassengers((current) => [{ ...current[0], [field]: value }]);
+    setPassengers((current) => current.map((passenger, passengerIndex) =>
+      passengerIndex === index ? { ...passenger, [field]: value } : passenger
+    ));
+  };
+
+  const addPassenger = () => {
+    setPassengers((current) => current.length >= 9 ? current : [...current, emptyPassenger()]);
+  };
+
+  const removePassenger = (index: number) => {
+    if (index === 0) return;
+    setPassengers((current) => current.filter((_, passengerIndex) => passengerIndex !== index));
   };
 
   const refreshTripSearch = () => {
@@ -506,12 +520,11 @@ export function BookingPage() {
       setBookingError(error || providerError || t("booking.tripUnavailable"));
       return;
     }
-    const passenger = passengers[0];
+    const contactPassenger = passengers[0];
     if (
-      !passenger.firstName.trim()
-      || !passenger.lastName.trim()
-      || !passenger.email.trim()
-      || !passenger.phone.trim()
+      passengers.some((passenger) => !passenger.firstName.trim() || !passenger.lastName.trim())
+      || !contactPassenger.email.trim()
+      || !contactPassenger.phone.trim()
     ) {
       setBookingError(t("booking.fillPassengerFields"));
       return;
@@ -545,8 +558,8 @@ export function BookingPage() {
           locale: languageOf(i18n.language),
           passengers: passengers.map((passenger) => ({
             fullName: `${passenger.firstName} ${passenger.lastName}`.trim(),
-            email: passenger.email,
-            phone: passenger.phone,
+            email: contactPassenger.email,
+            phone: contactPassenger.phone,
           })),
         },
       });
@@ -613,7 +626,9 @@ export function BookingPage() {
 
   const downloadTicket = () => {
     if (!bookingResult || !selectedTrip) return;
-    const passenger = passengers[0];
+    const passengerNames = passengers
+      .map((passenger) => `${escapeHtml(passenger.firstName)} ${escapeHtml(passenger.lastName)}`)
+      .join("<br>");
     const ticketHtml = `<!doctype html>
 <html lang="${escapeHtml(languageOf(i18n.language))}"><head><meta charset="utf-8"><title>${escapeHtml(bookingResult.bookingNumber)}</title>
 <style>body{font-family:Arial,sans-serif;max-width:720px;margin:40px auto;padding:24px;color:#172033}article{border:2px solid #087DFF;border-radius:16px;padding:24px}h1{color:#087DFF}.row{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #ddd;padding:10px 0}.status{background:#fff7e6;color:#8a4b00;padding:10px;border-radius:8px}@media print{button{display:none}}</style></head>
@@ -621,7 +636,7 @@ export function BookingPage() {
 <div class="row"><strong>${escapeHtml(t("booking.bookingNumber"))}</strong><span>${escapeHtml(bookingResult.bookingNumber)}</span></div>
 <div class="row"><strong>${escapeHtml(t("booking.route"))}</strong><span>${escapeHtml(routeNames.from)} → ${escapeHtml(routeNames.to)}</span></div>
 <div class="row"><strong>${escapeHtml(t("booking.date"))}</strong><span>${escapeHtml(date)} · ${escapeHtml(selectedTrip.departure_time)} — ${escapeHtml(selectedTrip.arrival_time)}</span></div>
-<div class="row"><strong>${escapeHtml(t("booking.passengerDetails"))}</strong><span>${escapeHtml(passenger.firstName)} ${escapeHtml(passenger.lastName)}<br>${escapeHtml(passenger.email)}<br>${escapeHtml(passenger.phone)}</span></div>
+<div class="row"><strong>${escapeHtml(t("booking.passengerDetails"))}</strong><span>${passengerNames}<br>${escapeHtml(passengers[0].email)}<br>${escapeHtml(passengers[0].phone)}</span></div>
 <div class="row"><strong>${escapeHtml(t("booking.carrier"))}</strong><span>${escapeHtml(selectedTrip.carrier)}${selectedTrip.bus_number ? ` · ${escapeHtml(selectedTrip.bus_number)}` : ""}</span></div>
 <div class="row"><strong>${escapeHtml(t("booking.total"))}</strong><span>${escapeHtml(bookingResult.totalAmount)} ${escapeHtml(bookingResult.currency)}</span></div>
 <p class="status">${escapeHtml(t("booking.ticketNotConfirmed"))}</p></article></body></html>`;
@@ -767,23 +782,86 @@ export function BookingPage() {
       {selectedTrip && (
         <form onSubmit={submitBooking} style={{ width: "100%", maxWidth: "760px", display: "grid", gap: "12px", padding: "18px", borderRadius: "14px", border: `1px solid ${tokens.colorBorder}`, background: tokens.colorBgCard, boxSizing: "border-box" }}>
           <h2 style={{ fontSize: "1.1rem", margin: 0 }}>{t("booking.passengerDetails")}</h2>
-          {([
-            ["firstName", "firstName"],
-            ["lastName", "lastName"],
-            ["email", "email"],
-            ["phone", "phone"],
-          ] as const).map(([field, key]) => (
-            <label key={field} style={{ display: "grid", gap: "6px", color: tokens.colorTextSecondary }}>
-              {t(`booking.${key}`)}
-              <input
-                required
-                type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
-                value={passengers[0][field]}
-                onChange={(event) => updatePassenger(field, event.target.value)}
-                style={inputStyle}
-              />
-            </label>
+          {passengers.length > 1 && <p style={{ color: tokens.colorTextSecondary, fontSize: "0.85rem" }}>{t("booking.contactShared")}</p>}
+          {passengers.map((passenger, index) => (
+            <fieldset
+              key={index}
+              style={{
+                display: "grid",
+                gap: "10px",
+                border: 0,
+                borderTop: `1px solid ${tokens.colorBorder}`,
+                paddingTop: "12px",
+              }}
+            >
+              <legend style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "0 8px 0 0", fontSize: "0.9rem", fontWeight: 700 }}>
+                <span>{t("booking.passengerNumber", { number: index + 1 })}</span>
+                {index > 0 && (
+                  <button
+                    type="button"
+                    aria-label={t("booking.removePassenger", { number: index + 1 })}
+                    onClick={() => removePassenger(index)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: tokens.colorTextSecondary, fontSize: "0.8rem" }}
+                  >
+                    <X size={14} aria-hidden="true" />
+                    {t("booking.removePassengerLabel")}
+                  </button>
+                )}
+              </legend>
+              {([
+                ["firstName", "firstName"],
+                ["lastName", "lastName"],
+              ] as const).map(([field, key]) => (
+                <label key={field} style={{ display: "grid", gap: "6px", color: tokens.colorTextSecondary }}>
+                  {t(`booking.${key}`)}
+                  <input
+                    required
+                    type="text"
+                    value={passenger[field]}
+                    onChange={(event) => updatePassenger(index, field, event.target.value)}
+                    style={inputStyle}
+                  />
+                </label>
+              ))}
+              {index === 0 && ([
+                ["email", "email"],
+                ["phone", "phone"],
+              ] as const).map(([field, key]) => (
+                <label key={field} style={{ display: "grid", gap: "6px", color: tokens.colorTextSecondary }}>
+                  {t(`booking.${key}`)}
+                  <input
+                    required
+                    type={field === "email" ? "email" : "tel"}
+                    value={passenger[field]}
+                    onChange={(event) => updatePassenger(index, field, event.target.value)}
+                    style={inputStyle}
+                  />
+                </label>
+              ))}
+            </fieldset>
           ))}
+          <button
+            type="button"
+            disabled={passengers.length >= 9}
+            onClick={addPassenger}
+            style={{
+              display: "inline-flex",
+              width: "fit-content",
+              minHeight: "42px",
+              alignItems: "center",
+              gap: "8px",
+              padding: "0 12px",
+              border: `1px solid ${tokens.colorBorder}`,
+              borderRadius: "10px",
+              color: tokens.colorText,
+              fontWeight: 700,
+              opacity: passengers.length >= 9 ? 0.55 : 1,
+            }}
+          >
+            <Plus size={16} aria-hidden="true" />
+            {t("booking.addPassenger")}
+          </button>
+          <p style={{ color: tokens.colorTextSecondary, fontSize: "0.78rem" }}>{t("booking.passengerLimit")}</p>
           <button
             type="submit"
             disabled={bookingLoading || !bookingReady}

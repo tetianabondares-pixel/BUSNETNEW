@@ -4,10 +4,11 @@
     "nameSuffix": "UA",
     "tagline": "Більше, ніж подорожі",
     "heroKicker": "АВТОБУСНІ ПОДОРОЖІ ЄВРОПОЮ",
-    "heroTitle1": "Європа",
+    "heroTitle1": "До Європи — автобусом",
     "heroTitleAccent": "ближче,",
     "heroTitle2": "ніж здається",
-    "heroSubtitle": "Знайди рейс · Бронюй онлайн · Оплачуй при посадці"
+    "heroSubtitle": "Обери напрямок і дату — ми покажемо доступні рейси.",
+    "routeCaption": "Популярні напрямки"
   },
   "maintenance": {
     "title": "BUSNET тимчасово недоступний",
@@ -25,6 +26,7 @@
     "faq": "FAQ",
     "login": "Увійти",
     "passengerLogin": "Вхід пасажира",
+    "backToLanding": "На головну",
     "signOut": "Вийти",
     "account": "Мій кабінет"
   },
@@ -40,7 +42,7 @@
     "toPlaceholder": "Введіть місто",
     "dateLabel": "Дата:",
     "dateDefault": "Сьогодні",
-    "submit": "Пошук",
+    "submit": "Знайти рейс",
     "today": "Сьогодні",
     "tomorrow": "Завтра",
     "selectDate": "Оберіть дату",
@@ -49,7 +51,6 @@
     "cityPlaceholder": "Місто",
     "locationLoadError": "Не вдалося завантажити міста.",
     "noLocations": "Міст не знайдено.",
-    "loading": "Завантаження міст...",
     "swap": "Поміняти міста місцями",
     "retry": "Спробувати ще раз",
     "validation": {
@@ -404,7 +405,13 @@
     "stopArrival": "Прибуття",
     "stopDeparture": "Відправлення",
     "priceUnavailable": "Ціна недоступна",
-    "passengerDetails": "Дані пасажира",
+    "passengerDetails": "Дані пасажирів",
+    "passengerNumber": "Пасажир {{number}}",
+    "contactShared": "Контактні дані для бронювання вкажіть для першого пасажира.",
+    "addPassenger": "Додати пасажира",
+    "removePassenger": "Видалити пасажира {{number}}",
+    "removePassengerLabel": "Видалити",
+    "passengerLimit": "До 9 пасажирів в одному бронюванні.",
     "checkingAccount": "Перевіряємо вхід до кабінету…",
     "signInToBook": "Щоб заявка збереглася у ваших бронюваннях, спочатку увійдіть або зареєструйтеся.",
     "signInAction": "Увійти або зареєструватися",

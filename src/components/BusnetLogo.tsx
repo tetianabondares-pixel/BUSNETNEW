@@ -27,20 +27,18 @@ export function BusnetLogo({ className = "" }: Props) {
         style={{
           width: "48px",
           height: "48px",
-          borderRadius: "10px",
-          background: "#fff",
-          border: `1px solid ${isDark ? "rgba(56, 189, 248, 0.25)" : "rgba(8, 125, 255, 0.2)"}`,
+          borderRadius: "8px",
+          background: "transparent",
+          border: "none",
           display: "grid",
           placeItems: "center",
           overflow: "hidden",
-          boxShadow: isDark
-            ? "0 0 16px rgba(8, 125, 255, 0.2)"
-            : "0 2px 8px rgba(8, 125, 255, 0.1)",
+          boxShadow: "none",
           transition: "all 200ms ease",
         }}
       >
         <img
-          src="/icons/busnet-192.png"
+          src="/icons/busnet-logo-transparent.png"
           alt=""
           aria-hidden="true"
           width={48}
