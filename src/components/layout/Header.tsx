@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { User, Moon, Sun } from "lucide-react";
+import { ArrowLeft, User, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/theme";
 import { BusnetLogo } from "@/components/BusnetLogo";
 import { supabase } from "@/lib/supabase";
@@ -71,7 +71,7 @@ export function Header() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "1.25rem 2.25rem",
+        padding: "0.75rem 2.25rem",
         background: "transparent",
         color: tokens.colorText,
       }}
@@ -138,7 +138,7 @@ export function Header() {
                   padding: "0.25rem 0.1rem 0.35rem",
                   fontSize: "0.78rem",
                   fontWeight: isActive ? 600 : 400,
-                  color: isActive ? (isDark ? "#FFFFFF" : "#101828") : (isDark ? "#64748B" : "#8A98A9"),
+                  color: isActive ? (isDark ? "#FFFFFF" : "#101828") : (isDark ? "#B7C5D8" : "#68788C"),
                   cursor: "pointer",
                   transition: "color 150ms ease",
                   textTransform: "uppercase",
@@ -194,40 +194,65 @@ export function Header() {
           {isDark ? <Sun size={15} /> : <Moon size={15} />}
         </button>
 
-        {/* Login Button (Outline with icon) */}
-        <button
-          type="button"
-          onClick={handleAccountNavigation}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.45rem 1rem",
-            borderRadius: "10px",
-            fontSize: "0.78rem",
-            fontWeight: 500,
-            textDecoration: "none",
-            color: isDark ? "#F4F7FB" : "#344054",
-            background: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.75)",
-            border: `1px solid ${isDark ? "rgba(56, 189, 248, 0.35)" : "rgba(8, 125, 255, 0.22)"}`,
-            backdropFilter: "blur(8px)",
-            boxShadow: isDark ? "0 0 12px rgba(8, 125, 255, 0.12)" : "0 2px 6px rgba(16, 24, 40, 0.04)",
-            transition: "all 200ms ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = isDark ? "#38BDF8" : "#087DFF";
-            e.currentTarget.style.boxShadow = isDark
-              ? "0 0 16px rgba(56, 189, 248, 0.25)"
-              : "0 3px 10px rgba(8, 125, 255, 0.15)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = isDark ? "rgba(56, 189, 248, 0.35)" : "rgba(8, 125, 255, 0.22)";
-            e.currentTarget.style.boxShadow = isDark ? "0 0 12px rgba(8, 125, 255, 0.12)" : "0 2px 6px rgba(16, 24, 40, 0.04)";
-          }}
-        >
-          <User size={14} color={isDark ? "#38BDF8" : "#087DFF"} />
-          <span>{isSignedIn ? t("nav.account") : t("nav.passengerLogin")}</span>
-        </button>
+        {isPassengerAuthPage ? (
+          <Link
+            to="/"
+            className="app-header__landing-link"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+              color: isDark ? "#F4F7FB" : "#344054",
+              background: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.75)",
+              border: `1px solid ${isDark ? "rgba(56, 189, 248, 0.35)" : "rgba(8, 125, 255, 0.22)"}`,
+              backdropFilter: "blur(8px)",
+              boxShadow: isDark ? "0 0 12px rgba(8, 125, 255, 0.12)" : "0 2px 6px rgba(16, 24, 40, 0.04)",
+            }}
+          >
+            <ArrowLeft size={14} aria-hidden="true" />
+            <span>{t("nav.backToLanding")}</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAccountNavigation}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.45rem 1rem",
+              borderRadius: "10px",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              textDecoration: "none",
+              color: isDark ? "#F4F7FB" : "#344054",
+              background: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.75)",
+              border: `1px solid ${isDark ? "rgba(56, 189, 248, 0.35)" : "rgba(8, 125, 255, 0.22)"}`,
+              backdropFilter: "blur(8px)",
+              boxShadow: isDark ? "0 0 12px rgba(8, 125, 255, 0.12)" : "0 2px 6px rgba(16, 24, 40, 0.04)",
+              transition: "all 200ms ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = isDark ? "#38BDF8" : "#087DFF";
+              e.currentTarget.style.boxShadow = isDark
+                ? "0 0 16px rgba(56, 189, 248, 0.25)"
+                : "0 3px 10px rgba(8, 125, 255, 0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = isDark ? "rgba(56, 189, 248, 0.35)" : "rgba(8, 125, 255, 0.22)";
+              e.currentTarget.style.boxShadow = isDark ? "0 0 12px rgba(8, 125, 255, 0.12)" : "0 2px 6px rgba(16, 24, 40, 0.04)";
+            }}
+          >
+            <User size={14} color={isDark ? "#38BDF8" : "#087DFF"} />
+            <span>{isSignedIn ? t("nav.account") : t("nav.passengerLogin")}</span>
+          </button>
+        )}
       </div>
     </header>
   );

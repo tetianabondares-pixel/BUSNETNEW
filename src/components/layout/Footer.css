@@ -1,22 +1,62 @@
 .site-footer {
+  position: relative;
+  isolation: isolate;
   width: 100%;
   margin-top: auto;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
-  background: #f4f7fb;
+  padding: 1.25rem clamp(0.75rem, 2.5vw, 2rem) 1.5rem;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(86, 164, 255, 0.17), transparent 38%),
+    radial-gradient(ellipse at 84% 82%, rgba(137, 115, 255, 0.11), transparent 36%),
+    #edf3fa;
   color: #0b1f3a;
-  transition: background-color 220ms ease, color 220ms ease;
+  transition: background-color 220ms ease, color 220ms ease, background 220ms ease;
 }
 
 .site-footer[data-theme="dark"] {
-  background: #0a192f;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(45, 99, 219, 0.22), transparent 40%),
+    radial-gradient(ellipse at 84% 82%, rgba(107, 73, 220, 0.15), transparent 38%),
+    #070d19;
   color: #f8fafc;
 }
 
 .site-footer__content {
-  width: min(100%, 1200px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(100%, 1320px);
   margin: 0 auto;
-  padding: 3rem clamp(1rem, 5vw, 4rem)
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3.5rem)
     calc(1.25rem + env(safe-area-inset-bottom));
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-top-color: rgba(255, 255, 255, 0.94);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 24px 70px rgba(37, 69, 108, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  backdrop-filter: blur(22px) saturate(135%);
+}
+
+.site-footer__content::after {
+  position: absolute;
+  z-index: -1;
+  right: -0.02em;
+  bottom: -0.42em;
+  color: currentColor;
+  content: "BUSNET";
+  font-size: clamp(5rem, 13vw, 12rem);
+  font-weight: 850;
+  letter-spacing: -0.09em;
+  line-height: 1;
+  opacity: 0.025;
+  pointer-events: none;
+}
+
+.site-footer[data-theme="dark"] .site-footer__content {
+  border-color: rgba(177, 202, 234, 0.12);
+  border-top-color: rgba(222, 237, 255, 0.24);
+  background: rgba(14, 25, 43, 0.62);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .site-footer__main {
@@ -103,9 +143,24 @@
   transition: color 160ms ease, transform 160ms ease;
 }
 
+.site-footer__links a::after {
+  margin-left: 0;
+  content: "↗";
+  font-size: 0.75em;
+  opacity: 0;
+  transform: translate(-2px, 2px);
+  transition: opacity 160ms ease, transform 160ms ease, margin-left 160ms ease;
+}
+
 .site-footer__links a:hover {
   color: #38bdf8;
   transform: translateX(3px);
+}
+
+.site-footer__links a:hover::after {
+  margin-left: 0.35rem;
+  opacity: 1;
+  transform: translate(0, 0);
 }
 
 .site-footer__support {
@@ -254,7 +309,11 @@
 }
 
 @media (max-width: 680px) {
-  .site-footer__content { padding-top: 1.75rem; }
+  .site-footer { padding-inline: 0.65rem; }
+  .site-footer__content {
+    padding: 1.5rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-radius: 22px;
+  }
   .site-footer__main { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
   .site-footer__group { border-top: 1px solid rgba(148, 163, 184, 0.16); }
   .site-footer__group-title--desktop { display: none; }
@@ -287,6 +346,7 @@
 @media (prefers-reduced-motion: reduce) {
   .site-footer__socials a,
   .site-footer__links a,
+  .site-footer__links a::after,
   .site-footer__chat,
   .site-footer__chevron {
     transition: none;

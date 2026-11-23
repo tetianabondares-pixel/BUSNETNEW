@@ -4,10 +4,11 @@
     "nameSuffix": "UA",
     "tagline": "More than travel",
     "heroKicker": "EUROPEAN BUS MOBILITY",
-    "heroTitle1": "Europe is",
+    "heroTitle1": "Europe, by bus",
     "heroTitleAccent": "closer,",
     "heroTitle2": "than it seems",
-    "heroSubtitle": "Find trips · Book online · Pay upon boarding"
+    "heroSubtitle": "Choose your route and date to see available trips.",
+    "routeCaption": "Popular routes"
   },
   "maintenance": {
     "title": "BUSNET is temporarily unavailable",
@@ -25,6 +26,7 @@
     "faq": "FAQ",
     "login": "Sign in",
     "passengerLogin": "Passenger sign in",
+    "backToLanding": "Homepage",
     "signOut": "Sign out",
     "account": "My account"
   },
@@ -40,7 +42,7 @@
     "toPlaceholder": "Enter destination",
     "dateLabel": "Date:",
     "dateDefault": "Today",
-    "submit": "Search",
+    "submit": "Find a trip",
     "today": "Today",
     "tomorrow": "Tomorrow",
     "selectDate": "Select date",
@@ -49,7 +51,6 @@
     "cityPlaceholder": "City",
     "locationLoadError": "Could not load locations.",
     "noLocations": "No cities found.",
-    "loading": "Loading cities...",
     "swap": "Swap cities",
     "retry": "Try again",
     "validation": {
@@ -405,6 +406,12 @@
     "stopDeparture": "Departure",
     "priceUnavailable": "Price unavailable",
     "passengerDetails": "Passenger details",
+    "passengerNumber": "Passenger {{number}}",
+    "contactShared": "Enter booking contact details for the first passenger.",
+    "addPassenger": "Add another passenger",
+    "removePassenger": "Remove passenger {{number}}",
+    "removePassengerLabel": "Remove",
+    "passengerLimit": "Up to 9 passengers per booking.",
     "checkingAccount": "Checking your account…",
     "signInToBook": "Sign in or register first so the request is saved in your bookings.",
     "signInAction": "Sign in or register",
