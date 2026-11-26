@@ -1,0 +1,2 @@
+/supabase/migrations/*.sql -text
+/replay-sources.json text eol=lf

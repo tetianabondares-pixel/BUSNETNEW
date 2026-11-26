@@ -1,0 +1,1 @@
+create policy "audit logs admin read" on public.audit_logs for select using (public.is_admin());

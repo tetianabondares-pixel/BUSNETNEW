@@ -1,0 +1,1 @@
+create policy "public content admin manage" on public.public_content for all using (exists (select 1 from public.admin_profiles where user_id=auth.uid() and active=true and role in ('super_admin','admin','content_manager'))) with check (exists (select 1 from public.admin_profiles where user_id=auth.uid() and active=true and role in ('super_admin','admin','content_manager')));

@@ -1,0 +1,1 @@
+create policy "public content public read" on public.public_content for select using (active=true);

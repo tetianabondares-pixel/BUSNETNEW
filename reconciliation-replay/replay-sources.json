@@ -1,0 +1,190 @@
+{
+    "project_ref":  "local-only",
+    "isolated_project_id":  "busnet-migration-reconciliation-local",
+    "production_ref":  "htgvcoshbnvvoseigtdg",
+    "migration_count":  20,
+    "capability_engine_included":  false,
+    "production_ledger_edited":  false,
+    "entries":  [
+                    {
+                        "replay_file":  "20261119150807_dashboard_base_schema.sql",
+                        "source_type":  "dashboard_query_log_normalized",
+                        "source_path":  "dashboard-normalized-sql\\20261119T150807_normalized_base_schema.sql",
+                        "raw_log_path":  "dashboard-query-logs/20261119T150807_dashboard_base_schema.sql",
+                        "raw_log_sha256":  "90d32def9719d84ff98126d552575a912c84587eb78f362315faef52eef1e1f1",
+                        "dashboard_timestamp_utc":  "2026-11-19 15:08:07.520 UTC",
+                        "replay_sha256":  "df817df8bea2dee7ec3c66f542c790774c219750d49cab2fa5fa35d018bff114"
+                    },
+                    {
+                        "replay_file":  "20261120133431_altrans_weekly_schedule_calendar.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120133431_altrans_weekly_schedule_calendar.sql",
+                        "source_version":  "20261120133431",
+                        "source_name":  "altrans_weekly_schedule_calendar",
+                        "replay_sha256":  "22222b9a424d9df9a8f6c7a94b0b70cfc293743563af7875d408c7f4f380da39",
+                        "archived_original_sha256":  "22222b9a424d9df9a8f6c7a94b0b70cfc293743563af7875d408c7f4f380da39"
+                    },
+                    {
+                        "replay_file":  "20261120133443_altrans_schedule_tables_revoke_write_grants.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120133443_altrans_schedule_tables_revoke_write_grants.sql",
+                        "source_version":  "20261120133443",
+                        "source_name":  "altrans_schedule_tables_revoke_write_grants",
+                        "replay_sha256":  "762a3685fcd1dfb6b00d0d93da1963560f4197dcc3c4d9d662d9d967eccce333",
+                        "archived_original_sha256":  "762a3685fcd1dfb6b00d0d93da1963560f4197dcc3c4d9d662d9d967eccce333"
+                    },
+                    {
+                        "replay_file":  "20261120154048_busnet_admin_content_audit.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120154048_busnet_admin_content_audit.sql",
+                        "source_version":  "20261120154048",
+                        "source_name":  "busnet_admin_content_audit",
+                        "replay_sha256":  "6d9e6e6eaa9c5cb5ced6dfaa9c70ca031f646c1bfe7aad210e7da4cdebfe0bc2",
+                        "archived_original_sha256":  "6d9e6e6eaa9c5cb5ced6dfaa9c70ca031f646c1bfe7aad210e7da4cdebfe0bc2"
+                    },
+                    {
+                        "replay_file":  "20261120154134_public_content_read_policy.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120154134_public_content_read_policy.sql",
+                        "source_version":  "20261120154134",
+                        "source_name":  "public_content_read_policy",
+                        "replay_sha256":  "c0995c1b354579924e73c3bb2c62f605f7079f2340c02815d18eb283bdbf3420",
+                        "archived_original_sha256":  "c0995c1b354579924e73c3bb2c62f605f7079f2340c02815d18eb283bdbf3420"
+                    },
+                    {
+                        "replay_file":  "20261120154141_public_content_admin_policy.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120154141_public_content_admin_policy.sql",
+                        "source_version":  "20261120154141",
+                        "source_name":  "public_content_admin_policy",
+                        "replay_sha256":  "d7110b770c07d261498fe595023864231647cd26ee1d7cd75f6a29c7670297d0",
+                        "archived_original_sha256":  "d7110b770c07d261498fe595023864231647cd26ee1d7cd75f6a29c7670297d0"
+                    },
+                    {
+                        "replay_file":  "20261120154159_busnet_admin_security_functions.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120154159_busnet_admin_security_functions.sql",
+                        "source_version":  "20261120154159",
+                        "source_name":  "busnet_admin_security_functions",
+                        "replay_sha256":  "4c43465290cae80366b6d4c02c300e6e7ac4b96dd4b45bfd798f5f2224df88be",
+                        "archived_original_sha256":  "4c43465290cae80366b6d4c02c300e6e7ac4b96dd4b45bfd798f5f2224df88be"
+                    },
+                    {
+                        "replay_file":  "20261120154208_audit_logs_admin_read_policy.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120154208_audit_logs_admin_read_policy.sql",
+                        "source_version":  "20261120154208",
+                        "source_name":  "audit_logs_admin_read_policy",
+                        "replay_sha256":  "7edbc5c8a98b4f7aed8160dd6559c3c712d7a2c97d23a5a45edfed713d2d2018",
+                        "archived_original_sha256":  "7edbc5c8a98b4f7aed8160dd6559c3c712d7a2c97d23a5a45edfed713d2d2018"
+                    },
+                    {
+                        "replay_file":  "20261120154219_popular_routes_admin_manage.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120154219_popular_routes_admin_manage.sql",
+                        "source_version":  "20261120154219",
+                        "source_name":  "popular_routes_admin_manage",
+                        "replay_sha256":  "d5103762fc456b0f4c37c745d8e8283c8514b0c5bb782f5f3db2997be88123d6",
+                        "archived_original_sha256":  "d5103762fc456b0f4c37c745d8e8283c8514b0c5bb782f5f3db2997be88123d6"
+                    },
+                    {
+                        "replay_file":  "20261120155552_busnet_booking_mvp.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261120155552_busnet_booking_mvp.sql",
+                        "source_version":  "20261120155552",
+                        "source_name":  "busnet_booking_mvp",
+                        "replay_sha256":  "afdafe90aaf698fa15a62a835043d75f837bb53cd65aaba4ce050458788b47ca",
+                        "archived_original_sha256":  "afdafe90aaf698fa15a62a835043d75f837bb53cd65aaba4ce050458788b47ca"
+                    },
+                    {
+                        "replay_file":  "20261120161055_dashboard_booking_cancellation.sql",
+                        "source_type":  "dashboard_query_log_normalized",
+                        "source_path":  "dashboard-normalized-sql\\20261120T161055_normalized_booking_cancellation.sql",
+                        "raw_log_path":  "dashboard-query-logs/20261120T161055_dashboard_booking_cancellation.sql",
+                        "raw_log_sha256":  "1f26c25acdd66c30f70347eed5a6efa0e3b919091e753711ca3ae6e84b77f8fd",
+                        "dashboard_timestamp_utc":  "2026-11-20 16:10:55.847 UTC",
+                        "replay_sha256":  "98cc18742b94bc16c49b3f6a2cea50ec2bbb45ad63ea010397c4a26b98f63426"
+                    },
+                    {
+                        "replay_file":  "20261121063840_passenger_profile_phone.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261121063840_passenger_profile_phone.sql",
+                        "source_version":  "20261121063840",
+                        "source_name":  "passenger_profile_phone",
+                        "replay_sha256":  "a023075890ef7019829de7ff064e8346d949ff0448d16ef366b45a7bfc215c81",
+                        "archived_original_sha256":  "a023075890ef7019829de7ff064e8346d949ff0448d16ef366b45a7bfc215c81"
+                    },
+                    {
+                        "replay_file":  "20261121071512_backfill_profile_phone_from_bookings.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261121071512_backfill_profile_phone_from_bookings.sql",
+                        "source_version":  "20261121071512",
+                        "source_name":  "backfill_profile_phone_from_bookings",
+                        "replay_sha256":  "d89c01221bae68dc0db43060bb457a8bfa7467ed3c43a108e288dec8e732dd63",
+                        "archived_original_sha256":  "d89c01221bae68dc0db43060bb457a8bfa7467ed3c43a108e288dec8e732dd63"
+                    },
+                    {
+                        "replay_file":  "20261121200834_restrict_update_booking_status_to_admin_roles.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261121200834_restrict_update_booking_status_to_admin_roles.sql",
+                        "source_version":  "20261121200834",
+                        "source_name":  "restrict_update_booking_status_to_admin_roles",
+                        "replay_sha256":  "1abcba0303d9daea04a0d1cceb37b783b54db724d12cbfe646fbb5a160a30571",
+                        "archived_original_sha256":  "1abcba0303d9daea04a0d1cceb37b783b54db724d12cbfe646fbb5a160a30571"
+                    },
+                    {
+                        "replay_file":  "20261121221356_admin_dashboard_workflows.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261121221356_admin_dashboard_workflows.sql",
+                        "source_version":  "20261121221356",
+                        "source_name":  "admin_dashboard_workflows",
+                        "replay_sha256":  "3884a1a196c4272ce21a83f4e1d5080a32f38b28e9915e8e88e1bf53425cb2a1",
+                        "archived_original_sha256":  "3884a1a196c4272ce21a83f4e1d5080a32f38b28e9915e8e88e1bf53425cb2a1"
+                    },
+                    {
+                        "replay_file":  "20261122000906_guest_booking_claim.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261122000906_guest_booking_claim.sql",
+                        "source_version":  "20261122000906",
+                        "source_name":  "guest_booking_claim",
+                        "replay_sha256":  "9ae73de054eafb75d61bab09d3f80d0fb323dcee7e986c9dc130c06e74207cfe",
+                        "archived_original_sha256":  "9ae73de054eafb75d61bab09d3f80d0fb323dcee7e986c9dc130c06e74207cfe"
+                    },
+                    {
+                        "replay_file":  "20261126133130_admin_booking_dashboard_rpcs.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261126133130_admin_booking_dashboard_rpcs.sql",
+                        "source_version":  "20261126133130",
+                        "source_name":  "admin_booking_dashboard_rpcs",
+                        "replay_sha256":  "14f9b9e4f8c8fb4431fce0f784743f321a54c02ecbdff9c925ca4723a4211d13",
+                        "archived_original_sha256":  "14f9b9e4f8c8fb4431fce0f784743f321a54c02ecbdff9c925ca4723a4211d13"
+                    },
+                    {
+                        "replay_file":  "20261126155515_dashboard_knowledge_center.sql",
+                        "source_type":  "dashboard_query_log_normalized",
+                        "source_path":  "dashboard-normalized-sql\\20261126T155515_normalized_knowledge_center.sql",
+                        "raw_log_path":  "dashboard-query-logs/20261126T155515_dashboard_knowledge_center.sql",
+                        "raw_log_sha256":  "fd879ca1baac1445e430c63bc68d22461b1fc833c783b2c1a36283384e907a90",
+                        "dashboard_timestamp_utc":  "2026-11-26 15:55:15.557 UTC",
+                        "replay_sha256":  "c94f832cc84e6980b62e1a963a6b8f29a9b75a71e1b7198db0a491fb30506832"
+                    },
+                    {
+                        "replay_file":  "20261126185840_fix_knowledge_search_source_metadata.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261126185840_fix_knowledge_search_source_metadata.sql",
+                        "source_version":  "20261126185840",
+                        "source_name":  "fix_knowledge_search_source_metadata",
+                        "replay_sha256":  "f75bf9f468173d7552eaaf03a59601355c083e91d6bc2f619ea3faf02176c068",
+                        "archived_original_sha256":  "f75bf9f468173d7552eaaf03a59601355c083e91d6bc2f619ea3faf02176c068"
+                    },
+                    {
+                        "replay_file":  "20261126190657_busnet_first_100_capabilities_v3.sql",
+                        "source_type":  "production_ledger_sql",
+                        "source_path":  "production-ledger-verified/20261126190657_busnet_first_100_capabilities_v3.sql",
+                        "source_version":  "20261126190657",
+                        "source_name":  "busnet_first_100_capabilities_v3",
+                        "replay_sha256":  "0de2cd609510f5ca9b5ce80af015b4f755d8e3d048467ce89179d0ee89746cc2",
+                        "archived_original_sha256":  "0de2cd609510f5ca9b5ce80af015b4f755d8e3d048467ce89179d0ee89746cc2"
+                    }
+                ]
+}
