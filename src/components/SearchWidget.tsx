@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeftRight,
   Calendar,
@@ -73,22 +73,9 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   const [dateISO, setDateISO] = useState(todayISO);
   const [active, setActive] = useState<Field | "date" | null>(null);
   const [isSwapped, setIsSwapped] = useState(false);
-  const [suggestions, setSuggestions] = useState<ResolvedLocation[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [suppressEmptySuggestions, setSuppressEmptySuggestions] = useState(false);
-  const [error, setError] = useState<"rpc" | "empty" | null>(null);
   const [validationError, setValidationError] = useState<SearchValidationError | null>(null);
-  const [retrySearch, setRetrySearch] = useState(0);
-  const [highlighted, setHighlighted] = useState(-1);
-  const [composing, setComposing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const fromFieldRef = useRef<HTMLDivElement>(null);
-  const toFieldRef = useRef<HTMLDivElement>(null);
   const dateTriggerRef = useRef<HTMLButtonElement>(null);
-  const requestRef = useRef(0);
-  const focusDestinationAfterOriginRef = useRef(false);
-  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     if (!selectedRoute) return;
@@ -98,20 +85,11 @@ export function SearchWidget({ selectedRoute = null }: Props) {
   }, [selectedRoute]);
 
   useEffect(() => {
-    if (active !== "to" || !focusDestinationAfterOriginRef.current) return;
-    focusDestinationAfterOriginRef.current = false;
-    toFieldRef.current?.querySelector<HTMLInputElement>("input")?.focus();
-  }, [active]);
-
-  useEffect(() => {
     if (!routePrefill) return;
-    requestRef.current += 1;
     setFromLocation(null);
     setToLocation(null);
     setFromText(routePrefill.from);
     setToText(routePrefill.to);
-    setSuggestions([]);
-    setError(null);
     setValidationError(null);
     setActive(null);
   }, [routePrefill]);
@@ -122,80 +100,6 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     setFromText((text) => fromLocation ? localizedName(fromLocation, language) : text);
     setToText((text) => toLocation ? localizedName(toLocation, language) : text);
   }, [language]);
-
-  useLayoutEffect(() => {
-    if (active !== "from" && active !== "to") return;
-    const updatePosition = () => {
-      const container = containerRef.current;
-      const panel = panelRef.current;
-      const field = active === "from" ? fromFieldRef.current : toFieldRef.current;
-      if (!container || !panel || !field) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-      const fieldRect = field.getBoundingClientRect();
-      const narrow = window.matchMedia("(max-width: 640px)").matches;
-      const width = narrow
-        ? Math.min(containerRect.width, window.innerWidth - 24)
-        : Math.min(300, window.innerWidth - 24);
-      const left = narrow
-        ? 0
-        : Math.max(0, Math.min(
-          (active === "to" ? fieldRect.right : fieldRect.left) - containerRect.left -
-            (active === "to" ? width : 0),
-          containerRect.width - width,
-        ));
-      const top = narrow
-        ? panelRect.bottom - containerRect.top + 8
-        : fieldRect.bottom - containerRect.top + 8;
-      setPopoverStyle({ left, top, width });
-    };
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [active]);
-
-  useEffect(() => {
-    if (active !== "from" && active !== "to") return;
-    const text = active === "from" ? fromText : toText;
-    const fromId = fromLocation?.id;
-    const toId = toLocation?.id;
-    const requestId = ++requestRef.current;
-    if (text.trim().length === 0 && suppressEmptySuggestions) {
-      setSuggestions([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    if (text.trim().length === 1) {
-      setSuggestions([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    const rpc = active === "to" ? "search_destination_locations" : "search_origin_locations";
-    void (async () => {
-      const { data, error: rpcError } = await supabase.rpc(rpc, {
-        p_query: text.trim(), p_language: language, p_limit: 8,
-        ...(active === "to" ? { p_from_location_id: fromId ?? null } : { p_to_location_id: toId ?? null }),
-      });
-      if (requestId !== requestRef.current) return;
-      setLoading(false);
-      if (rpcError) { setSuggestions([]); setError("rpc"); return; }
-      const rows = Array.isArray(data) ? data : [];
-      setSuggestions(rows.map((row) => rowToLocation(row as Record<string, unknown>, language)));
-      setError(rows.length ? null : "empty");
-      setHighlighted(-1);
-    })();
-  }, [active, fromText, toText, fromLocation?.id, toLocation?.id, language, retrySearch, suppressEmptySuggestions]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -208,88 +112,75 @@ export function SearchWidget({ selectedRoute = null }: Props) {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const select = (field: Field, location: ResolvedLocation, advanceToDestination = false) => {
-    if (field === "from") { setFromLocation(location); setFromText(location.name); }
-    else { setToLocation(location); setToText(location.name); }
-    setValidationError(null);
-    setSuggestions([]);
-    setHighlighted(-1);
-    if (field === "from" && advanceToDestination) {
-      setSuppressEmptySuggestions(true);
-      focusDestinationAfterOriginRef.current = true;
-      setActive("to");
-    } else {
-      setActive(null);
-    }
-  };
   const edit = (field: Field, value: string) => {
-    requestRef.current += 1;
-    setSuppressEmptySuggestions(false);
-    setSuggestions([]);
-    setError(null);
     setValidationError(null);
     if (field === "from") { setFromText(value); setFromLocation(null); }
     else { setToText(value); setToLocation(null); }
-    setActive(field);
+    setActive(null);
   };
-  const inlineSuggestionFor = (field: Field) => {
-    const text = field === "from" ? fromText : toText;
-    const normalizedText = text.toLocaleLowerCase();
-    const suggestion = suggestions.find((location) =>
-      location.name.toLocaleLowerCase().startsWith(normalizedText)
-    );
-    if (
-      active !== field ||
-      loading ||
-      error ||
-      highlighted >= 0 ||
-      !text ||
-      !suggestion ||
-      suggestion.name.length <= text.length
-    ) return null;
-    return suggestion;
-  };
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, field: Field) => {
-    if (composing) return;
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
       event.preventDefault();
-      setHighlighted((current) => event.key === "ArrowDown"
-        ? Math.min(current + 1, suggestions.length - 1) : Math.max(current - 1, -1));
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const inlineSuggestion = inlineSuggestionFor(field);
-      if (highlighted >= 0) select(field, suggestions[highlighted], field === "from");
-      else if (inlineSuggestion) select(field, inlineSuggestion, field === "from");
-      else {
-        setActive(null);
-        handleSearch();
-      }
-    } else if (event.key === "Escape" || event.key === "Tab") setActive(null);
+      void handleSearch();
+    } else if (event.key === "Escape") setActive(null);
   };
   const swap = () => {
     const oldFrom = fromLocation; setFromLocation(toLocation); setToLocation(oldFrom);
     const oldText = fromText; setFromText(toText); setToText(oldText);
     setIsSwapped((current) => !current);
-    setSuggestions([]); setValidationError(null);
+    setValidationError(null);
   };
-  const handleSearch = () => {
-    if (!fromLocation) { setValidationError("origin"); return; }
-    if (!toLocation) { setValidationError("destination"); return; }
-    if (fromLocation.id === toLocation.id) { setValidationError("sameLocation"); return; }
-    if (!fromLocation.providerLocationId || !toLocation.providerLocationId) {
+  const resolveTypedLocation = async (
+    text: string,
+    rpc: "search_origin_locations" | "search_destination_locations",
+    fromLocationId: string | null,
+  ) => {
+    const { data, error } = await supabase.rpc(rpc, {
+      p_query: text.trim(),
+      p_language: language,
+      p_limit: 8,
+      ...(rpc === "search_destination_locations"
+        ? { p_from_location_id: fromLocationId }
+        : { p_to_location_id: null }),
+    });
+    if (error || !Array.isArray(data)) return null;
+    const normalized = text.trim().toLocaleLowerCase();
+    const exactRow = data.find((row) => {
+      const location = rowToLocation(row as Record<string, unknown>, language);
+      return [location.nameUk, location.nameEn, location.nameIt, location.name]
+        .filter((name): name is string => Boolean(name))
+        .some((name) => name.toLocaleLowerCase() === normalized);
+    });
+    return exactRow ? rowToLocation(exactRow as Record<string, unknown>, language) : null;
+  };
+  const handleSearch = async () => {
+    let resolvedFrom = fromLocation;
+    let resolvedTo = toLocation;
+
+    if (!resolvedFrom && fromText.trim()) {
+      resolvedFrom = await resolveTypedLocation(fromText, "search_origin_locations", null);
+      if (resolvedFrom) setFromLocation(resolvedFrom);
+    }
+    if (!resolvedTo && toText.trim() && resolvedFrom) {
+      resolvedTo = await resolveTypedLocation(toText, "search_destination_locations", resolvedFrom.id);
+      if (resolvedTo) setToLocation(resolvedTo);
+    }
+
+    if (!resolvedFrom) { setValidationError("origin"); return; }
+    if (!resolvedTo) { setValidationError("destination"); return; }
+    if (resolvedFrom.id === resolvedTo.id) { setValidationError("sameLocation"); return; }
+    if (!resolvedFrom.providerLocationId || !resolvedTo.providerLocationId) {
       setValidationError("unavailableLocation");
       return;
     }
     if (dateISO < todayISO()) { setValidationError("pastDate"); return; }
     setValidationError(null);
-    navigate(`/booking?fromId=${encodeURIComponent(fromLocation.id)}&toId=${encodeURIComponent(toLocation.id)}&date=${encodeURIComponent(dateISO)}`);
+    navigate(`/booking?fromId=${encodeURIComponent(resolvedFrom.id)}&toId=${encodeURIComponent(resolvedTo.id)}&date=${encodeURIComponent(dateISO)}`);
   };
   const renderField = (field: Field) => {
     const text = field === "from" ? fromText : toText;
     const inputId = `search-${field}`;
-    const inlineSuggestion = inlineSuggestionFor(field);
-    return <div ref={field === "from" ? fromFieldRef : toFieldRef}
-      className={`search-widget-field search-widget-field--${field}`}
+    return <div className={`search-widget-field search-widget-field--${field}`}
       style={{ flex: "1 1 32%", minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
       {field === "from"
         ? <CircleDot className="search-widget-location-icon" size={16} color={resolved === "dark" ? "#38BDF8" : "#087DFF"} />
@@ -299,33 +190,19 @@ export function SearchWidget({ selectedRoute = null }: Props) {
           {t(`search.${field}Label`)}
         </label>
         <div className="search-widget-input-wrap">
-          {inlineSuggestion && (
-            <span className="search-widget-inline-suggestion" aria-hidden="true">
-              <span>{text}</span>
-              {inlineSuggestion.name.slice(text.length)}
-            </span>
-          )}
-          <input id={inputId} role="combobox" aria-autocomplete="list" aria-expanded={active === field}
-            aria-controls={`${inputId}-list`} aria-activedescendant={highlighted >= 0 ? `${inputId}-option-${highlighted}` : undefined}
+          <input id={inputId}
             name={`busnet-${field}-city`} autoComplete="off" autoCorrect="off" spellCheck={false}
-            value={text} onFocus={() => {
-              if (active !== field) {
-                requestRef.current += 1;
-                setSuggestions([]);
-                setError(null);
-              }
-              setActive(field);
-            }} onChange={(event) => edit(field, event.target.value)}
-            onKeyDown={(event) => handleKeyDown(event, field)} onCompositionStart={() => setComposing(true)}
-            onCompositionEnd={() => setComposing(false)} placeholder={t("search.cityPlaceholder")}
-            style={{ position: "relative", zIndex: 1, background: "transparent", border: 0, outline: 0, width: "100%", color: resolved === "dark" ? "#fff" : "#172033", fontWeight: 600, lineHeight: 1.3, letterSpacing: "-0.015em" }} />
+            value={text} onFocus={() => setActive(null)} onChange={(event) => edit(field, event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t("search.cityPlaceholder")}
+            style={{ position: "relative", zIndex: 1, background: "transparent", border: 0, outline: 0, width: "100%", color: resolved === "dark" ? "#fff" : "#172033", fontWeight: 600, lineHeight: 1.3, letterSpacing: "-0.015em", textTransform: "none" }} />
         </div>
       </div>
     </div>;
   };
   const isDark = resolved === "dark";
   return <div id="trip-search" ref={containerRef} style={{ position: "relative", zIndex: 15, width: "100%", maxWidth: 920 }}>
-    <div ref={panelRef} className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 86, padding: "12px 12px 12px 18px", borderRadius: 20 }}>
+    <div className="search-widget-panel" style={{ display: "flex", alignItems: "center", minHeight: 86, padding: "12px 12px 12px 18px", borderRadius: 20 }}>
       <div className="search-widget-route-fields">
         {renderField("from")}
         <button type="button" className="search-widget-swap" onClick={swap} disabled={!fromText.trim() && !toText.trim()} aria-label={t("search.swap")}><ArrowLeftRight className={isSwapped ? "is-swapped" : ""} size={16} /></button>
@@ -344,32 +221,6 @@ export function SearchWidget({ selectedRoute = null }: Props) {
         {t(`search.validation.${validationError}`)}
       </p>
     )}
-    {(active === "from" || active === "to") &&
-      !inlineSuggestionFor(active) &&
-      !suppressEmptySuggestions &&
-      !loading &&
-      (suggestions.length > 0 || error !== null) && <div
-      className={`search-widget-popover search-widget-popover--${active}`}
-      style={popoverStyle}>
-      {!loading && error === "rpc" && (
-        <div role="alert" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 10 }}>
-          <span>{t("search.locationLoadError")}</span>
-          <button type="button" onClick={() => setRetrySearch((value) => value + 1)}>
-            {t("search.retry")}
-          </button>
-        </div>
-      )}
-      {!loading && error === "empty" && <div role="status" style={{ padding: 10 }}>{t("search.noLocations")}</div>}
-      <div id={`search-${active}-list`} role="listbox" aria-busy={loading}>
-        {!loading && !error && suggestions.map((location, index) => <button type="button" role="option"
-          className="search-widget-option" id={`search-${active}-option-${index}`}
-          aria-selected={highlighted === index} key={location.id}
-          onMouseDown={(event) => event.preventDefault()} onClick={() => select(active, location)}
-          style={{ background: highlighted === index ? (isDark ? "#17263a" : "#eef5ff") : "transparent", color: isDark ? "#fff" : "#101828" }}>
-          {location.name}{location.countryCode ? ` · ${location.countryCode}` : ""}
-        </button>)}
-      </div>
-    </div>}
     <BusnetCalendar open={active === "date"} selectedDate={dateISO} fromLocationId={fromLocation?.id ?? null} toLocationId={toLocation?.id ?? null} onChange={(nextDate) => { setDateISO(nextDate); setValidationError(null); }} onClose={() => setActive(null)} triggerRef={dateTriggerRef} />
   </div>;
 }

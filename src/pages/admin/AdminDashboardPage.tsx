@@ -2,31 +2,54 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowLeft,
+  Activity,
   Bell,
   BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
+  CircleAlert,
+  Clock3,
   Download,
+  FileText,
+  Filter,
+  ListTodo,
   Mail,
   LayoutDashboard,
   LogOut,
   Map as MapIcon,
+  Menu,
+  Mic,
   MessageCircle,
+  Moon,
+  Pencil,
   Phone,
+  Plus,
   RefreshCw,
+  RotateCcw,
   Search,
+  Send,
   Settings,
+  SlidersHorizontal,
   Star,
+  Sun,
   TicketCheck,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/theme";
+import { KnowledgeCenterPanel } from "@/pages/admin/KnowledgeCenterPanel";
 import "./AdminDashboardPage.css";
 
 type Tab = "overview" | "bookings" | "passengers" | "cancellations" | "catalog" | "routes" | "locations" | "popular" | "content" | "audit" | "settings";
 type AdminRole = "super_admin" | "admin" | "content_manager" | "support" | "provider_operator";
 type DataSection = "stats" | "bookings" | "passengers" | "cancellations" | "providerLogs" | "routes" | "locations" | "popularRoutes" | "publicContent" | "auditLogs" | "settings" | "notifications";
+type BookingCategory = "all" | "attention" | "upcoming" | "completed" | "cancelled";
 
 const ADMIN_PATHS: Record<string, Tab> = {
   "/admin/bookings": "bookings",
@@ -189,11 +212,33 @@ type BookingRow = {
     departure_at?: string;
     arrival_at?: string | null;
     carrier?: string | null;
+    trip_status?: string;
+    open_cancellation_request?: boolean;
     from_city?: string;
     to_city?: string;
   };
-  booking_passengers: Array<{ full_name: string; email: string | null; phone: string | null }>;
+  booking_passengers: Array<{
+    id?: string;
+    full_name: string;
+    email: string | null;
+    phone: string | null;
+    seat_number?: string | null;
+    nationality?: string | null;
+    document_type?: string | null;
+    document_number?: string | null;
+  }>;
   total_count?: number;
+};
+
+type BookingDashboardSummary = {
+  total_count: number;
+  attention_count: number;
+  upcoming_count: number;
+  completed_count: number;
+  pending_count: number;
+  confirmed_count: number;
+  cancelled_count: number;
+  cancellation_request_count: number;
 };
 
 type AdminNotification = {
@@ -208,10 +253,245 @@ type AdminNotification = {
   created_at: string;
 };
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+type RobotPreferences = {
+  greeting: string;
+  enabled: boolean;
+  greetOnEntry: boolean;
+  animated: boolean;
+  draggable: boolean;
 };
+
+type AgentMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+};
+
+type AgentTask = {
+  id: string;
+  title: string;
+  status: "draft" | "in_progress" | "completed" | "needs_confirmation" | "error";
+  createdAt: string;
+};
+
+type RobotPanelMode = "launcher" | "quick-actions" | "chat" | "workspace";
+type AgentWorkspaceTab = "tasks" | "reports" | "activity" | "capabilities" | "knowledge";
+type KnowledgeCategory =
+  | "busnet_knowledge"
+  | "business_rule"
+  | "experience"
+  | "learned_knowledge"
+  | "document"
+  | "technical_knowledge"
+  | "problem_solution"
+  | "proposal";
+type KnowledgeStatus = "new" | "needs_verification" | "verified" | "stale_or_conflict" | "rejected" | "archived";
+type KnowledgeSource = "owner_input" | "platform_source" | "task_experience";
+type KnowledgeScope = "shared" | "module" | "owner";
+
+type KnowledgeEntry = {
+  id: string;
+  title: string;
+  content: string;
+  category: KnowledgeCategory;
+  status: KnowledgeStatus;
+  source: KnowledgeSource;
+  sourceReference: string;
+  module: string;
+  scope: KnowledgeScope;
+  createdAt: string;
+  updatedAt: string;
+  isDemo: boolean;
+};
+
+type KnowledgeDraft = Omit<KnowledgeEntry, "id" | "createdAt" | "updatedAt" | "isDemo">;
+type KnowledgeCenterState = { entries: KnowledgeEntry[]; error: string };
+type KnowledgeCategoryFilter = "all" | KnowledgeCategory;
+
+const KNOWLEDGE_STORAGE_KEY = "busnet_knowledge_center_prototype";
+const KNOWLEDGE_CATEGORIES: Array<{ id: KnowledgeCategory; label: string }> = [
+  { id: "busnet_knowledge", label: "Знання про BUSNET" },
+  { id: "business_rule", label: "Бізнес-правила" },
+  { id: "experience", label: "Досвід" },
+  { id: "learned_knowledge", label: "Нові знання" },
+  { id: "document", label: "Документи" },
+  { id: "technical_knowledge", label: "Технічні знання" },
+  { id: "problem_solution", label: "Рішення проблем" },
+  { id: "proposal", label: "Пропозиції" },
+];
+const KNOWLEDGE_STATUSES: Array<{ id: KnowledgeStatus; label: string }> = [
+  { id: "new", label: "Нове" },
+  { id: "needs_verification", label: "Потребує перевірки" },
+  { id: "verified", label: "Перевірено" },
+  { id: "stale_or_conflict", label: "Застаріло / суперечність" },
+  { id: "rejected", label: "Відхилено" },
+  { id: "archived", label: "Архів" },
+];
+const KNOWLEDGE_SOURCES: Array<{ id: KnowledgeSource; label: string }> = [
+  { id: "owner_input", label: "Від адміністратора" },
+  { id: "platform_source", label: "Джерело BUSNET" },
+  { id: "task_experience", label: "Досвід задачі" },
+];
+const KNOWLEDGE_SCOPES: Array<{ id: KnowledgeScope; label: string }> = [
+  { id: "shared", label: "Спільне" },
+  { id: "module", label: "Модуль" },
+  { id: "owner", label: "Лише власник" },
+];
+const EMPTY_KNOWLEDGE_DRAFT: KnowledgeDraft = {
+  title: "",
+  content: "",
+  category: "busnet_knowledge",
+  status: "new",
+  source: "owner_input",
+  sourceReference: "",
+  module: "Загальне",
+  scope: "shared",
+};
+
+const DEFAULT_ROBOT_PREFERENCES: RobotPreferences = {
+  greeting: "Привіт, Танюшка! Ну що, до роботи? Мальдіви самі себе не оплатять! Я вже на місці — енергія заряджена. Давай сьогодні зробимо BUSNET ще успішнішим!",
+  enabled: true,
+  greetOnEntry: true,
+  animated: true,
+  draggable: true,
+};
+
+function createDemoKnowledgeEntries(): KnowledgeEntry[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      id: "demo-busnet-overview",
+      title: "Приклад: структура BUSNET",
+      content: "Демо-запис для макета. Додайте підтверджений опис модуля та його зв’язків.",
+      category: "busnet_knowledge",
+      status: "needs_verification",
+      source: "platform_source",
+      sourceReference: "Демонстраційний приклад",
+      module: "Загальне",
+      scope: "shared",
+      createdAt: now,
+      updatedAt: now,
+      isDemo: true,
+    },
+    {
+      id: "demo-business-rule",
+      title: "Приклад: бізнес-правило",
+      content: "Демо-запис. Це не робоче правило і не впливає на роботу BUSNET.",
+      category: "business_rule",
+      status: "new",
+      source: "owner_input",
+      sourceReference: "Демонстраційний приклад",
+      module: "Операції",
+      scope: "module",
+      createdAt: now,
+      updatedAt: now,
+      isDemo: true,
+    },
+    {
+      id: "demo-task-experience",
+      title: "Приклад: висновок із задачі",
+      content: "Демо-запис досвіду. Після інтеграції його можна буде пов’язати з реальною задачею та результатом.",
+      category: "experience",
+      status: "new",
+      source: "task_experience",
+      sourceReference: "Демонстраційний приклад",
+      module: "Операції",
+      scope: "shared",
+      createdAt: now,
+      updatedAt: now,
+      isDemo: true,
+    },
+  ];
+}
+
+function isKnowledgeEntry(value: unknown): value is KnowledgeEntry {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  return typeof entry.id === "string" &&
+    typeof entry.title === "string" &&
+    typeof entry.content === "string" &&
+    KNOWLEDGE_CATEGORIES.some((category) => category.id === entry.category) &&
+    KNOWLEDGE_STATUSES.some((status) => status.id === entry.status) &&
+    KNOWLEDGE_SOURCES.some((source) => source.id === entry.source) &&
+    typeof entry.sourceReference === "string" &&
+    typeof entry.module === "string" &&
+    KNOWLEDGE_SCOPES.some((scope) => scope.id === entry.scope) &&
+    typeof entry.createdAt === "string" &&
+    typeof entry.updatedAt === "string" &&
+    typeof entry.isDemo === "boolean";
+}
+
+function readKnowledgeCenter(): KnowledgeCenterState {
+  if (typeof window === "undefined") return { entries: createDemoKnowledgeEntries(), error: "" };
+  try {
+    const stored = window.localStorage.getItem(KNOWLEDGE_STORAGE_KEY);
+    if (!stored) return { entries: createDemoKnowledgeEntries(), error: "" };
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed) || !parsed.every(isKnowledgeEntry)) {
+      return { entries: [], error: "Не вдалося прочитати локальні записи Knowledge Center. Перевірте дані браузера." };
+    }
+    return { entries: parsed, error: "" };
+  } catch {
+    return { entries: createDemoKnowledgeEntries(), error: "Не вдалося прочитати локальні записи Knowledge Center." };
+  }
+}
+
+function readAgentMessages(): AgentMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = window.localStorage.getItem("busnet_intelligence_messages");
+    const parsed: unknown = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is AgentMessage =>
+      !!item && typeof item === "object" &&
+      typeof item.id === "string" &&
+      (item.role === "user" || item.role === "assistant") &&
+      typeof item.text === "string" &&
+      typeof item.createdAt === "string",
+    ).slice(-100);
+  } catch {
+    return [];
+  }
+}
+
+function readAgentTasks(): AgentTask[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = window.localStorage.getItem("busnet_intelligence_tasks");
+    const parsed: unknown = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is AgentTask =>
+      !!item && typeof item === "object" &&
+      typeof item.id === "string" &&
+      typeof item.title === "string" &&
+      ["draft", "in_progress", "completed", "needs_confirmation", "error"].includes(item.status) &&
+      typeof item.createdAt === "string",
+    ).slice(-100);
+  } catch {
+    return [];
+  }
+}
+
+function readRobotPreferences(): RobotPreferences {
+  if (typeof window === "undefined") return DEFAULT_ROBOT_PREFERENCES;
+  try {
+    const stored = window.localStorage.getItem("busnet_ai_robot_preferences");
+    if (!stored) return DEFAULT_ROBOT_PREFERENCES;
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return DEFAULT_ROBOT_PREFERENCES;
+    const value = parsed as Partial<RobotPreferences>;
+    return {
+      greeting: typeof value.greeting === "string" ? value.greeting : DEFAULT_ROBOT_PREFERENCES.greeting,
+      enabled: typeof value.enabled === "boolean" ? value.enabled : DEFAULT_ROBOT_PREFERENCES.enabled,
+      greetOnEntry: typeof value.greetOnEntry === "boolean" ? value.greetOnEntry : DEFAULT_ROBOT_PREFERENCES.greetOnEntry,
+      animated: typeof value.animated === "boolean" ? value.animated : DEFAULT_ROBOT_PREFERENCES.animated,
+      draggable: typeof value.draggable === "boolean" ? value.draggable : DEFAULT_ROBOT_PREFERENCES.draggable,
+    };
+  } catch {
+    return DEFAULT_ROBOT_PREFERENCES;
+  }
+}
 
 type SyncResult = {
   providerError: false;
@@ -241,6 +521,7 @@ export function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { resolved, setMode } = useTheme();
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -252,10 +533,24 @@ export function AdminDashboardPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingStatusFilter, setBookingStatusFilter] = useState("");
-  const [bookingFromDate, setBookingFromDate] = useState("");
-  const [bookingToDate, setBookingToDate] = useState("");
+  const [bookingCategory, setBookingCategory] = useState<BookingCategory>("all");
+  const [bookingFiltersOpen, setBookingFiltersOpen] = useState(false);
+  const [bookingCreatedFrom, setBookingCreatedFrom] = useState("");
+  const [bookingCreatedTo, setBookingCreatedTo] = useState("");
+  const [bookingDepartureFrom, setBookingDepartureFrom] = useState("");
+  const [bookingDepartureTo, setBookingDepartureTo] = useState("");
+  const [bookingCarrier, setBookingCarrier] = useState("");
+  const [bookingCurrency, setBookingCurrency] = useState("");
+  const [bookingMinAmount, setBookingMinAmount] = useState("");
+  const [bookingMaxAmount, setBookingMaxAmount] = useState("");
+  const [bookingPassengerCount, setBookingPassengerCount] = useState("");
+  const [bookingCarriers, setBookingCarriers] = useState<string[]>([]);
+  const [bookingCurrencies, setBookingCurrencies] = useState<string[]>([]);
   const [bookingPage, setBookingPage] = useState(0);
   const [bookingTotal, setBookingTotal] = useState(0);
+  const [bookingSummary, setBookingSummary] = useState<BookingDashboardSummary | null>(null);
+  const [bookingHistory, setBookingHistory] = useState<AuditRow[]>([]);
+  const [bookingHistoryError, setBookingHistoryError] = useState("");
   const [passengers, setPassengers] = useState<PassengerRow[]>([]);
   const [passengerSearch, setPassengerSearch] = useState("");
   const [passengerLocaleFilter, setPassengerLocaleFilter] = useState("");
@@ -283,7 +578,56 @@ export function AdminDashboardPage() {
   const [contentMessage, setContentMessage] = useState("");
   const [selectedContentId, setSelectedContentId] = useState("");
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [robotPreferences, setRobotPreferences] = useState<RobotPreferences>(readRobotPreferences);
+  const [robotSettingsDraft, setRobotSettingsDraft] = useState<RobotPreferences>(robotPreferences);
+  const robotPreferencesOnLoadRef = useRef(robotPreferences);
+  const [robotGreetingOpen, setRobotGreetingOpen] = useState(false);
+  const [robotPosition, setRobotPosition] = useState<{ x: number; y: number }>(() => {
+    const fallback = {
+      x: typeof window === "undefined"
+        ? 20
+        : Math.min(window.innerWidth > 680 ? 280 : 20, Math.max(16, window.innerWidth - 88)),
+      y: typeof window === "undefined" ? 120 : Math.max(16, window.innerHeight - 108),
+    };
+    if (typeof window === "undefined") return fallback;
+    try {
+      const saved = window.localStorage.getItem("busnet_ai_robot_position");
+      if (!saved) return fallback;
+      const value: unknown = JSON.parse(saved);
+      if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+      const position = value as { x?: number; y?: number };
+      if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return fallback;
+      return {
+        x: Math.min(Math.max(Number(position.x), 16), Math.max(16, window.innerWidth - 88)),
+        y: Math.min(Math.max(Number(position.y), 16), Math.max(16, window.innerHeight - 88)),
+      };
+    } catch {
+      return fallback;
+    }
+  });
+  const [hubOpen, setHubOpen] = useState(false);
+  const [hubQuery, setHubQuery] = useState("");
+  const [robotPanelMode, setRobotPanelMode] = useState<RobotPanelMode>("launcher");
+  const [agentWorkspaceTab, setAgentWorkspaceTab] = useState<AgentWorkspaceTab>("tasks");
+  const [agentMessages, setAgentMessages] = useState<AgentMessage[]>(readAgentMessages);
+  const [agentTasks, setAgentTasks] = useState<AgentTask[]>(readAgentTasks);
+  const [agentDraft, setAgentDraft] = useState("");
+  const [knowledgeCenter, setKnowledgeCenter] = useState<KnowledgeCenterState>(readKnowledgeCenter);
+  const [knowledgeCategoryFilter, setKnowledgeCategoryFilter] = useState<KnowledgeCategoryFilter>("all");
+  const [knowledgeStatusFilter, setKnowledgeStatusFilter] = useState<KnowledgeStatus | "all">("all");
+  const [knowledgeQuery, setKnowledgeQuery] = useState("");
+  const [knowledgeFormOpen, setKnowledgeFormOpen] = useState(false);
+  const [knowledgeEditingId, setKnowledgeEditingId] = useState<string | null>(null);
+  const [knowledgeDraft, setKnowledgeDraft] = useState<KnowledgeDraft>(EMPTY_KNOWLEDGE_DRAFT);
+  const [knowledgeFormError, setKnowledgeFormError] = useState("");
+  const agentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const hubPanelRef = useRef<HTMLDivElement>(null);
+  const robotButtonRef = useRef<HTMLButtonElement>(null);
+  const robotDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const robotDragRef = useRef(false);
+  const robotMovedRef = useRef(false);
+  const robotGreetingTimerRef = useRef<number | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [bookingEditing, setBookingEditing] = useState(false);
   const [bookingEditDraft, setBookingEditDraft] = useState({
@@ -300,8 +644,8 @@ export function AdminDashboardPage() {
   const [interactionSaving, setInteractionSaving] = useState(false);
   const interactionLoadRequestRef = useRef(0);
   const bookingLoadRequestRef = useRef(0);
+  const refreshBookingDataRef = useRef<() => void>(() => {});
   const passengerLoadRequestRef = useRef(0);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [settingsDraft, setSettingsDraft] = useState({
     timezone: "Europe/Kyiv",
     expirationMinutes: "30",
@@ -343,6 +687,59 @@ export function AdminDashboardPage() {
   useEffect(() => {
     setTab(ADMIN_PATHS[location.pathname] ?? "overview");
   }, [location.pathname]);
+
+  useEffect(() => {
+    const preferences = robotPreferencesOnLoadRef.current;
+    if (!authorized || !preferences.enabled || !preferences.greetOnEntry) return;
+    setRobotGreetingOpen(true);
+    robotGreetingTimerRef.current = window.setTimeout(() => setRobotGreetingOpen(false), 8500);
+    return () => {
+      if (robotGreetingTimerRef.current !== null) window.clearTimeout(robotGreetingTimerRef.current);
+    };
+  }, [authorized]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(agentMessages.slice(-100)));
+      window.localStorage.setItem("busnet_intelligence_tasks", JSON.stringify(agentTasks.slice(-100)));
+    } catch (error) {
+      console.error("Could not save BUSNET Intelligence workspace history", error);
+    }
+  }, [agentMessages, agentTasks]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setRobotPanelMode("quick-actions");
+        setHubOpen(true);
+        window.setTimeout(() => {
+          document.querySelector<HTMLInputElement>(".busnet-hub__search input")?.focus();
+        }, 50);
+      }
+      if (event.key === "Escape") setHubOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!hubOpen) return;
+    const handleOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (robotButtonRef.current?.contains(target) || hubPanelRef.current?.contains(target)) return;
+      setHubOpen(false);
+    };
+    document.addEventListener("pointerdown", handleOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointerDown);
+  }, [hubOpen]);
+
+  useEffect(() => {
+    if (!hubOpen || robotPanelMode !== "chat") return;
+    const timer = window.setTimeout(() => agentInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [hubOpen, robotPanelMode]);
 
   useEffect(() => {
     if (loading || !role) return;
@@ -410,6 +807,7 @@ export function AdminDashboardPage() {
             [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 30),
           );
           setActionMessage(notification.message);
+          if (notification.type === "new_booking") refreshBookingDataRef.current();
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification(notification.title, {
               body: notification.message,
@@ -422,15 +820,6 @@ export function AdminDashboardPage() {
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [authorized]);
-
-  useEffect(() => {
-    const handleInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
-  }, []);
 
   const loadStats = async () => {
     const results = await Promise.all([
@@ -448,9 +837,12 @@ export function AdminDashboardPage() {
       ["super_admin", "admin", "provider_operator"].includes(role)
         ? supabase.from("provider_request_logs").select("id", { count: "exact", head: true }).eq("status", "error")
         : Promise.resolve({ count: null, error: null }),
+      supabase.rpc("admin_booking_dashboard_summary"),
     ]);
     const failed = results.some((result) => result.error);
     setLoadErrors((current) => ({ ...current, stats: failed ? t("admin.loadFailed") : undefined }));
+    const summaryRows = results[12].data as BookingDashboardSummary[] | null;
+    setBookingSummary(results[12].error ? null : summaryRows?.[0] ?? null);
     setStats({
       bookings: results[0].error ? null : results[0].count,
       pending: results[1].error ? null : results[1].count,
@@ -469,11 +861,19 @@ export function AdminDashboardPage() {
 
   const loadBookings = async () => {
     const requestId = ++bookingLoadRequestRef.current;
-    const { data, error } = await supabase.rpc("admin_search_bookings", {
+    const { data, error } = await supabase.rpc("admin_search_booking_dashboard", {
       p_query: bookingSearch || null,
       p_status: bookingStatusFilter || null,
-      p_from_date: bookingFromDate || null,
-      p_to_date: bookingToDate || null,
+      p_category: bookingCategory,
+      p_created_from: bookingCreatedFrom || null,
+      p_created_to: bookingCreatedTo || null,
+      p_departure_from: bookingDepartureFrom || null,
+      p_departure_to: bookingDepartureTo || null,
+      p_carrier: bookingCarrier || null,
+      p_currency: bookingCurrency || null,
+      p_min_amount: bookingMinAmount ? Number(bookingMinAmount) : null,
+      p_max_amount: bookingMaxAmount ? Number(bookingMaxAmount) : null,
+      p_passenger_count: bookingPassengerCount ? Number(bookingPassengerCount) : null,
       p_page: bookingPage,
       p_page_size: 50,
     });
@@ -488,6 +888,23 @@ export function AdminDashboardPage() {
     setLoadErrors((current) => ({ ...current, bookings: undefined }));
     setBookings(rows);
     setBookingTotal(rows[0]?.total_count ?? 0);
+  };
+
+  const loadBookingFacets = async () => {
+    const [carrierResult, currencyResult] = await Promise.all([
+      supabase.from("trips").select("carrier").not("carrier", "is", null).order("carrier").limit(500),
+      supabase.from("bookings").select("currency").order("currency").limit(500),
+    ]);
+    if (carrierResult.error || currencyResult.error) {
+      setLoadErrors((current) => ({ ...current, bookings: t("admin.loadFailed") }));
+      return;
+    }
+    setBookingCarriers([...new Set((carrierResult.data ?? [])
+      .map((row) => row.carrier)
+      .filter((carrier): carrier is string => Boolean(carrier)))]);
+    setBookingCurrencies([...new Set((currencyResult.data ?? [])
+      .map((row) => row.currency)
+      .filter((currency): currency is string => Boolean(currency)))]);
   };
 
   const loadNotifications = async () => {
@@ -890,12 +1307,76 @@ export function AdminDashboardPage() {
     await loadSettings();
   };
 
+  const saveRobotSettings = () => {
+    const greeting = robotSettingsDraft.greeting.trim();
+    if (!greeting || greeting.length > 300) {
+      setActionMessage("Вітання має містити від 1 до 300 символів");
+      return;
+    }
+    const nextPreferences = { ...robotSettingsDraft, greeting };
+    try {
+      window.localStorage.setItem("busnet_ai_robot_preferences", JSON.stringify(nextPreferences));
+    } catch (error) {
+      console.error("Could not save BUSNET AI preferences", error);
+      setActionMessage(t("admin.actionFailed"));
+      return;
+    }
+    setRobotPreferences(nextPreferences);
+    setRobotSettingsDraft(nextPreferences);
+    setActionMessage("Налаштування помічника BUSNET збережено");
+  };
+
+  const sendAgentMessage = () => {
+    const text = agentDraft.trim();
+    if (!text) return;
+    const now = new Date().toISOString();
+    const taskId = `agent-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setAgentMessages((current): AgentMessage[] => [
+      ...current,
+      { id: `${taskId}-user`, role: "user" as const, text, createdAt: now },
+      {
+        id: `${taskId}-assistant`,
+        role: "assistant" as const,
+        text: "Записала це як чернетку в робочий простір. Поки що я не аналізую базу й не виконую команди — інструменти помічника ще не підключені.",
+        createdAt: new Date(Date.now() + 1).toISOString(),
+      },
+    ].slice(-100));
+    setAgentTasks((current): AgentTask[] => [
+      { id: taskId, title: text, status: "draft" as const, createdAt: now },
+      ...current,
+    ].slice(0, 100));
+    setAgentDraft("");
+  };
+
   useEffect(() => {
     if (loading || !authorized) return;
     if (tab === "bookings" && ["super_admin", "admin", "support"].includes(role)) {
       void loadBookings();
     }
-  }, [authorized, bookingFromDate, bookingPage, bookingSearch, bookingStatusFilter, bookingToDate, loading, role, tab]);
+  }, [
+    authorized,
+    bookingCarrier,
+    bookingCategory,
+    bookingCreatedFrom,
+    bookingCreatedTo,
+    bookingCurrency,
+    bookingDepartureFrom,
+    bookingDepartureTo,
+    bookingMaxAmount,
+    bookingMinAmount,
+    bookingPage,
+    bookingPassengerCount,
+    bookingSearch,
+    bookingStatusFilter,
+    loading,
+    role,
+    tab,
+  ]);
+
+  useEffect(() => {
+    if (loading || !authorized || tab !== "bookings" || !["super_admin", "admin", "support"].includes(role)) return;
+    void loadBookingFacets();
+  }, [authorized, loading, role, tab]);
 
   useEffect(() => {
     if (loading || !authorized) return;
@@ -903,6 +1384,19 @@ export function AdminDashboardPage() {
       void loadPassengers();
     }
   }, [authorized, loading, passengerLocaleFilter, passengerPage, passengerSearch, role, tab]);
+
+  useEffect(() => {
+    refreshBookingDataRef.current = () => {
+      void loadStats();
+      if (tab === "bookings" || tab === "overview") void loadBookings();
+    };
+  });
+
+  useEffect(() => {
+    if (!authorized || tab !== "bookings") return;
+    const intervalId = window.setInterval(() => refreshBookingDataRef.current(), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [authorized, tab]);
 
   const addPopularRoute = async () => {
     if (!popularRouteId) return;
@@ -1141,6 +1635,8 @@ export function AdminDashboardPage() {
     const passenger = booking.booking_passengers?.[0];
     const requestId = ++interactionLoadRequestRef.current;
     setSelectedBooking(booking);
+    setBookingHistory([]);
+    setBookingHistoryError("");
     setBookingEditing(false);
     setBookingEditDraft({
       fullName: passenger?.full_name ?? "",
@@ -1164,6 +1660,21 @@ export function AdminDashboardPage() {
       setPassengerRating(Number(data?.rating ?? 0));
       setPassengerComment(String(data?.comment ?? ""));
     })();
+    void (async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("id,actor_id,action,target_type,target_id,metadata,created_at")
+        .eq("target_type", "booking")
+        .eq("target_id", booking.id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (requestId !== interactionLoadRequestRef.current) return;
+      if (error || !data) {
+        setBookingHistoryError(t("admin.loadFailed"));
+        return;
+      }
+      setBookingHistory(data as unknown as AuditRow[]);
+    })();
   };
 
   const openNotification = async (notification: AdminNotification) => {
@@ -1183,7 +1694,7 @@ export function AdminDashboardPage() {
         ),
       );
     }
-    setNotificationsOpen(false);
+    setHubOpen(false);
     if (notification.booking_id) {
       const booking = bookings.find((item) => item.id === notification.booking_id);
       if (booking) openBooking(booking);
@@ -1258,14 +1769,82 @@ export function AdminDashboardPage() {
     await Promise.all([loadCancellations(), loadBookings(), loadStats(), loadAuditLogs()]);
   };
 
-  const installApp = async () => {
-    if (!installPrompt) {
-      setActionMessage("Для встановлення відкрийте меню браузера та оберіть «Встановити застосунок».");
+  const persistKnowledgeEntries = (entries: KnowledgeEntry[]) => {
+    try {
+      window.localStorage.setItem(KNOWLEDGE_STORAGE_KEY, JSON.stringify(entries));
+      setKnowledgeCenter({ entries, error: "" });
+      return true;
+    } catch {
+      setKnowledgeCenter((current) => ({
+        ...current,
+        error: "Не вдалося зберегти зміни в локальному сховищі браузера.",
+      }));
+      return false;
+    }
+  };
+
+  const openKnowledgeCreateForm = () => {
+    setKnowledgeEditingId(null);
+    setKnowledgeDraft(EMPTY_KNOWLEDGE_DRAFT);
+    setKnowledgeFormError("");
+    setKnowledgeFormOpen(true);
+  };
+
+  const openKnowledgeEditForm = (entry: KnowledgeEntry) => {
+    setKnowledgeEditingId(entry.id);
+    setKnowledgeDraft({
+      title: entry.title,
+      content: entry.content,
+      category: entry.category,
+      status: entry.status,
+      source: entry.source,
+      sourceReference: entry.sourceReference,
+      module: entry.module,
+      scope: entry.scope,
+    });
+    setKnowledgeFormError("");
+    setKnowledgeFormOpen(true);
+  };
+
+  const saveKnowledgeEntry = () => {
+    if (!knowledgeDraft.title.trim() || !knowledgeDraft.content.trim()) {
+      setKnowledgeFormError("Вкажіть назву та зміст запису.");
       return;
     }
-    await installPrompt.prompt();
-    await installPrompt.userChoice;
-    setInstallPrompt(null);
+    const now = new Date().toISOString();
+    const previousEntry = knowledgeCenter.entries.find((entry) => entry.id === knowledgeEditingId);
+    const entry: KnowledgeEntry = {
+      ...knowledgeDraft,
+      id: previousEntry?.id ?? `knowledge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: knowledgeDraft.title.trim(),
+      content: knowledgeDraft.content.trim(),
+      sourceReference: knowledgeDraft.sourceReference.trim(),
+      module: knowledgeDraft.module.trim() || "Загальне",
+      createdAt: previousEntry?.createdAt ?? now,
+      updatedAt: now,
+      isDemo: false,
+    };
+    const entries = previousEntry
+      ? knowledgeCenter.entries.map((current) => current.id === entry.id ? entry : current)
+      : [entry, ...knowledgeCenter.entries];
+    if (persistKnowledgeEntries(entries)) {
+      setKnowledgeFormOpen(false);
+      setKnowledgeFormError("");
+    }
+  };
+
+  const changeKnowledgeStatus = (entry: KnowledgeEntry, status: KnowledgeStatus) => {
+    const entries = knowledgeCenter.entries.map((current) =>
+      current.id === entry.id
+        ? { ...current, status, updatedAt: new Date().toISOString() }
+        : current,
+    );
+    persistKnowledgeEntries(entries);
+  };
+
+  const deleteKnowledgeEntry = (entry: KnowledgeEntry) => {
+    if (!window.confirm(`Видалити запис «${entry.title}» з локального прототипу?`)) return;
+    persistKnowledgeEntries(knowledgeCenter.entries.filter((current) => current.id !== entry.id));
   };
 
   const signOut = async () => {
@@ -1288,6 +1867,17 @@ export function AdminDashboardPage() {
       </main>
     );
   }
+
+  const knowledgeSearch = knowledgeQuery.trim().toLowerCase();
+  const filteredKnowledgeEntries = knowledgeCenter.entries.filter((entry) => {
+    if (knowledgeCategoryFilter !== "all" && entry.category !== knowledgeCategoryFilter) return false;
+    if (knowledgeStatusFilter !== "all" && entry.status !== knowledgeStatusFilter) return false;
+    if (!knowledgeSearch) return true;
+    return [entry.title, entry.content, entry.module, entry.sourceReference]
+      .some((value) => value.toLowerCase().includes(knowledgeSearch));
+  });
+  const knowledgeStatusCount = (status: KnowledgeStatus) =>
+    knowledgeCenter.entries.filter((entry) => entry.status === status).length;
 
   const filteredBookings = bookings;
   const filteredPassengers = passengers;
@@ -1335,11 +1925,22 @@ export function AdminDashboardPage() {
     { id: "settings", label: t("admin.tabs.settings"), icon: Settings, roles: ["super_admin", "admin"] },
   ];
   const navItems = allNavItems.filter((item) => item.roles.includes(role as AdminRole));
+  const unreadNotificationCount = notifications.filter((item) => !item.read_at).length;
 
   return (
-    <main className="admin-dashboard">
+    <main className={`admin-dashboard${sidebarCollapsed ? " is-sidebar-collapsed" : ""}`}>
       <aside className="admin-dashboard__sidebar">
         <div className="admin-dashboard__brand">
+          <button
+            type="button"
+            className="admin-dashboard__brand-toggle"
+            aria-label={sidebarCollapsed ? "Розгорнути меню" : "Згорнути меню"}
+            aria-expanded={!sidebarCollapsed}
+            title={sidebarCollapsed ? "Розгорнути меню" : "Згорнути меню"}
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          >
+            <Menu size={19} aria-hidden="true" />
+          </button>
           <img
             src="/icons/busnet-192.png"
             alt=""
@@ -1361,62 +1962,433 @@ export function AdminDashboardPage() {
               onClick={() => navigate(TAB_PATHS[id])}
             >
               <Icon size={18} aria-hidden="true" />
-              {label}
+              <span className="admin-dashboard__nav-label">{label}</span>
+              {id === "bookings" && notifications.filter((item) => item.type === "new_booking" && !item.read_at).length > 0 && (
+                <span className="admin-dashboard__nav-count">
+                  {notifications.filter((item) => item.type === "new_booking" && !item.read_at).length}
+                </span>
+              )}
+              <span className="admin-dashboard__nav-tooltip" role="tooltip">{label}</span>
             </button>
           ))}
         </nav>
         <div className="admin-dashboard__account">
-          <div><Users size={17} /><span>{role}</span></div>
-          <button type="button" onClick={() => void installApp()}><Download size={17} /> {t("admin.installApp")}</button>
+          <div data-tooltip={role}><Users size={17} /><span>{role}</span></div>
           <button
             type="button"
+            data-tooltip={t("admin.enableNotifications")}
             onClick={() => {
               if ("Notification" in window) {
                 void Notification.requestPermission();
               }
             }}
           >
-            <Bell size={17} /> {t("admin.enableNotifications")}
+            <Bell size={17} /><span>{t("admin.enableNotifications")}</span>
           </button>
-          <button type="button" onClick={() => void signOut()}><LogOut size={17} /> {t("admin.signOut")}</button>
+          <button type="button" data-tooltip={t("admin.signOut")} onClick={() => void signOut()}>
+            <LogOut size={17} /><span>{t("admin.signOut")}</span>
+          </button>
         </div>
       </aside>
 
       <section className="admin-dashboard__workspace">
-        <div className="admin-dashboard__workspace-tools">
-          <button
-            aria-label={t("admin.notifications")}
-            className="admin-dashboard__notification-button"
-            onClick={() => setNotificationsOpen((open) => !open)}
-            type="button"
-          >
-            <Bell size={18} />
-            {notifications.filter((item) => !item.read_at).length > 0 && (
-              <span>{notifications.filter((item) => !item.read_at).length}</span>
-            )}
-          </button>
-          {notificationsOpen && (
-            <div className="admin-dashboard__notifications">
-              <h3>{t("admin.notifications")}</h3>
-              {loadErrors.notifications ? (
-                <p className="admin-dashboard__error" role="alert">{loadErrors.notifications}</p>
-              ) : notifications.length === 0 ? (
-                <p>{t("admin.noNotifications")}</p>
-              ) : notifications.map((notification) => (
-                <button
-                  className={notification.read_at ? "" : "is-unread"}
-                  key={notification.id}
-                  onClick={() => void openNotification(notification)}
-                  type="button"
+        {(() => {
+          const unreadCount = unreadNotificationCount;
+          const hubSearch = hubQuery.trim().toLowerCase();
+          const bookingResults = hubSearch
+            ? bookings.filter((booking) => [
+                booking.booking_number,
+                booking.status,
+                booking.trip_details?.from_city ?? "",
+                booking.trip_details?.to_city ?? "",
+                ...booking.booking_passengers.map((passenger) => passenger.full_name),
+              ].some((value) => value.toLowerCase().includes(hubSearch))).slice(0, 4)
+            : [];
+          const passengerResults = hubSearch
+            ? passengers.filter((passenger) => [
+                passenger.full_name,
+                passenger.email ?? "",
+                passenger.phone ?? "",
+              ].some((value) => value.toLowerCase().includes(hubSearch))).slice(0, 4)
+            : [];
+          const routeResults = hubSearch
+            ? routes.filter((route) => [
+                route.fromName ?? "",
+                route.toName ?? "",
+                route.provider_route_id ?? "",
+              ].some((value) => value.toLowerCase().includes(hubSearch))).slice(0, 4)
+            : [];
+          const opensOnLeft = robotPosition.x > window.innerWidth / 2;
+
+          return (
+            <>
+              {hubOpen && (
+                <div
+                  ref={hubPanelRef}
+                  className={[
+                    "busnet-hub__panel",
+                    robotPanelMode === "chat" || robotPanelMode === "workspace" ? "is-expanded" : "",
+                  ].filter(Boolean).join(" ")}
+                  data-side={opensOnLeft ? "left" : "right"}
+                  style={{
+                    left: robotPanelMode === "chat" || robotPanelMode === "workspace"
+                      ? undefined
+                      : !opensOnLeft
+                        ? Math.max(16, Math.min(robotPosition.x + 100, window.innerWidth - 390))
+                        : undefined,
+                    right: robotPanelMode === "chat" || robotPanelMode === "workspace"
+                      ? undefined
+                      : opensOnLeft ? window.innerWidth - robotPosition.x + 16 : undefined,
+                    top: robotPanelMode === "chat" || robotPanelMode === "workspace"
+                      ? undefined
+                      : Math.max(16, Math.min(robotPosition.y - 260, window.innerHeight - 636)),
+                  }}
+                  role="dialog"
+                  aria-label="Центр BUSNET"
                 >
-                  <strong>{notification.title}</strong>
-                  <span>{notification.message}</span>
-                  <small>{new Date(notification.created_at).toLocaleString()}</small>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                  <header className="busnet-hub__header">
+                    {robotPanelMode !== "launcher" && (
+                      <button
+                        type="button"
+                        aria-label="Назад до меню"
+                        onClick={() => setRobotPanelMode("launcher")}
+                      >
+                        <ArrowLeft size={17} />
+                      </button>
+                    )}
+                    <div>
+                      <p>ЦИФРОВИЙ СПІВРОБІТНИК BUSNET</p>
+                      <h3>
+                        {robotPanelMode === "launcher" && "Цифровий співробітник"}
+                        {robotPanelMode === "quick-actions" && "Швидкі дії"}
+                        {robotPanelMode === "chat" && "Чат із помічником"}
+                        {robotPanelMode === "workspace" && "Робочий простір"}
+                      </h3>
+                    </div>
+                    <button type="button" aria-label="Close" onClick={() => setHubOpen(false)}>
+                      <X size={17} />
+                    </button>
+                  </header>
+
+                  {robotPanelMode === "launcher" && (
+                    <div className="busnet-intelligence__launcher">
+                      <button type="button" onClick={() => setRobotPanelMode("quick-actions")}>
+                        <span className="busnet-intelligence__card-icon"><TicketCheck size={19} /></span>
+                        <span className="busnet-intelligence__card-copy">
+                          <strong>01 · ШВИДКІ ДІЇ</strong>
+                          <small>Швидкий доступ до функцій BUSNET</small>
+                        </span>
+                        {unreadCount > 0 && <span className="busnet-intelligence__count">{unreadCount}</span>}
+                      </button>
+                      <button type="button" onClick={() => setRobotPanelMode("chat")}>
+                        <span className="busnet-intelligence__card-icon"><MessageCircle size={19} /></span>
+                        <span className="busnet-intelligence__card-copy">
+                          <strong>02 · ЧАТ ІЗ ПОМІЧНИКОМ</strong>
+                          <small>Спілкування та чернетки завдань</small>
+                        </span>
+                      </button>
+                      <button type="button" onClick={() => setRobotPanelMode("workspace")}>
+                        <span className="busnet-intelligence__card-icon"><ClipboardList size={19} /></span>
+                        <span className="busnet-intelligence__card-copy">
+                          <strong>03 · РОБОЧИЙ ПРОСТІР</strong>
+                          <small>Завдання, звіти та можливості</small>
+                        </span>
+                        {agentTasks.length > 0 && <span className="busnet-intelligence__count">{agentTasks.length}</span>}
+                      </button>
+                      <p className="busnet-intelligence__prototype-note">
+                        Чат і задачі зберігаються в цьому браузері. Реальне виконання доручень поки не підключене.
+                      </p>
+                    </div>
+                  )}
+
+                  {robotPanelMode === "chat" && (
+                    <section className="busnet-agent-chat">
+                      <div className="busnet-agent-chat__messages" aria-live="polite">
+                        {agentMessages.length === 0 && (
+                          <article className="is-assistant">
+                            <img src="/images/busnet-ai-assistant-robot.png" alt="" />
+                            <div>
+                              <strong>BUSNET ПОМІЧНИК</strong>
+                              <p>{robotPreferences.greeting}</p>
+                                <p className="is-note">Поки що можу приймати запити й зберігати їх як чернетки. Доступ до реальних даних та операцій ще не підключений.</p>
+                            </div>
+                          </article>
+                        )}
+                        {agentMessages.map((message) => (
+                          <article className={`is-${message.role}`} key={message.id}>
+                            {message.role === "assistant" && <img src="/images/busnet-ai-assistant-robot.png" alt="" />}
+                            <div>
+                              <strong>{message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}</strong>
+                              <p>{message.text}</p>
+                              <time>{new Date(message.createdAt).toLocaleString()}</time>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                      <div className="busnet-agent-chat__composer">
+                        <p><Mic size={14} /> Голосове керування з’явиться на наступному етапі</p>
+                        <div>
+                          <textarea
+                            ref={agentInputRef}
+                            value={agentDraft}
+                            maxLength={1000}
+                            rows={2}
+                            placeholder="Напишіть запит або доручення..."
+                            aria-label="Повідомлення помічнику BUSNET"
+                            onChange={(event) => setAgentDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" && !event.shiftKey) {
+                                event.preventDefault();
+                                sendAgentMessage();
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            disabled
+                            title="Голосове керування ще не підключене"
+                            aria-label="Голосове керування ще не підключене"
+                          >
+                            <Mic size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!agentDraft.trim()}
+                            aria-label="Надіслати повідомлення"
+                            onClick={sendAgentMessage}
+                          >
+                            <Send size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {robotPanelMode === "workspace" && (
+                    <section className="busnet-agent-workspace">
+                      <nav aria-label="Робочий простір помічника">
+                        {([
+                          ["tasks", "Мої завдання", ListTodo],
+                          ["reports", "Звіти", FileText],
+                          ["activity", "Журнал дій", Activity],
+                          ["capabilities", "Можливості", Settings],
+                          ["knowledge", "База знань", BookOpen],
+                        ] as Array<[AgentWorkspaceTab, string, typeof Settings]>).map(([id, label, Icon]) => (
+                          <button
+                            type="button"
+                            key={id}
+                            className={agentWorkspaceTab === id ? "is-active" : ""}
+                            onClick={() => setAgentWorkspaceTab(id)}
+                          >
+                            <Icon size={16} />{label}
+                          </button>
+                        ))}
+                      </nav>
+                      <div className="busnet-agent-workspace__content">
+                        {agentWorkspaceTab === "tasks" && (
+                          <>
+                            <div className="busnet-agent-workspace__heading">
+                              <div><h4>Мої завдання</h4><p>Запити з чату, збережені як чернетки</p></div>
+                              <span>{agentTasks.length}</span>
+                            </div>
+                            {agentTasks.length === 0 ? (
+                              <div className="busnet-agent-workspace__empty">
+                                <ListTodo size={26} />
+                                <p>Поки немає завдань. Напишіть запит у чаті помічника.</p>
+                                <button
+                                  type="button"
+                                  className="busnet-agent-workspace__chat-cta"
+                                  onClick={() => setRobotPanelMode("chat")}
+                                >
+                                  <MessageCircle size={16} />Перейти до чату
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="busnet-agent-workspace__tasks">
+                                {agentTasks.map((task) => (
+                                  <article key={task.id}>
+                                    <span className="is-draft">Чернетка · не виконується</span>
+                                    <p>{task.title}</p>
+                                    <time>{new Date(task.createdAt).toLocaleString()}</time>
+                                  </article>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {agentWorkspaceTab === "reports" && (
+                          <div className="busnet-agent-workspace__empty"><FileText size={26} /><p>Звіти з’являться, коли робот отримає реальні інструменти виконання.</p></div>
+                        )}
+                        {agentWorkspaceTab === "activity" && (
+                          agentMessages.length === 0 ? (
+                            <div className="busnet-agent-workspace__empty"><Activity size={26} /><p>Історія взаємодій поки порожня.</p></div>
+                          ) : (
+                            <div className="busnet-agent-workspace__tasks">
+                              {[...agentMessages].reverse().map((message) => (
+                                <article key={message.id}>
+                                  <span className={message.role === "assistant" ? "is-assistant" : "is-user"}>
+                                    {message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}
+                                  </span>
+                                  <p>{message.text}</p>
+                                  <time>{new Date(message.createdAt).toLocaleString()}</time>
+                                </article>
+                              ))}
+                            </div>
+                          )
+                        )}
+                        {agentWorkspaceTab === "capabilities" && (
+                          <div className="busnet-agent-workspace__capabilities">
+                            <article><TicketCheck size={17} /><span><strong>Навігація та швидкі дії</strong><small>Підключено до модулів адмінки</small></span><i className="is-ready">Доступно</i></article>
+                            <article><Bell size={17} /><span><strong>Вхідні події</strong><small>Існуючі сповіщення та Realtime</small></span><i className="is-ready">Доступно</i></article>
+                            <article><Search size={17} /><span><strong>Пошук BUSNET</strong><small>Пошук серед завантажених записів</small></span><i className="is-ready">Доступно</i></article>
+                            <article><MessageCircle size={17} /><span><strong>Автоматизація та голос</strong><small>Інтеграція ще не налаштована</small></span><i>Незабаром</i></article>
+                          </div>
+                        )}
+                        {agentWorkspaceTab === "knowledge" && <KnowledgeCenterPanel role={role} />}
+
+                      </div>
+                    </section>
+                  )}
+
+                  {robotPanelMode === "quick-actions" && (
+                    <>
+                  <div className="busnet-hub__search">
+                    <Search size={17} />
+                    <input
+                      value={hubQuery}
+                      onChange={(event) => setHubQuery(event.target.value)}
+                      placeholder="Пошук: BN-00125, пасажир, AL-TRANS..."
+                      aria-label="Глобальний пошук BUSNET"
+                    />
+                    <kbd>Ctrl K</kbd>
+                  </div>
+
+                  {hubSearch ? (
+                    <div className="busnet-hub__search-results">
+                      {bookingResults.map((booking) => (
+                        <button
+                          type="button"
+                          key={booking.id}
+                          onClick={() => {
+                            openBooking(booking);
+                            setHubOpen(false);
+                          }}
+                        >
+                          <TicketCheck size={15} />
+                          <span><strong>{booking.booking_number}</strong><small>{booking.status}</small></span>
+                        </button>
+                      ))}
+                      {passengerResults.map((passenger) => (
+                        <button type="button" key={passenger.id} onClick={() => {
+                          navigate("/admin/passengers");
+                          setHubOpen(false);
+                        }}>
+                          <Users size={15} />
+                          <span><strong>{passenger.full_name}</strong><small>{passenger.phone || passenger.email || "Пасажир"}</small></span>
+                        </button>
+                      ))}
+                      {routeResults.map((route) => (
+                        <button type="button" key={route.id} onClick={() => {
+                          navigate("/admin/routes");
+                          setHubOpen(false);
+                        }}>
+                          <MapIcon size={15} />
+                          <span><strong>{route.fromName ?? "Маршрут"} — {route.toName ?? ""}</strong><small>{route.provider_route_id || "AL-TRANS"}</small></span>
+                        </button>
+                      ))}
+                      {bookingResults.length + passengerResults.length + routeResults.length === 0 && (
+                        <p className="busnet-hub__empty">Нічого не знайдено</p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="busnet-hub__overview">
+                        <button type="button" onClick={() => navigate("/admin/bookings")}>
+                          <span>Нові</span><strong>{stats.pending ?? 0}</strong>
+                        </button>
+                        <button type="button" onClick={() => navigate("/admin/cancellations")}>
+                          <span>Скасування</span><strong>{stats.cancellations ?? 0}</strong>
+                        </button>
+                        <button type="button" onClick={() => navigate("/admin/audit")}>
+                          <span>Критичні</span><strong>{stats.providerErrors ?? 0}</strong>
+                        </button>
+                      </div>
+
+                      <section className="busnet-hub__section">
+                        <h4>ШВИДКІ ДІЇ</h4>
+                        <div className="busnet-hub__actions">
+                          <button type="button" onClick={() => navigate("/admin/bookings")}><TicketCheck size={16} />Бронювання</button>
+                          <button type="button" onClick={() => navigate("/admin/passengers")}><Users size={16} />Пасажири</button>
+                          <button type="button" onClick={() => navigate("/admin/routes")}><MapIcon size={16} />Маршрути</button>
+                          <button type="button" onClick={() => void syncCatalog()} disabled={syncing}><RefreshCw size={16} />Синхронізувати</button>
+                        </div>
+                      </section>
+
+                      <section className="busnet-hub__section">
+                        <div className="busnet-hub__section-title">
+                          <h4>ОСТАННІ ПОДІЇ</h4>
+                          {unreadCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void Promise.all(
+                                  notifications
+                                    .filter((item) => !item.read_at)
+                                    .map((item) => supabase.rpc("mark_admin_notification_read", { p_notification_id: item.id })),
+                                ).then(() => {
+                                  setNotifications((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })));
+                                });
+                              }}
+                            >
+                              Прочитати всі
+                            </button>
+                          )}
+                        </div>
+                        <div className="busnet-hub__notifications">
+                          {loadErrors.notifications ? (
+                            <p className="busnet-hub__empty">{loadErrors.notifications}</p>
+                          ) : notifications.length === 0 ? (
+                            <p className="busnet-hub__empty">{t("admin.noNotifications")}</p>
+                          ) : notifications.slice(0, 5).map((notification) => (
+                            <button
+                              type="button"
+                              key={notification.id}
+                              className={!notification.read_at ? "is-unread" : ""}
+                              onClick={() => void openNotification(notification)}
+                            >
+                              <span className={`busnet-hub__event-dot is-${notification.type}`} />
+                              <span><strong>{notification.title}</strong><small>{notification.message}</small></span>
+                              <time>{new Date(notification.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="busnet-hub__section">
+                        <h4>СТАН СИСТЕМИ</h4>
+                        <div className="busnet-hub__status">
+                          <span><i className="is-online" />Supabase</span>
+                          <span><i className={stats.providerErrors ? "is-warning" : "is-online"} />AL-TRANS</span>
+                          <span><i className="is-online" />Події наживо</span>
+                        </div>
+                      </section>
+
+                      <footer className="busnet-hub__footer">
+                        <div className="busnet-hub__themes" aria-label="Тема інтерфейсу">
+                          <button type="button" className={resolved === "light" ? "is-active" : ""} onClick={() => setMode("light")}><Sun size={15} />Світла</button>
+                          <button type="button" className={resolved === "dark" ? "is-active" : ""} onClick={() => setMode("dark")}><Moon size={15} />Темна</button>
+                        </div>
+                        <button type="button" className="busnet-hub__settings" onClick={() => navigate("/admin/settings")}><SlidersHorizontal size={15} />Налаштування</button>
+                      </footer>
+                    </>
+                  )}
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
         {actionMessage && <p className="admin-dashboard__feedback" role="status">{actionMessage}</p>}
         {tab === "overview" && (
           <>
@@ -1453,7 +2425,7 @@ export function AdminDashboardPage() {
               </div>
               {loadErrors.bookings
                 ? <p className="admin-dashboard__error" role="alert">{loadErrors.bookings}</p>
-                : <BookingTable bookings={bookings.slice(0, 5)} onStatusChange={updateBookingStatus} onOpen={openBooking} canManageStatus={["super_admin", "admin"].includes(role)} t={t} />}
+                : <BookingTable bookings={bookings.slice(0, 5)} onOpen={openBooking} t={t} i18nLanguage={i18n.language} />}
             </div>
           </>
         )}
@@ -1461,9 +2433,70 @@ export function AdminDashboardPage() {
         {tab === "bookings" && (
           <>
             <header className="admin-dashboard__header">
-              <div><p>{t("admin.bookingsSubtitle")}</p><h2>{t("admin.tabs.bookings")}</h2></div>
+              <div>
+                <p>{t("admin.bookingsSubtitle")}</p>
+                <h2>{t("admin.tabs.bookings")}</h2>
+                <span className="admin-dashboard__header-caption">{t("admin.bookingsDescription")}</span>
+              </div>
             </header>
-            <div className="admin-dashboard__toolbar">
+            {loadErrors.stats && <p className="admin-dashboard__error" role="alert">{loadErrors.stats}</p>}
+            <div className="admin-dashboard__booking-stats">
+              <article>
+                <span className="is-blue"><TicketCheck size={18} /></span>
+                <strong>{bookingSummary?.total_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.total")}</p>
+              </article>
+              <article>
+                <span className="is-red"><CircleAlert size={18} /></span>
+                <strong>{bookingSummary?.attention_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.attention")}</p>
+              </article>
+              <article>
+                <span className="is-purple"><CalendarDays size={18} /></span>
+                <strong>{bookingSummary?.upcoming_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.upcoming")}</p>
+              </article>
+              <article>
+                <span className="is-amber"><Clock3 size={18} /></span>
+                <strong>{bookingSummary?.pending_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.pending")}</p>
+              </article>
+              <article>
+                <span className="is-green"><CheckCircle2 size={18} /></span>
+                <strong>{bookingSummary?.confirmed_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.confirmed")}</p>
+              </article>
+              <article>
+                <span className="is-gray"><TicketCheck size={18} /></span>
+                <strong>{bookingSummary?.cancelled_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.cancelled")}</p>
+              </article>
+              <article>
+                <span className="is-amber"><CircleAlert size={18} /></span>
+                <strong>{bookingSummary?.cancellation_request_count ?? "—"}</strong>
+                <p>{t("admin.bookingMetrics.cancellationRequests")}</p>
+              </article>
+            </div>
+            <nav className="admin-dashboard__booking-tabs" aria-label={t("admin.bookingCategories.label")}>
+              {([
+                ["all", t("admin.bookingCategories.all"), bookingSummary?.total_count],
+                ["attention", t("admin.bookingCategories.attention"), bookingSummary?.attention_count],
+                ["upcoming", t("admin.bookingCategories.upcoming"), bookingSummary?.upcoming_count],
+                ["completed", t("admin.bookingCategories.completed"), bookingSummary?.completed_count],
+                ["cancelled", t("admin.bookingCategories.cancelled"), bookingSummary?.cancelled_count],
+              ] as Array<[BookingCategory, string, number | undefined]>).map(([category, label, count]) => (
+                <button
+                  aria-pressed={bookingCategory === category}
+                  className={bookingCategory === category ? "is-active" : ""}
+                  key={category}
+                  onClick={() => { setBookingPage(0); setBookingCategory(category); }}
+                  type="button"
+                >
+                  {label}<span>{count ?? "—"}</span>
+                </button>
+              ))}
+            </nav>
+            <div className="admin-dashboard__toolbar admin-dashboard__toolbar--bookings">
               <label>
                 <Search size={17} />
                 <input value={bookingSearch} onChange={(event) => { setBookingPage(0); setBookingSearch(event.target.value); }} placeholder={t("admin.searchBookings")} />
@@ -1472,17 +2505,84 @@ export function AdminDashboardPage() {
                 <option value="">{t("admin.allStatuses")}</option>
                 {["pending", "confirmed", "cancelled", "expired", "refunded"].map((status) => <option key={status} value={status}>{t(`admin.status.${status}`)}</option>)}
               </select>
-              <input aria-label={t("admin.fromDate")} type="date" value={bookingFromDate} onChange={(event) => { setBookingPage(0); setBookingFromDate(event.target.value); }} />
-              <input aria-label={t("admin.toDate")} type="date" value={bookingToDate} onChange={(event) => { setBookingPage(0); setBookingToDate(event.target.value); }} />
-              <span>{bookingTotal} {t("admin.results")}</span>
+              <button
+                aria-expanded={bookingFiltersOpen}
+                className={`admin-dashboard__filter-toggle${bookingFiltersOpen ? " is-active" : ""}`}
+                onClick={() => setBookingFiltersOpen((open) => !open)}
+                type="button"
+              >
+                <Filter size={16} /> {t("admin.bookingFilters.toggle")}
+              </button>
               <button className="admin-dashboard__export" type="button" onClick={exportBookingsCsv}>
-                {t("admin.exportCsv")}
+                <Download size={16} /> {t("admin.exportCsv")}
               </button>
             </div>
+            {bookingFiltersOpen && (
+              <div className="admin-dashboard__booking-filters">
+                <label>{t("admin.bookingFilters.createdFrom")}
+                  <input aria-label={t("admin.bookingFilters.createdFrom")} type="date" value={bookingCreatedFrom} onChange={(event) => { setBookingPage(0); setBookingCreatedFrom(event.target.value); }} />
+                </label>
+                <label>{t("admin.bookingFilters.createdTo")}
+                  <input aria-label={t("admin.bookingFilters.createdTo")} type="date" value={bookingCreatedTo} onChange={(event) => { setBookingPage(0); setBookingCreatedTo(event.target.value); }} />
+                </label>
+                <label>{t("admin.bookingFilters.departureFrom")}
+                  <input aria-label={t("admin.bookingFilters.departureFrom")} type="date" value={bookingDepartureFrom} onChange={(event) => { setBookingPage(0); setBookingDepartureFrom(event.target.value); }} />
+                </label>
+                <label>{t("admin.bookingFilters.departureTo")}
+                  <input aria-label={t("admin.bookingFilters.departureTo")} type="date" value={bookingDepartureTo} onChange={(event) => { setBookingPage(0); setBookingDepartureTo(event.target.value); }} />
+                </label>
+                <label>{t("admin.bookingFilters.carrier")}
+                  <select value={bookingCarrier} onChange={(event) => { setBookingPage(0); setBookingCarrier(event.target.value); }}>
+                    <option value="">{t("admin.bookingFilters.allCarriers")}</option>
+                    {bookingCarriers.map((carrier) => <option key={carrier} value={carrier}>{carrier}</option>)}
+                  </select>
+                </label>
+                <label>{t("admin.bookingFilters.currency")}
+                  <select value={bookingCurrency} onChange={(event) => { setBookingPage(0); setBookingCurrency(event.target.value); }}>
+                    <option value="">{t("admin.bookingFilters.allCurrencies")}</option>
+                    {bookingCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+                  </select>
+                </label>
+                <label>{t("admin.bookingFilters.minAmount")}
+                  <input min="0" step="0.01" type="number" value={bookingMinAmount} onChange={(event) => { setBookingPage(0); setBookingMinAmount(event.target.value); }} />
+                </label>
+                <label>{t("admin.bookingFilters.maxAmount")}
+                  <input min="0" step="0.01" type="number" value={bookingMaxAmount} onChange={(event) => { setBookingPage(0); setBookingMaxAmount(event.target.value); }} />
+                </label>
+                <label>{t("admin.bookingFilters.passengerCount")}
+                  <input min="1" step="1" type="number" value={bookingPassengerCount} onChange={(event) => { setBookingPage(0); setBookingPassengerCount(event.target.value); }} />
+                </label>
+                <button
+                  className="admin-dashboard__reset-filters"
+                  onClick={() => {
+                    setBookingPage(0);
+                    setBookingSearch("");
+                    setBookingStatusFilter("");
+                    setBookingCategory("all");
+                    setBookingCreatedFrom("");
+                    setBookingCreatedTo("");
+                    setBookingDepartureFrom("");
+                    setBookingDepartureTo("");
+                    setBookingCarrier("");
+                    setBookingCurrency("");
+                    setBookingMinAmount("");
+                    setBookingMaxAmount("");
+                    setBookingPassengerCount("");
+                  }}
+                  type="button"
+                >
+                  <RotateCcw size={15} /> {t("admin.bookingFilters.reset")}
+                </button>
+              </div>
+            )}
             <div className="admin-dashboard__panel">
+              <div className="admin-dashboard__booking-results">
+                <span>{bookingTotal} {t("admin.results")}</span>
+                {bookingCategory === "attention" && <span className="is-priority"><CircleAlert size={14} /> {t("admin.bookingCategories.attentionHint")}</span>}
+              </div>
               {loadErrors.bookings
                 ? <p className="admin-dashboard__error" role="alert">{loadErrors.bookings}</p>
-                : <BookingTable bookings={filteredBookings} onStatusChange={updateBookingStatus} onOpen={openBooking} canManageStatus={["super_admin", "admin"].includes(role)} t={t} />}
+                : <BookingTable bookings={filteredBookings} onOpen={openBooking} t={t} i18nLanguage={i18n.language} />}
               <Pagination page={bookingPage} total={bookingTotal} pageSize={50} onPageChange={setBookingPage} t={t} />
             </div>
           </>
@@ -1724,7 +2824,7 @@ export function AdminDashboardPage() {
                       <th>{t("admin.table.providerId")}</th>
                       <th>{t("admin.table.country")}</th>
                       <th>{t("admin.table.coordinates")}</th>
-                      <th>{t("admin.table.status")}</th>
+                      <th>{t("admin.bookingTable.status")}</th>
                     </tr></thead>
                     <tbody>
                       {filteredLocations.map((locationRow) => (
@@ -1934,7 +3034,174 @@ export function AdminDashboardPage() {
               <p>{t("admin.settings.runtimeNote")}</p>
               <button type="button" onClick={() => void saveSettings()}>{t("admin.saveSettings")}</button>
             </div>
+            <section className="admin-dashboard__panel admin-dashboard__robot-settings">
+              <header>
+                <img src="/images/busnet-ai-assistant-robot.png" alt="" aria-hidden="true" />
+                <div>
+                  <p>BUSNET · ПОМІЧНИК</p>
+                  <h3>Цифровий співробітник</h3>
+                  <span>Візуальний прототип без команд та зовнішніх інтеграцій</span>
+                </div>
+              </header>
+              <label className="admin-dashboard__robot-greeting">
+                Привітання при вході
+                <textarea
+                  maxLength={300}
+                  value={robotSettingsDraft.greeting}
+                  onChange={(event) => setRobotSettingsDraft((current) => ({ ...current, greeting: event.target.value }))}
+                />
+                <small>{robotSettingsDraft.greeting.length}/300</small>
+              </label>
+              <div className="admin-dashboard__robot-options">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={robotSettingsDraft.enabled}
+                    onChange={(event) => setRobotSettingsDraft((current) => ({ ...current, enabled: event.target.checked }))}
+                  />
+                  Показувати плаваючого робота
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={robotSettingsDraft.greetOnEntry}
+                    onChange={(event) => setRobotSettingsDraft((current) => ({ ...current, greetOnEntry: event.target.checked }))}
+                  />
+                  Вітати при вході в кабінет
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={robotSettingsDraft.animated}
+                    onChange={(event) => setRobotSettingsDraft((current) => ({ ...current, animated: event.target.checked }))}
+                  />
+                  Увімкнути анімацію
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={robotSettingsDraft.draggable}
+                    onChange={(event) => setRobotSettingsDraft((current) => ({ ...current, draggable: event.target.checked }))}
+                  />
+                  Дозволити переміщення
+                </label>
+              </div>
+              <button type="button" onClick={saveRobotSettings}>Зберегти налаштування робота</button>
+            </section>
           </>
+        )}
+        {robotPreferences.enabled && (
+          <div
+            className={`busnet-ai-robot${robotPreferences.animated ? " is-animated" : ""}`}
+            style={{ left: robotPosition.x, top: robotPosition.y }}
+          >
+            <button
+              ref={robotButtonRef}
+              className={[
+                "busnet-ai-robot__button",
+                hubOpen ? "is-active" : "",
+                unreadNotificationCount > 0 ? "has-alert" : "",
+                (stats.providerErrors ?? 0) > 0 ? "has-critical" : "",
+              ].filter(Boolean).join(" ")}
+              type="button"
+              aria-label="Відкрити центр BUSNET"
+              aria-expanded={hubOpen}
+              title="Центр BUSNET"
+              onPointerDown={(event) => {
+                if (!robotPreferences.draggable) return;
+                robotDragRef.current = true;
+                robotMovedRef.current = false;
+                robotDragStartRef.current = { x: event.clientX, y: event.clientY };
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (!robotDragRef.current) return;
+                const start = robotDragStartRef.current;
+                if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4) {
+                  robotMovedRef.current = true;
+                }
+                setRobotPosition({
+                  x: Math.min(Math.max(event.clientX - 44, 16), Math.max(16, window.innerWidth - 88)),
+                  y: Math.min(Math.max(event.clientY - 44, 16), Math.max(16, window.innerHeight - 88)),
+                });
+              }}
+              onPointerUp={(event) => {
+                if (!robotDragRef.current) return;
+                robotDragRef.current = false;
+                robotDragStartRef.current = null;
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }
+                if (!robotMovedRef.current) return;
+                const finalPosition = {
+                  x: Math.min(Math.max(event.clientX - 44, 16), Math.max(16, window.innerWidth - 88)),
+                  y: Math.min(Math.max(event.clientY - 44, 16), Math.max(16, window.innerHeight - 88)),
+                };
+                setRobotPosition(finalPosition);
+                try {
+                  window.localStorage.setItem("busnet_ai_robot_position", JSON.stringify(finalPosition));
+                } catch (error) {
+                  console.error("Could not save BUSNET AI position", error);
+                  setActionMessage(t("admin.actionFailed"));
+                }
+              }}
+              onPointerCancel={() => {
+                robotDragRef.current = false;
+                robotDragStartRef.current = null;
+              }}
+              onClick={() => {
+                if (robotMovedRef.current) {
+                  robotMovedRef.current = false;
+                  return;
+                }
+                setRobotGreetingOpen(false);
+                if (hubOpen) {
+                  setHubOpen(false);
+                } else {
+                  setRobotPanelMode("launcher");
+                  setHubOpen(true);
+                }
+              }}
+            >
+              <img src="/images/busnet-ai-assistant-robot.png" alt="" draggable={false} />
+              {unreadNotificationCount > 0 && (
+                <span className="busnet-ai-robot__badge">
+                  {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                </span>
+              )}
+            </button>
+            {robotGreetingOpen && (
+              <div
+                className="busnet-ai-robot__greeting"
+                role="status"
+                aria-live="polite"
+                style={{
+                  left: robotPosition.x < window.innerWidth / 2
+                    ? Math.max(16, Math.min(robotPosition.x + 92, window.innerWidth - 336))
+                    : undefined,
+                  right: robotPosition.x >= window.innerWidth / 2
+                    ? window.innerWidth - robotPosition.x + 12
+                    : undefined,
+                  top: Math.min(Math.max(robotPosition.y - 20, 16), window.innerHeight - 170),
+                }}
+              >
+                <header>
+                  <span><i />BUSNET · ЦИФРОВИЙ ПОМІЧНИК</span>
+                  <button
+                    type="button"
+                    aria-label="Закрити привітання"
+                    onClick={() => {
+                      setRobotGreetingOpen(false);
+                      if (robotGreetingTimerRef.current !== null) window.clearTimeout(robotGreetingTimerRef.current);
+                    }}
+                  >
+                    <X size={15} />
+                  </button>
+                </header>
+                <p>{robotPreferences.greeting}</p>
+              </div>
+            )}
+          </div>
         )}
         {selectedBooking && (
           <div className="admin-dashboard__modal-backdrop" role="presentation" onMouseDown={(event) => {
@@ -1948,7 +3215,7 @@ export function AdminDashboardPage() {
             >
               <header>
                 <div>
-                  <p>Бронювання</p>
+                  <p>{t("admin.tabs.bookings")}</p>
                   <h2 id="booking-modal-title">{selectedBooking.booking_number}</h2>
                 </div>
                 <button aria-label="Закрити" onClick={() => setSelectedBooking(null)} type="button">
@@ -1964,28 +3231,43 @@ export function AdminDashboardPage() {
                   <>
                     <div className="admin-dashboard__booking-modal-grid">
                       <article>
-                        <span>Пасажир</span>
-                        <strong>{passenger?.full_name || "—"}</strong>
-                        {passenger?.phone && <p>{passenger.phone}</p>}
-                        {passenger?.email && <p>{passenger.email}</p>}
+                        <span>{t("admin.bookingDetailsSections.order")}</span>
+                        <strong>{t(`admin.status.${selectedBooking.status}`)}</strong>
+                        <p>{t("admin.bookingDetailsSections.created")}: {new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedBooking.created_at))}</p>
+                        {selectedBooking.expires_at && <p>{t("admin.table.expires")}: {new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedBooking.expires_at))}</p>}
+                        {selectedBooking.confirmed_at && <p>{t("admin.table.confirmed")}: {new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedBooking.confirmed_at))}</p>}
+                        {selectedBooking.provider_booking_id && <p>{t("admin.table.providerId")}: {selectedBooking.provider_booking_id}</p>}
                       </article>
                       <article>
-                        <span>Рейс</span>
+                        <span>{t("admin.bookingDetailsSections.trip")}</span>
                         <strong>
                           {selectedBooking.trip_details?.from_city ?? "—"} → {selectedBooking.trip_details?.to_city ?? "—"}
                         </strong>
-                        <p>
-                          {selectedBooking.trip_details?.departure_at
-                            ? new Date(selectedBooking.trip_details.departure_at).toLocaleString()
-                            : "—"}
-                        </p>
+                        {selectedBooking.trip_details?.departure_at && <p>{t("admin.bookingTable.departure")}: {new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedBooking.trip_details.departure_at))}</p>}
+                        {selectedBooking.trip_details?.arrival_at && <p>{t("admin.bookingDetailsSections.arrival")}: {new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedBooking.trip_details.arrival_at))}</p>}
+                        {selectedBooking.trip_details?.carrier && <p>{t("admin.bookingTable.carrier")}: {selectedBooking.trip_details.carrier}</p>}
+                        <p>{t("admin.table.tripId")}: {selectedBooking.trip_id}</p>
                       </article>
                       <article>
-                        <span>Статус і сума</span>
-                        <strong>{t(`admin.status.${selectedBooking.status}`)}</strong>
-                        <p>{Number(selectedBooking.total_amount).toLocaleString()} {selectedBooking.currency}</p>
+                        <span>{t("admin.bookingDetailsSections.finances")}</span>
+                        <strong>{new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(Number(selectedBooking.total_amount))} {selectedBooking.currency}</strong>
+                        <p>{t("admin.bookingDetailsSections.totalOrder")}</p>
                       </article>
                     </div>
+
+                    <section className="admin-dashboard__booking-detail-section">
+                      <h3>{t("admin.bookingDetailsSections.passengers")} ({selectedBooking.booking_passengers.length})</h3>
+                      {selectedBooking.booking_passengers.map((item, index) => (
+                        <article key={item.id ?? `${selectedBooking.id}-passenger-${index}`}>
+                          <strong>{item.full_name}</strong>
+                          {item.phone && <span><Phone size={14} /> {item.phone}</span>}
+                          {item.email && <span><Mail size={14} /> {item.email}</span>}
+                          {item.seat_number && <span>{t("admin.bookingDetailsSections.seat")}: {item.seat_number}</span>}
+                          {item.nationality && <span>{t("admin.bookingDetailsSections.nationality")}: {item.nationality}</span>}
+                          {item.document_type && <span>{t("admin.bookingDetailsSections.document")}: {item.document_type}{item.document_number ? ` · ${item.document_number}` : ""}</span>}
+                        </article>
+                      ))}
+                    </section>
 
                     <div className="admin-dashboard__contact-actions">
                       {phone && (
@@ -2000,6 +3282,25 @@ export function AdminDashboardPage() {
                         <a href={`mailto:${passenger.email}`}><Mail size={17} /> Написати email</a>
                       )}
                     </div>
+
+                    <section className="admin-dashboard__booking-history">
+                      <h3>{t("admin.bookingDetailsSections.history")}</h3>
+                      {bookingHistoryError ? (
+                        <p className="admin-dashboard__error" role="alert">{bookingHistoryError}</p>
+                      ) : bookingHistory.length === 0 ? (
+                        <p>{t("admin.bookingDetailsSections.noHistory")}</p>
+                      ) : (
+                        <ol>
+                          {bookingHistory.slice().reverse().map((entry) => (
+                            <li key={entry.id}>
+                              <strong>{entry.action}</strong>
+                              <time dateTime={entry.created_at}>{new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.created_at))}</time>
+                              <span>{entry.actor_id ? `${t("admin.bookingDetailsSections.admin")}: ${entry.actor_id.slice(0, 8)}` : ""}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </section>
 
                     <div className="admin-dashboard__modal-actions">
                       {["super_admin", "admin"].includes(role) && selectedBooking.status === "pending" && (
@@ -2132,58 +3433,65 @@ export function AdminDashboardPage() {
 
 function BookingTable({
   bookings,
-  onStatusChange,
   onOpen,
-  canManageStatus,
   t,
+  i18nLanguage,
 }: {
   bookings: BookingRow[];
-  onStatusChange: (id: string, status: BookingRow["status"]) => Promise<boolean>;
   onOpen: (booking: BookingRow) => void;
-  canManageStatus: boolean;
   t: (key: string) => string;
+  i18nLanguage: string;
 }) {
   if (bookings.length === 0) return <p className="admin-dashboard__empty">{t("admin.noBookings")}</p>;
   return (
     <div className="admin-dashboard__table-wrap">
       <table className="admin-dashboard__table">
-        <thead><tr><th>{t("admin.table.booking")}</th><th>{t("admin.table.passenger")}</th><th>{t("admin.table.amount")}</th><th>{t("admin.table.status")}</th><th>{t("admin.table.actions")}</th></tr></thead>
+        <thead><tr>
+          <th>{t("admin.table.booking")}</th>
+          <th>{t("admin.table.passenger")}</th>
+          <th>{t("admin.bookingTable.route")}</th>
+          <th>{t("admin.bookingTable.departure")}</th>
+          <th>{t("admin.bookingTable.carrier")}</th>
+          <th>{t("admin.table.amount")}</th>
+          <th>{t("admin.table.status")}</th>
+        </tr></thead>
         <tbody>
           {bookings.map((booking) => {
             const passenger = booking.booking_passengers?.[0];
             return (
-              <tr key={booking.id} onDoubleClick={() => onOpen(booking)}>
+              <tr
+                aria-label={`${booking.booking_number}, ${passenger?.full_name ?? ""}`}
+                className="admin-dashboard__booking-row"
+                key={booking.id}
+                onClick={() => onOpen(booking)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpen(booking);
+                  }
+                }}
+                tabIndex={0}
+              >
                 <td>
                   <strong>{booking.booking_number}</strong>
-                  <span>{new Date(booking.created_at).toLocaleString()}</span>
-                  <details>
-                    <summary>{t("admin.bookingDetails")}</summary>
-                    <span>{booking.trip_details?.from_city ?? "—"} → {booking.trip_details?.to_city ?? "—"}</span>
-                    <span>{booking.trip_details?.departure_at ? new Date(booking.trip_details.departure_at).toLocaleString() : "—"}</span>
-                    <span>{t("admin.table.tripId")}: {booking.trip_id}</span>
-                    <span>{t("admin.table.providerId")}: {booking.provider_booking_id ?? "—"}</span>
-                    <span>{t("admin.table.expires")}: {booking.expires_at ? new Date(booking.expires_at).toLocaleString() : "—"}</span>
-                    <span>{t("admin.table.confirmed")}: {booking.confirmed_at ? new Date(booking.confirmed_at).toLocaleString() : "—"}</span>
-                    {booking.booking_passengers.map((item, index) => (
-                      <span key={`${booking.id}-passenger-${index}`}>{item.full_name} · {item.phone ?? item.email ?? "—"}</span>
-                    ))}
-                  </details>
+                  <span>{new Intl.DateTimeFormat(i18nLanguage, { dateStyle: "medium", timeStyle: "short" }).format(new Date(booking.created_at))}</span>
                 </td>
-                <td><strong>{passenger?.full_name || "—"}</strong><span>{passenger?.phone || passenger?.email || "—"}</span></td>
-                <td>{Number(booking.total_amount).toLocaleString()} {booking.currency}</td>
-                <td><span className={`admin-dashboard__status admin-dashboard__status--${booking.status}`}>{t(`admin.status.${booking.status}`)}</span></td>
                 <td>
-                  <div className="admin-dashboard__actions">
-                    <button type="button" onClick={() => onOpen(booking)}>Відкрити</button>
-                  </div>
-                  {canManageStatus && booking.status === "pending" && (
-                    <div className="admin-dashboard__actions">
-                      <button type="button" onClick={() => void onStatusChange(booking.id, "confirmed")}>{t("admin.confirm")}</button>
-                      <button type="button" onClick={() => void onStatusChange(booking.id, "cancelled")}>{t("admin.cancel")}</button>
-                    </div>
-                  )}
-                  {canManageStatus && booking.status === "confirmed" && (
-                    <button type="button" onClick={() => void onStatusChange(booking.id, "cancelled")}>{t("admin.cancel")}</button>
+                  <strong>{passenger?.full_name || "—"}</strong>
+                  <span>{booking.booking_passengers.length > 1
+                    ? `${booking.booking_passengers.length} ${t("admin.bookingTable.passengers")}`
+                    : passenger?.phone || passenger?.email || "—"}</span>
+                </td>
+                <td>{booking.trip_details?.from_city ?? "—"} → {booking.trip_details?.to_city ?? "—"}</td>
+                <td>{booking.trip_details?.departure_at
+                  ? new Intl.DateTimeFormat(i18nLanguage, { dateStyle: "medium", timeStyle: "short" }).format(new Date(booking.trip_details.departure_at))
+                  : "—"}</td>
+                <td>{booking.trip_details?.carrier ?? "—"}</td>
+                <td><strong>{new Intl.NumberFormat(i18nLanguage, { maximumFractionDigits: 2 }).format(Number(booking.total_amount))} {booking.currency}</strong></td>
+                <td>
+                  <span className={`admin-dashboard__status admin-dashboard__status--${booking.status}`}>{t(`admin.status.${booking.status}`)}</span>
+                  {booking.trip_details?.open_cancellation_request && (
+                    <span className="admin-dashboard__booking-flag">{t("admin.bookingTable.cancellationRequested")}</span>
                   )}
                 </td>
               </tr>

@@ -37,28 +37,15 @@ export function HomePage() {
         data-theme={resolved}
         aria-labelledby="home-hero-title"
       >
-        <div className="home-hero__glow" aria-hidden="true" />
-        <div className="home-hero__route-art" aria-hidden="true">
-          <svg viewBox="0 0 560 460" fill="none">
-            <path className="home-hero__route-line" d="M92 310C165 288 168 174 260 195s107 116 208 51" />
-            <path className="home-hero__route-line home-hero__route-line--secondary" d="M92 310C170 366 241 357 301 292s90-113 167-126" />
-            <circle className="home-hero__route-node" cx="92" cy="310" r="7" />
-            <circle className="home-hero__route-node" cx="260" cy="195" r="7" />
-            <circle className="home-hero__route-node" cx="301" cy="292" r="7" />
-            <circle className="home-hero__route-node home-hero__route-node--end" cx="468" cy="167" r="7" />
-            <circle className="home-hero__route-node home-hero__route-node--end" cx="468" cy="246" r="7" />
-            <circle className="home-hero__route-halo" cx="92" cy="310" r="20" />
-            <text x="69" y="350">KYIV</text>
-            <text x="226" y="175">WARSAW</text>
-            <text x="275" y="330">PRAGUE</text>
-            <text x="444" y="146">BERLIN</text>
-            <text x="446" y="278">MILAN</text>
-          </svg>
-          <div className="home-hero__route-caption">
-            <span />
-            {t("app.routeCaption")}
-          </div>
-        </div>
+        <div
+          className="home-hero__glow"
+          aria-hidden="true"
+          style={{
+            backgroundImage: isDark
+              ? `linear-gradient(180deg, rgba(5, 9, 18, 0.12) 0%, rgba(5, 9, 18, 0.06) 58%, ${tokens.colorBg} 100%), url("${tokens.bgImage}")`
+              : `linear-gradient(180deg, rgba(244, 247, 251, 0.14) 0%, rgba(244, 247, 251, 0.04) 58%, ${tokens.colorBg} 100%), url("${tokens.bgImage}")`,
+          }}
+        />
 
         <Header />
 

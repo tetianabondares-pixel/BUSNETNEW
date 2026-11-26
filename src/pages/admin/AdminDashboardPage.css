@@ -7,6 +7,10 @@
   color: #101828;
 }
 
+.admin-dashboard.is-sidebar-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
 .admin-dashboard__loading,
 .admin-dashboard__denied {
   grid-column: 1 / -1;
@@ -44,6 +48,23 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.admin-dashboard__brand-toggle {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  background: #fff;
+  color: #66758a;
+}
+
+.admin-dashboard__brand-toggle:hover {
+  border-color: #087dff;
+  color: #087dff;
 }
 
 .admin-dashboard__brand img {
@@ -89,6 +110,107 @@
 .admin-dashboard__sidebar nav button.is-active {
   background: #edf5ff;
   color: #087dff;
+}
+
+.admin-dashboard__nav-tooltip {
+  display: none;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar {
+  padding: 1rem .5rem;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__brand {
+  display: grid;
+  justify-items: center;
+  gap: .55rem;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__brand > div {
+  display: none;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar nav {
+  margin-top: 1.25rem;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar nav button {
+  position: relative;
+  justify-content: center;
+  gap: 0;
+  padding: .65rem .25rem;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__nav-label,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account > div span,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account button span {
+  display: none;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__nav-tooltip {
+  position: absolute;
+  z-index: 130;
+  top: 50%;
+  left: calc(100% + 10px);
+  display: block;
+  width: max-content;
+  max-width: 220px;
+  padding: .45rem .65rem;
+  transform: translateY(-50%);
+  border: 1px solid rgba(207, 219, 234, .9);
+  border-radius: 8px;
+  background: rgba(16, 24, 40, .94);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 650;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, .16);
+  transition: opacity .12s ease;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar nav button:hover .admin-dashboard__nav-tooltip,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar nav button:focus-visible .admin-dashboard__nav-tooltip {
+  opacity: 1;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account {
+  justify-items: center;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account > div,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account button {
+  position: relative;
+  justify-content: center;
+  width: 44px;
+  min-height: 42px;
+  padding: .5rem;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account > div::after,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 130;
+  top: 50%;
+  left: calc(100% + 10px);
+  width: max-content;
+  max-width: 220px;
+  padding: .45rem .65rem;
+  transform: translateY(-50%);
+  border-radius: 8px;
+  background: rgba(16, 24, 40, .94);
+  color: #fff;
+  font-size: .72rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account > div:hover::after,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account button:hover::after,
+.admin-dashboard.is-sidebar-collapsed .admin-dashboard__account button:focus-visible::after {
+  opacity: 1;
 }
 
 .admin-dashboard__account {
@@ -633,6 +755,16 @@ html[data-theme="dark"] .admin-dashboard__sidebar {
   border-color: #1b2d43;
 }
 
+html[data-theme="dark"] .admin-dashboard__brand-toggle {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .admin-dashboard__brand-toggle:hover {
+  color: #38bdf8;
+}
+
 html[data-theme="dark"] .admin-dashboard__account,
 html[data-theme="dark"] .admin-dashboard__table th,
 html[data-theme="dark"] .admin-dashboard__table td,
@@ -692,96 +824,1947 @@ html[data-theme="dark"] .admin-dashboard__table tr.is-selected {
   background: #10243a;
 }
 
-.admin-dashboard__workspace-tools {
-  position: absolute;
-  top: 1.1rem;
-  right: 2rem;
-  z-index: 30;
+html[data-theme="dark"] .busnet-hub__panel {
+  border-color: rgba(56, 189, 248, .12);
+  background: rgba(7, 15, 27, .94);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .58);
 }
 
-.admin-dashboard__notification-button {
-  position: relative;
+html[data-theme="dark"] .busnet-hub__header button,
+html[data-theme="dark"] .busnet-hub__search,
+html[data-theme="dark"] .busnet-hub__overview button,
+html[data-theme="dark"] .busnet-hub__actions button,
+html[data-theme="dark"] .busnet-hub__search-results button,
+html[data-theme="dark"] .busnet-hub__themes {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-hub__search {
+  background: rgba(11, 20, 34, .92);
+}
+
+html[data-theme="dark"] .busnet-hub__search input,
+html[data-theme="dark"] .busnet-hub__notifications strong,
+html[data-theme="dark"] .busnet-hub__search-results strong,
+html[data-theme="dark"] .busnet-hub__status span {
+  color: #f4f7fb;
+}
+
+html[data-theme="dark"] .busnet-hub__search kbd,
+html[data-theme="dark"] .busnet-hub__themes button.is-active {
+  border-color: #1b2d43;
+  background: #10243a;
+  color: #38bdf8;
+}
+
+html[data-theme="dark"] .busnet-hub__notifications button.is-unread {
+  background: #10243a;
+}
+
+html[data-theme="dark"] .busnet-hub__footer,
+html[data-theme="dark"] .busnet-hub__search-results button,
+html[data-theme="dark"] .busnet-agent-workspace > nav {
+  border-color: #1b2d43;
+}
+
+html[data-theme="dark"] .busnet-intelligence__launcher > button,
+html[data-theme="dark"] .busnet-agent-chat__messages article > div,
+html[data-theme="dark"] .busnet-agent-workspace__tasks article,
+html[data-theme="dark"] .busnet-agent-workspace__capabilities article {
+  border-color: #1b2d43;
+  background: rgba(11, 20, 34, .86);
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-intelligence__launcher > button:hover,
+html[data-theme="dark"] .busnet-agent-chat__messages article.is-user > div {
+  border-color: #1d4e89;
+  background: #10243a;
+}
+
+html[data-theme="dark"] .busnet-intelligence__card-copy small,
+html[data-theme="dark"] .busnet-agent-workspace__heading p,
+html[data-theme="dark"] .busnet-agent-workspace__capabilities small {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__messages p,
+html[data-theme="dark"] .busnet-agent-workspace__tasks article p,
+html[data-theme="dark"] .busnet-agent-workspace__capabilities article > span {
+  color: #d7e0eb;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__composer {
+  border-color: #1b2d43;
+  background: rgba(11, 20, 34, .88);
+}
+
+html[data-theme="dark"] .busnet-agent-chat__composer textarea {
+  border-color: #1b2d43;
+  background: #07101d;
+  color: #f4f7fb;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__composer button:disabled {
+  background: #1b2d43;
+  color: #64748b;
+}
+
+html[data-theme="dark"] .busnet-agent-workspace > nav button.is-active,
+html[data-theme="dark"] .busnet-agent-workspace__heading > span,
+html[data-theme="dark"] .busnet-intelligence__card-icon,
+html[data-theme="dark"] .busnet-agent-workspace__chat-cta {
+  background: #10243a;
+  color: #38bdf8;
+}
+
+html[data-theme="dark"] .busnet-knowledge__stats article,
+html[data-theme="dark"] .busnet-knowledge__form,
+html[data-theme="dark"] .busnet-knowledge__categories,
+html[data-theme="dark"] .busnet-knowledge__entry,
+html[data-theme="dark"] .busnet-knowledge__evolution {
+  border-color: #1b2d43;
+  background: rgba(11, 20, 34, .86);
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-knowledge__prototype-note,
+html[data-theme="dark"] .busnet-knowledge__document-note {
+  border-color: #1d4e89;
+  background: #10243a;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-knowledge__header p,
+html[data-theme="dark"] .busnet-knowledge__form-heading p,
+html[data-theme="dark"] .busnet-knowledge__entry > p,
+html[data-theme="dark"] .busnet-knowledge__entry-meta,
+html[data-theme="dark"] .busnet-knowledge__evolution p,
+html[data-theme="dark"] .busnet-knowledge__empty span {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-knowledge__stats span,
+html[data-theme="dark"] .busnet-knowledge__form label,
+html[data-theme="dark"] .busnet-knowledge__entry-actions label {
+  color: #a7b4c5;
+}
+
+html[data-theme="dark"] .busnet-knowledge__form input,
+html[data-theme="dark"] .busnet-knowledge__form select,
+html[data-theme="dark"] .busnet-knowledge__form textarea,
+html[data-theme="dark"] .busnet-knowledge__filters input,
+html[data-theme="dark"] .busnet-knowledge__filters select,
+html[data-theme="dark"] .busnet-knowledge__entry-actions select {
+  border-color: #1b2d43;
+  background: #07101d;
+  color: #f4f7fb;
+}
+
+html[data-theme="dark"] .busnet-knowledge__categories button {
+  color: #a7b4c5;
+}
+
+html[data-theme="dark"] .busnet-knowledge__categories button:hover,
+html[data-theme="dark"] .busnet-knowledge__categories button.is-active {
+  background: #10243a;
+  color: #38bdf8;
+}
+
+html[data-theme="dark"] .busnet-knowledge__categories i {
+  background: #17283d;
+  color: #a7b4c5;
+}
+
+html[data-theme="dark"] .busnet-knowledge__entry-topline,
+html[data-theme="dark"] .busnet-knowledge__entry-meta,
+html[data-theme="dark"] .busnet-knowledge__entry-actions {
+  border-color: #1b2d43;
+}
+
+html[data-theme="dark"] .busnet-knowledge__entry h5,
+html[data-theme="dark"] .busnet-knowledge__evolution h5,
+html[data-theme="dark"] .busnet-knowledge__form-heading h5 {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-knowledge__recent > span {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-knowledge__recent p strong {
+  color: #d7e0eb;
+}
+
+html[data-theme="dark"] .busnet-knowledge__entry-actions > button {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
+  color: #fda4af;
+}
+
+.busnet-hub__panel {
+  position: fixed;
+  z-index: 119;
+  width: 374px;
+  max-width: calc(100vw - 32px);
+  max-height: min(620px, calc(100vh - 32px));
+  overflow-y: auto;
+  border: 1px solid rgba(207, 219, 234, .82);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 24px 70px rgba(16, 24, 40, .22);
+  backdrop-filter: blur(22px) saturate(145%);
+  animation: busnet-hub-open .18s ease-out;
+}
+
+.busnet-hub__panel.is-expanded {
+  top: 16px !important;
+  right: 0 !important;
+  bottom: 16px;
+  left: 0 !important;
+  display: flex;
+  width: min(1080px, calc(100vw - 32px));
+  max-width: none;
+  max-height: none;
+  height: auto;
+  flex-direction: column;
+  margin: auto;
+  overflow: hidden;
+}
+
+.busnet-hub__panel.is-expanded > .busnet-hub__header {
+  flex: 0 0 auto;
+}
+
+@keyframes busnet-hub-open {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.busnet-hub__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1rem .75rem;
+}
+
+.busnet-hub__header p {
+  margin: 0 0 .2rem;
+  color: #087dff;
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.busnet-hub__header h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.busnet-hub__header button,
+.busnet-hub__search-results button,
+.busnet-hub__notifications button {
+  border: 0;
+}
+
+.busnet-hub__header button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #66758a;
+}
+
+.busnet-hub__search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  margin: 0 1rem .75rem;
+  min-height: 42px;
+  padding: 0 .65rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .92);
+  color: #66758a;
+}
+
+.busnet-hub__search input {
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #101828;
+  font-size: .78rem;
+}
+
+.busnet-hub__search kbd {
+  padding: .18rem .36rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 6px;
+  background: #fff;
+  color: #98a2b3;
+  font-size: .58rem;
+}
+
+.busnet-hub__overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+  margin: 0 1rem .75rem;
+}
+
+.busnet-hub__overview button {
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+  padding: .65rem;
+  border: 1px solid #e6edf6;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, .84);
+  text-align: left;
+}
+
+.busnet-hub__overview button span {
+  color: #66758a;
+  font-size: .68rem;
+}
+
+.busnet-hub__overview button strong {
+  font-size: 1.15rem;
+}
+
+.busnet-hub__section {
+  padding: .25rem 1rem .75rem;
+}
+
+.busnet-hub__section h4 {
+  margin: 0 0 .55rem;
+  color: #66758a;
+  font-size: .62rem;
+  letter-spacing: .12em;
+}
+
+.busnet-hub__section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.busnet-hub__section-title button {
+  color: #087dff;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.busnet-hub__actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .5rem;
+}
+
+.busnet-hub__actions button {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: .45rem;
+  padding: .55rem .65rem;
+  border: 1px solid #e6edf6;
+  border-radius: 11px;
+  background: #fff;
+  color: #475467;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.busnet-hub__notifications,
+.busnet-hub__search-results {
+  display: grid;
+  gap: .25rem;
+}
+
+.busnet-hub__notifications button,
+.busnet-hub__search-results button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+  padding: .58rem;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.busnet-hub__notifications button.is-unread {
+  background: #edf5ff;
+}
+
+.busnet-hub__notifications button > span:nth-child(2),
+.busnet-hub__search-results button > span {
+  min-width: 0;
+}
+
+.busnet-hub__notifications strong,
+.busnet-hub__notifications small,
+.busnet-hub__search-results strong,
+.busnet-hub__search-results small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busnet-hub__notifications strong,
+.busnet-hub__search-results strong {
+  font-size: .74rem;
+}
+
+.busnet-hub__notifications small,
+.busnet-hub__search-results small,
+.busnet-hub__notifications time {
+  margin-top: .12rem;
+  color: #66758a;
+  font-size: .62rem;
+}
+
+.busnet-hub__event-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #087dff;
+  box-shadow: 0 0 0 4px rgba(8, 125, 255, .08);
+}
+
+.busnet-hub__event-dot.is-cancellation_request {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, .10);
+}
+
+.busnet-hub__event-dot.is-booking_status {
+  background: #64748b;
+  box-shadow: 0 0 0 4px rgba(100, 116, 139, .10);
+}
+
+.busnet-hub__status {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+}
+
+.busnet-hub__status span {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  color: #475467;
+  font-size: .68rem;
+}
+
+.busnet-hub__status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.busnet-hub__status i.is-online { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, .45); }
+.busnet-hub__status i.is-warning { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, .45); }
+
+.busnet-hub__search-results {
+  padding: 0 1rem .75rem;
+}
+
+.busnet-hub__search-results button {
+  grid-template-columns: auto 1fr;
+  border: 1px solid #edf1f6;
+  background: #fff;
+  color: #475467;
+}
+
+.busnet-hub__empty {
+  margin: 0;
+  padding: 1rem;
+  color: #66758a;
+  text-align: center;
+  font-size: .72rem;
+}
+
+.busnet-hub__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  border-top: 1px solid #edf1f6;
+}
+
+.busnet-hub__themes {
+  display: flex;
+  gap: .35rem;
+  padding: .2rem;
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
+.busnet-hub__themes button,
+.busnet-hub__settings {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: .35rem;
+  padding: .45rem .55rem;
+  border-radius: 8px;
+  color: #66758a;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.busnet-hub__themes button.is-active {
+  background: #fff;
+  color: #087dff;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, .08);
+}
+
+.busnet-hub__settings {
+  color: #475467;
+}
+
+.busnet-intelligence__launcher {
+  display: grid;
+  gap: .65rem;
+  padding: .25rem 1rem 1rem;
+}
+
+.busnet-intelligence__launcher > button {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  width: 100%;
+  min-height: 74px;
+  padding: .7rem;
+  border: 1px solid rgba(207, 219, 234, .9);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .64);
+  color: #101828;
+  text-align: left;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.busnet-intelligence__launcher > button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(8, 125, 255, .4);
+  background: rgba(237, 245, 255, .8);
+}
+
+.busnet-intelligence__card-icon {
   display: grid;
   width: 42px;
   height: 42px;
   place-items: center;
+  border-radius: 12px;
+  background: #edf5ff;
+  color: #087dff;
+}
+
+.busnet-intelligence__card-copy {
+  display: grid;
+  gap: .28rem;
+  min-width: 0;
+}
+
+.busnet-intelligence__card-copy strong {
+  font-size: .72rem;
+  letter-spacing: .03em;
+}
+
+.busnet-intelligence__card-copy small {
+  color: #66758a;
+  font-size: .68rem;
+}
+
+.busnet-intelligence__count {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 .35rem;
+  border-radius: 12px;
+  background: #087dff;
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.busnet-intelligence__prototype-note {
+  margin: 0;
+  padding: .3rem .1rem 0;
+  color: #7b8797;
+  font-size: .67rem;
+  line-height: 1.45;
+}
+
+.busnet-agent-chat,
+.busnet-agent-workspace {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.busnet-agent-chat__messages {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  padding: .5rem clamp(1rem, 3vw, 2rem) 1rem;
+}
+
+.busnet-agent-chat__messages article {
+  display: flex;
+  max-width: min(760px, 88%);
+  align-items: flex-start;
+  gap: .7rem;
+}
+
+.busnet-agent-chat__messages article.is-user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.busnet-agent-chat__messages article > img {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 50%;
+  background: rgba(8, 125, 255, .1);
+}
+
+.busnet-agent-chat__messages article > div {
+  min-width: 0;
+  padding: .8rem .9rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-agent-chat__messages article.is-user > div {
+  border-color: rgba(8, 125, 255, .2);
+  background: #edf5ff;
+}
+
+.busnet-agent-chat__messages strong {
+  color: #087dff;
+  font-size: .68rem;
+}
+
+.busnet-agent-chat__messages p {
+  margin: .35rem 0 0;
+  color: #344054;
+  font-size: .84rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.busnet-agent-chat__messages p.is-note {
+  color: #7b8797;
+  font-size: .72rem;
+}
+
+.busnet-agent-chat__messages time {
+  display: block;
+  margin-top: .45rem;
+  color: #98a2b3;
+  font-size: .62rem;
+}
+
+.busnet-agent-chat__composer {
+  padding: .75rem clamp(1rem, 3vw, 2rem) 1rem;
+  border-top: 1px solid rgba(207, 219, 234, .75);
+  background: rgba(248, 250, 253, .65);
+}
+
+.busnet-agent-chat__composer > p {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin: 0 0 .55rem;
+  color: #7b8797;
+  font-size: .68rem;
+}
+
+.busnet-agent-chat__composer > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px 40px;
+  align-items: end;
+  gap: .5rem;
+}
+
+.busnet-agent-chat__composer textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 130px;
+  box-sizing: border-box;
+  padding: .7rem .75rem;
   border: 1px solid #dfe7f1;
   border-radius: 12px;
   background: #fff;
-  color: #087dff;
-  box-shadow: 0 8px 24px rgba(16,24,40,.08);
+  color: #101828;
+  font: inherit;
+  font-size: .82rem;
+  resize: vertical;
 }
 
-.admin-dashboard__notification-button span {
+.busnet-agent-chat__composer button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 11px;
+  background: #087dff;
+  color: #fff;
+}
+
+.busnet-agent-chat__composer button:disabled {
+  background: #e6edf6;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.busnet-agent-workspace > nav {
+  display: flex;
+  flex: 0 0 auto;
+  gap: .3rem;
+  overflow-x: auto;
+  padding: 0 1rem .75rem;
+  border-bottom: 1px solid rgba(207, 219, 234, .75);
+}
+
+.busnet-agent-workspace > nav button {
+  display: inline-flex;
+  min-height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .4rem;
+  padding: 0 .7rem;
+  border-radius: 9px;
+  color: #66758a;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.busnet-agent-workspace > nav button.is-active {
+  background: #edf5ff;
+  color: #087dff;
+}
+
+.busnet-agent-workspace__content {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.busnet-agent-workspace__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.busnet-agent-workspace__heading h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.busnet-agent-workspace__heading p {
+  margin: .25rem 0 0;
+  color: #7b8797;
+  font-size: .72rem;
+}
+
+.busnet-agent-workspace__heading > span {
+  display: grid;
+  min-width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: #edf5ff;
+  color: #087dff;
+  font-size: .75rem;
+  font-weight: 800;
+}
+
+.busnet-agent-workspace__empty {
+  display: grid;
+  min-height: 220px;
+  place-content: center;
+  justify-items: center;
+  gap: .65rem;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.busnet-agent-workspace__empty p {
+  max-width: 360px;
+  margin: 0;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.busnet-agent-workspace__chat-cta {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: .45rem;
+  margin-top: .2rem;
+  padding: 0 .8rem;
+  border: 1px solid rgba(8, 125, 255, .22);
+  border-radius: 10px;
+  background: #edf5ff;
+  color: #087dff;
+  font-size: .74rem;
+  font-weight: 750;
+}
+
+.busnet-agent-workspace__chat-cta:hover {
+  background: #e0efff;
+}
+
+.busnet-agent-workspace__tasks {
+  display: grid;
+  gap: .65rem;
+}
+
+.busnet-agent-workspace__tasks article {
+  padding: .85rem 1rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-agent-workspace__tasks article > span {
+  color: #b7791f;
+  font-size: .66rem;
+  font-weight: 750;
+}
+
+.busnet-agent-workspace__tasks article > span.is-assistant { color: #087dff; }
+.busnet-agent-workspace__tasks article > span.is-user { color: #66758a; }
+
+.busnet-agent-workspace__tasks article p {
+  margin: .35rem 0;
+  color: #344054;
+  font-size: .82rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.busnet-agent-workspace__tasks article time {
+  color: #98a2b3;
+  font-size: .64rem;
+}
+
+.busnet-agent-workspace__capabilities {
+  display: grid;
+  gap: .6rem;
+}
+
+.busnet-agent-workspace__capabilities article {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  padding: .8rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .7);
+  color: #087dff;
+}
+
+.busnet-agent-workspace__capabilities article > span {
+  display: grid;
+  gap: .2rem;
+  color: #344054;
+}
+
+.busnet-agent-workspace__capabilities strong {
+  font-size: .78rem;
+}
+
+.busnet-agent-workspace__capabilities small {
+  color: #7b8797;
+  font-size: .68rem;
+}
+
+.busnet-agent-workspace__capabilities i {
+  color: #98a2b3;
+  font-size: .65rem;
+  font-style: normal;
+}
+
+.busnet-agent-workspace__capabilities i.is-ready {
+  color: #079455;
+}
+
+.busnet-knowledge {
+  display: grid;
+  gap: 1rem;
+  color: #344054;
+}
+
+.busnet-knowledge__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.busnet-knowledge__header > div > span,
+.busnet-knowledge__evolution > div:first-child > span {
+  color: #087dff;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.busnet-knowledge__header h4 {
+  margin: .25rem 0;
+  color: #101828;
+  font-size: 1.2rem;
+}
+
+.busnet-knowledge__header p {
+  margin: 0;
+  color: #7b8797;
+  font-size: .75rem;
+}
+
+.busnet-knowledge__primary {
+  display: inline-flex;
+  min-height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: 0 .85rem;
+  border: 1px solid #087dff;
+  border-radius: 10px;
+  background: #087dff;
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.busnet-knowledge__primary:hover {
+  background: #0069df;
+}
+
+.busnet-knowledge__prototype-note,
+.busnet-knowledge__document-note {
+  padding: .7rem .85rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #344054;
+  font-size: .7rem;
+  line-height: 1.5;
+}
+
+.busnet-knowledge__prototype-note {
+  display: grid;
+  gap: .15rem;
+}
+
+.busnet-knowledge__prototype-note strong {
+  color: #087dff;
+  font-size: .7rem;
+}
+
+.busnet-knowledge__error {
+  margin: 0;
+  padding: .6rem .75rem;
+  border: 1px solid #fda29b;
+  border-radius: 9px;
+  background: #fff4f2;
+  color: #b42318;
+  font-size: .72rem;
+}
+
+.busnet-knowledge__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.busnet-knowledge__stats article {
+  display: grid;
+  gap: .35rem;
+  padding: .8rem .9rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-knowledge__stats span {
+  color: #7b8797;
+  font-size: .66rem;
+}
+
+.busnet-knowledge__stats strong {
+  color: #101828;
+  font-size: 1.25rem;
+}
+
+.busnet-knowledge__form {
+  display: grid;
+  gap: .9rem;
+  padding: 1rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.busnet-knowledge__form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .7rem;
+}
+
+.busnet-knowledge__form-heading h5,
+.busnet-knowledge__evolution h5 {
+  margin: 0;
+  color: #101828;
+  font-size: .88rem;
+}
+
+.busnet-knowledge__form-heading p,
+.busnet-knowledge__evolution p {
+  margin: .25rem 0 0;
+  color: #7b8797;
+  font-size: .67rem;
+}
+
+.busnet-knowledge__form-heading > button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid #e1e9f2;
+  border-radius: 9px;
+  color: #66758a;
+}
+
+.busnet-knowledge__form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+}
+
+.busnet-knowledge__form-grid label {
+  display: grid;
+  gap: .3rem;
+  color: #66758a;
+  font-size: .67rem;
+  font-weight: 700;
+}
+
+.busnet-knowledge__form-grid label.is-wide {
+  grid-column: 1 / -1;
+}
+
+.busnet-knowledge__form input,
+.busnet-knowledge__form select,
+.busnet-knowledge__form textarea,
+.busnet-knowledge__filters input,
+.busnet-knowledge__filters select,
+.busnet-knowledge__entry-actions select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #101828;
+  font: inherit;
+  font-size: .72rem;
+}
+
+.busnet-knowledge__form input,
+.busnet-knowledge__form select,
+.busnet-knowledge__filters select,
+.busnet-knowledge__entry-actions select {
+  min-height: 38px;
+  padding: 0 .6rem;
+}
+
+.busnet-knowledge__form textarea {
+  padding: .6rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.busnet-knowledge__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.busnet-knowledge__form-actions > button:first-child {
+  min-height: 38px;
+  padding: 0 .8rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  color: #66758a;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.busnet-knowledge__layout {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: .9rem;
+}
+
+.busnet-knowledge__categories {
+  display: grid;
+  gap: .2rem;
+  padding: .45rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-knowledge__categories button {
+  display: flex;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: .45rem;
+  padding: 0 .55rem;
+  border-radius: 8px;
+  color: #66758a;
+  font-size: .68rem;
+  text-align: left;
+}
+
+.busnet-knowledge__categories button:hover,
+.busnet-knowledge__categories button.is-active {
+  background: #edf5ff;
+  color: #087dff;
+}
+
+.busnet-knowledge__categories button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busnet-knowledge__categories i {
+  display: inline-grid;
+  min-width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: #f1f4f8;
+  color: #7b8797;
+  font-size: .6rem;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.busnet-knowledge__main {
+  display: grid;
+  min-width: 0;
+  gap: .7rem;
+}
+
+.busnet-knowledge__filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 200px);
+  gap: .5rem;
+}
+
+.busnet-knowledge__filters > label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .45rem;
+  padding-left: .65rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #98a2b3;
+}
+
+.busnet-knowledge__filters input {
+  min-height: 38px;
+  padding: 0 .5rem 0 0;
+  border: 0;
+  outline: 0;
+}
+
+.busnet-knowledge__entries {
+  display: grid;
+  gap: .6rem;
+}
+
+.busnet-knowledge__entry {
+  min-width: 0;
+  padding: .8rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-knowledge__entry-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .4rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid #eef2f6;
+  color: #7b8797;
+  font-size: .62rem;
+  font-weight: 700;
+}
+
+.busnet-knowledge__status {
+  padding: .2rem .45rem;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.busnet-knowledge__entry.is-new .busnet-knowledge__status { background: #eff8ff; color: #175cd3; }
+.busnet-knowledge__entry.is-needs_verification .busnet-knowledge__status { background: #fffaeb; color: #b54708; }
+.busnet-knowledge__entry.is-verified .busnet-knowledge__status { background: #ecfdf3; color: #027a48; }
+.busnet-knowledge__entry.is-stale_or_conflict .busnet-knowledge__status { background: #fef3f2; color: #b42318; }
+
+.busnet-knowledge__entry h5 {
+  margin: .55rem 0 .3rem;
+  color: #101828;
+  font-size: .78rem;
+}
+
+.busnet-knowledge__entry > p {
+  margin: 0;
+  color: #66758a;
+  font-size: .7rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.busnet-knowledge__entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem .7rem;
+  margin-top: .65rem;
+  padding-top: .55rem;
+  border-top: 1px solid #eef2f6;
+  color: #7b8797;
+  font-size: .6rem;
+}
+
+.busnet-knowledge__entry-meta > span:first-child {
+  overflow-wrap: anywhere;
+}
+
+.busnet-knowledge__entry-meta i {
+  padding: .14rem .35rem;
+  border-radius: 5px;
+  background: #f2f4f7;
+  color: #667085;
+  font-style: normal;
+}
+
+.busnet-knowledge__entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .4rem;
+  margin-top: .65rem;
+  padding-top: .55rem;
+  border-top: 1px solid #eef2f6;
+}
+
+.busnet-knowledge__entry-actions label {
+  display: grid;
+  width: min(230px, 100%);
+  gap: .2rem;
+  margin-right: auto;
+  color: #7b8797;
+  font-size: .59rem;
+}
+
+.busnet-knowledge__entry-actions > button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  padding: 0 .55rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  background: #fff;
+  color: #66758a;
+  font-size: .64rem;
+  font-weight: 700;
+}
+
+.busnet-knowledge__entry-actions > button.is-danger {
+  width: 32px;
+  padding: 0;
+  color: #b42318;
+}
+
+.busnet-knowledge__empty {
+  display: grid;
+  min-height: 170px;
+  place-content: center;
+  justify-items: center;
+  gap: .45rem;
+  padding: 1rem;
+  border: 1px dashed #dbe5f1;
+  border-radius: 12px;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.busnet-knowledge__empty strong {
+  color: #66758a;
+  font-size: .75rem;
+}
+
+.busnet-knowledge__empty span {
+  max-width: 300px;
+  font-size: .67rem;
+  line-height: 1.45;
+}
+
+.busnet-knowledge__evolution {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .85rem 1rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-knowledge__evolution-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1rem;
+  color: #7b8797;
+  font-size: .65rem;
+}
+
+.busnet-knowledge__evolution-counts strong {
+  color: #344054;
+}
+
+.busnet-knowledge__recent {
+  display: grid;
+  min-width: min(250px, 100%);
+  gap: .25rem;
+}
+
+.busnet-knowledge__recent > span {
+  color: #7b8797;
+  font-size: .6rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.busnet-knowledge__recent p {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  margin: 0;
+  color: #7b8797;
+  font-size: .61rem;
+}
+
+.busnet-knowledge__recent p strong {
+  overflow: hidden;
+  color: #344054;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busnet-knowledge__recent time {
+  flex: 0 0 auto;
+  font-size: .58rem;
+}
+
+.busnet-knowledge__success {
+  margin: 0;
+  padding: .6rem .75rem;
+  border: 1px solid #abefc6;
+  border-radius: 9px;
+  background: #ecfdf3;
+  color: #027a48;
+  font-size: .72rem;
+}
+
+.busnet-knowledge__legacy,
+.busnet-knowledge__queue,
+.busnet-knowledge__conflicts,
+.busnet-knowledge__history {
+  display: grid;
+  gap: .75rem;
+  padding: .9rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .76);
+}
+
+.busnet-knowledge__legacy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.busnet-knowledge__legacy > div {
+  display: grid;
+  gap: .2rem;
+}
+
+.busnet-knowledge__legacy strong,
+.busnet-knowledge__section-heading h5 {
+  color: #344054;
+  font-size: .76rem;
+}
+
+.busnet-knowledge__legacy span,
+.busnet-knowledge__queue-empty,
+.busnet-knowledge__proposal small,
+.busnet-knowledge__version small {
+  color: #7b8797;
+  font-size: .65rem;
+}
+
+.busnet-knowledge__legacy button,
+.busnet-knowledge__review-actions button,
+.busnet-knowledge__version > button,
+.busnet-knowledge__section-heading > button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  padding: 0 .65rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #344054;
+  font-size: .67rem;
+  font-weight: 700;
+}
+
+.busnet-knowledge__section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.busnet-knowledge__section-heading > div {
+  display: grid;
+  gap: .15rem;
+}
+
+.busnet-knowledge__section-heading > div > span {
+  color: #087dff;
+  font-size: .58rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.busnet-knowledge__section-heading h5 {
+  margin: 0;
+}
+
+.busnet-knowledge__section-heading > span {
+  display: grid;
+  min-width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #087dff;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.busnet-knowledge__proposal {
+  display: grid;
+  gap: .5rem;
+  padding: .8rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.busnet-knowledge__proposal h6,
+.busnet-knowledge__proposal p {
+  margin: 0;
+  color: #344054;
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.busnet-knowledge__proposal .busnet-knowledge__queue-warning {
+  color: #b54708;
+}
+
+.busnet-knowledge__review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+}
+
+.busnet-knowledge__review-actions textarea {
+  width: 100%;
+  min-height: 54px;
+  padding: .55rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #101828;
+  font: inherit;
+  font-size: .68rem;
+  resize: vertical;
+}
+
+.busnet-knowledge__review-actions button.is-danger {
+  color: #b42318;
+}
+
+.busnet-knowledge__version {
+  display: grid;
+  gap: .5rem;
+  padding: .75rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+}
+
+.busnet-knowledge__version > div,
+.busnet-knowledge__version details {
+  display: grid;
+  gap: .25rem;
+}
+
+.busnet-knowledge__version strong,
+.busnet-knowledge__version summary {
+  color: #344054;
+  font-size: .7rem;
+}
+
+.busnet-knowledge__version p {
+  margin: 0;
+  color: #66758a;
+  font-size: .67rem;
+  line-height: 1.5;
+}
+
+.busnet-knowledge__version > button {
+  justify-self: start;
+}
+
+.busnet-knowledge__api-note {
+  display: flex;
+  align-items: flex-start;
+  gap: .45rem;
+  margin: 0;
+  color: #7b8797;
+  font-size: .65rem;
+  line-height: 1.5;
+}
+
+html[data-theme="dark"] .busnet-knowledge__success {
+  border-color: #14532d;
+  background: #052e1a;
+  color: #86efac;
+}
+
+html[data-theme="dark"] .busnet-knowledge__legacy,
+html[data-theme="dark"] .busnet-knowledge__queue,
+html[data-theme="dark"] .busnet-knowledge__conflicts,
+html[data-theme="dark"] .busnet-knowledge__history,
+html[data-theme="dark"] .busnet-knowledge__proposal,
+html[data-theme="dark"] .busnet-knowledge__version {
+  border-color: #1b2d43;
+  background: rgba(11, 20, 34, .86);
+}
+
+html[data-theme="dark"] .busnet-knowledge__legacy strong,
+html[data-theme="dark"] .busnet-knowledge__section-heading h5,
+html[data-theme="dark"] .busnet-knowledge__proposal h6,
+html[data-theme="dark"] .busnet-knowledge__proposal p,
+html[data-theme="dark"] .busnet-knowledge__version strong,
+html[data-theme="dark"] .busnet-knowledge__version summary {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-knowledge__legacy span,
+html[data-theme="dark"] .busnet-knowledge__queue-empty,
+html[data-theme="dark"] .busnet-knowledge__proposal small,
+html[data-theme="dark"] .busnet-knowledge__version small,
+html[data-theme="dark"] .busnet-knowledge__api-note,
+html[data-theme="dark"] .busnet-knowledge__version p {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-knowledge__legacy button,
+html[data-theme="dark"] .busnet-knowledge__review-actions button,
+html[data-theme="dark"] .busnet-knowledge__version > button,
+html[data-theme="dark"] .busnet-knowledge__section-heading > button,
+html[data-theme="dark"] .busnet-knowledge__review-actions textarea {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-knowledge__section-heading > span {
+  background: #10243a;
+  color: #38bdf8;
+}
+
+.busnet-ai-robot {
+  position: fixed;
+  z-index: 110;
+  width: 88px;
+  height: 88px;
+}
+
+.busnet-ai-robot__button {
+  position: relative;
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-items: center;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid rgba(105, 190, 255, .46);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(35, 143, 255, .16), rgba(255, 255, 255, .10) 68%);
+  box-shadow: 0 8px 26px rgba(8, 125, 255, .16), inset 0 0 18px rgba(255, 255, 255, .2);
+  backdrop-filter: blur(12px);
+  touch-action: none;
+  cursor: grab;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.busnet-ai-robot__button:hover {
+  transform: scale(1.06);
+  border-color: rgba(56, 189, 248, .9);
+  box-shadow: 0 10px 34px rgba(8, 125, 255, .34), 0 0 18px rgba(56, 189, 248, .24);
+}
+
+.busnet-ai-robot__button:active {
+  cursor: grabbing;
+  transform: scale(.97);
+}
+
+.busnet-ai-robot__button.is-active {
+  border-color: rgba(56, 189, 248, .95);
+  box-shadow: 0 10px 36px rgba(8, 125, 255, .4), 0 0 20px rgba(56, 189, 248, .28);
+}
+
+.busnet-ai-robot__button.has-alert::after,
+.busnet-ai-robot__button.has-critical::after {
+  content: "";
   position: absolute;
-  top: -6px;
-  right: -6px;
+  z-index: 0;
+  inset: -5px;
+  border: 1px solid rgba(56, 189, 248, .52);
+  border-radius: 50%;
+  animation: busnet-ai-alert-ring 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.busnet-ai-robot__button.has-critical::after {
+  border-color: rgba(239, 68, 68, .68);
+}
+
+.busnet-ai-robot:not(.is-animated) .busnet-ai-robot__button::after {
+  animation: none;
+}
+
+.busnet-ai-robot__badge {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: -3px;
   display: grid;
   min-width: 20px;
   height: 20px;
   place-items: center;
   padding: 0 5px;
-  border-radius: 10px;
-  background: #ef4444;
+  border: 2px solid rgba(255, 255, 255, .92);
+  border-radius: 12px;
+  background: #087dff;
   color: #fff;
-  font-size: .68rem;
-  font-weight: 800;
+  font-size: .62rem;
+  font-weight: 850;
+  line-height: 1;
 }
 
-.admin-dashboard__notifications {
-  position: absolute;
-  top: 50px;
-  right: 0;
-  width: min(380px, calc(100vw - 2rem));
-  max-height: 430px;
-  overflow-y: auto;
-  padding: .75rem;
-  border: 1px solid #dfe7f1;
+.busnet-ai-robot__button.has-critical .busnet-ai-robot__badge {
+  background: #ef4444;
+}
+
+.busnet-ai-robot__button img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@keyframes busnet-ai-alert-ring {
+  70%, 100% { transform: scale(1.16); opacity: 0; }
+}
+
+.busnet-ai-robot.is-animated .busnet-ai-robot__button {
+  animation: busnet-ai-breathe 3.2s ease-in-out infinite;
+}
+
+.busnet-ai-robot.is-animated .busnet-ai-robot__button img {
+  animation: busnet-ai-float 3.8s ease-in-out infinite;
+}
+
+@keyframes busnet-ai-breathe {
+  0%, 100% { box-shadow: 0 8px 26px rgba(8, 125, 255, .16), inset 0 0 18px rgba(255, 255, 255, .2); }
+  50% { box-shadow: 0 10px 34px rgba(8, 125, 255, .34), 0 0 18px rgba(56, 189, 248, .2), inset 0 0 20px rgba(255, 255, 255, .25); }
+}
+
+@keyframes busnet-ai-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.busnet-ai-robot__greeting {
+  position: fixed;
+  z-index: 111;
+  width: 304px;
+  max-width: calc(100vw - 32px);
+  padding: .8rem .9rem;
+  border: 1px solid rgba(181, 211, 241, .82);
   border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 20px 50px rgba(16,24,40,.18);
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 18px 48px rgba(16, 24, 40, .18), 0 0 22px rgba(8, 125, 255, .08);
+  backdrop-filter: blur(20px) saturate(145%);
+  animation: busnet-ai-greeting-in .28s cubic-bezier(.2,.8,.2,1) both;
 }
 
-.admin-dashboard__notifications h3 {
-  margin: 0 0 .6rem;
-  font-size: .95rem;
+@keyframes busnet-ai-greeting-in {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.admin-dashboard__notifications > p {
-  margin: 0;
-  padding: 1rem;
+.busnet-ai-robot__greeting header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  color: #087dff;
+  font-size: .64rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+}
+
+.busnet-ai-robot__greeting header span {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.busnet-ai-robot__greeting header i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, .5);
+}
+
+.busnet-ai-robot__greeting header button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  place-items: center;
+  border-radius: 8px;
   color: #66758a;
 }
 
-.admin-dashboard__notifications button {
+.busnet-ai-robot__greeting p {
+  margin: .55rem 0 0;
+  color: #344054;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.admin-dashboard__robot-settings {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.admin-dashboard__robot-settings > header {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: .9rem;
+}
+
+.admin-dashboard__robot-settings > header img {
+  width: 72px;
+  height: 72px;
+  border: 1px solid rgba(8, 125, 255, .18);
+  border-radius: 16px;
+  background: radial-gradient(circle, rgba(8, 125, 255, .12), transparent 70%);
+  object-fit: contain;
+}
+
+.admin-dashboard__robot-settings > header p,
+.admin-dashboard__robot-settings > header h3 {
+  margin: 0;
+}
+
+.admin-dashboard__robot-settings > header p {
+  color: #087dff;
+  font-size: .65rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.admin-dashboard__robot-settings > header h3 {
+  margin-top: .2rem;
+  font-size: 1.05rem;
+}
+
+.admin-dashboard__robot-settings > header span {
+  display: block;
+  margin-top: .25rem;
+  color: #66758a;
+  font-size: .72rem;
+}
+
+.admin-dashboard__robot-greeting {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: .4rem;
+  color: #66758a;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.admin-dashboard__robot-greeting textarea {
   width: 100%;
-  gap: .25rem;
+  min-height: 100px;
+  box-sizing: border-box;
   padding: .75rem;
-  border-bottom: 1px solid #edf1f6;
-  text-align: left;
-}
-
-.admin-dashboard__notifications button.is-unread {
+  border: 1px solid #dbe5f1;
   border-radius: 10px;
-  background: #edf5ff;
-  border-bottom-color: transparent;
+  background: #fff;
+  color: #101828;
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
 }
 
-.admin-dashboard__notifications button strong,
-.admin-dashboard__notifications button span,
-.admin-dashboard__notifications button small {
-  overflow-wrap: anywhere;
+.admin-dashboard__robot-greeting small {
+  justify-self: end;
+  color: #8a98a9;
+  font-size: .68rem;
+  font-weight: 500;
 }
 
-.admin-dashboard__notifications button span {
+.admin-dashboard__robot-options {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.admin-dashboard__robot-options label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   color: #475467;
   font-size: .78rem;
 }
 
-.admin-dashboard__notifications button small {
-  color: #98a2b3;
-  font-size: .68rem;
+.admin-dashboard__robot-options input {
+  width: 16px;
+  height: 16px;
+  accent-color: #087dff;
+}
+
+.admin-dashboard__robot-settings > button {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  justify-self: start;
+  padding: 0 1rem;
+  border-radius: 10px;
+  background: #087dff;
+  color: #fff;
+  font-weight: 750;
+}
+
+html[data-theme="dark"] .busnet-ai-robot__button {
+  border-color: rgba(56, 189, 248, .34);
+  background: radial-gradient(circle at 50% 45%, rgba(8, 125, 255, .23), rgba(7, 15, 27, .38) 70%);
+}
+
+html[data-theme="dark"] .busnet-ai-robot__greeting {
+  border-color: rgba(56, 189, 248, .2);
+  background: rgba(7, 15, 27, .94);
+}
+
+html[data-theme="dark"] .busnet-ai-robot__greeting p,
+html[data-theme="dark"] .admin-dashboard__robot-options label {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .admin-dashboard__robot-greeting textarea {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #f4f7fb;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busnet-ai-robot.is-animated .busnet-ai-robot__button,
+  .busnet-ai-robot.is-animated .busnet-ai-robot__button img,
+  .busnet-ai-robot__button::after,
+  .busnet-ai-robot__greeting {
+    animation: none;
+  }
 }
 
 .admin-dashboard__modal-backdrop {
@@ -988,6 +2971,7 @@ html[data-theme="dark"] .admin-dashboard__table tr.is-selected {
 
 @media (max-width: 680px) {
   .admin-dashboard { grid-template-columns: 1fr; }
+  .admin-dashboard.is-sidebar-collapsed { grid-template-columns: 1fr; }
   .admin-dashboard__sidebar {
     min-height: 0;
     border-right: 0;
@@ -1001,7 +2985,34 @@ html[data-theme="dark"] .admin-dashboard__table tr.is-selected {
     justify-content: center;
     padding: 0.5rem;
   }
-  .admin-dashboard__sidebar nav button svg { display: none; }
+  .admin-dashboard__sidebar nav button svg { display: block; }
+  .admin-dashboard__nav-label { display: none; }
+  .admin-dashboard__nav-tooltip { display: none !important; }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar {
+    padding: 1rem;
+  }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__brand {
+    display: flex;
+    justify-items: initial;
+  }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__brand > div {
+    display: block;
+  }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar nav {
+    margin-top: 1rem;
+  }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__sidebar nav button {
+    justify-content: center;
+    gap: .45rem;
+    padding: .5rem;
+  }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__account > div span,
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__account button span {
+    display: inline;
+  }
+  .admin-dashboard.is-sidebar-collapsed .admin-dashboard__account {
+    justify-items: initial;
+  }
   .admin-dashboard__account {
     display: flex;
     align-items: center;
@@ -1020,10 +3031,415 @@ html[data-theme="dark"] .admin-dashboard__table tr.is-selected {
   .admin-dashboard__content-editor button { width: 100%; }
   .admin-dashboard__json-fields { grid-template-columns: 1fr; }
   .admin-dashboard__settings { grid-template-columns: 1fr; }
-  .admin-dashboard__workspace-tools { position: fixed; top: .75rem; right: 1rem; }
+  .admin-dashboard__robot-settings,
+  .admin-dashboard__robot-options { grid-template-columns: 1fr; }
+  .busnet-hub__panel {
+    position: fixed;
+    inset: auto 8px 8px 8px !important;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 76px);
+    border-radius: 20px;
+  }
   .admin-dashboard__booking-modal-grid { grid-template-columns: 1fr; }
   .admin-dashboard__contact-actions,
   .admin-dashboard__modal-actions { flex-direction: column; }
   .admin-dashboard__contact-actions a,
   .admin-dashboard__modal-actions button { width: 100%; }
+}
+
+.admin-dashboard__nav-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #087dff;
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.admin-dashboard__header-caption {
+  display: block;
+  margin-top: .45rem;
+  color: #66758a;
+  font-size: .84rem;
+}
+
+.admin-dashboard__booking-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.admin-dashboard__booking-stats article {
+  position: relative;
+  min-height: 104px;
+  padding: .9rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(16, 24, 40, .035);
+}
+
+.admin-dashboard__booking-stats article > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  margin-bottom: .7rem;
+  border-radius: 9px;
+}
+
+.admin-dashboard__booking-stats .is-blue { background: #edf5ff; color: #087dff; }
+.admin-dashboard__booking-stats .is-red { background: #fff1f2; color: #dc2626; }
+.admin-dashboard__booking-stats .is-purple { background: #f3f0ff; color: #7047eb; }
+.admin-dashboard__booking-stats .is-amber { background: #fff8e6; color: #b7791f; }
+.admin-dashboard__booking-stats .is-green { background: #ecfdf3; color: #079455; }
+.admin-dashboard__booking-stats .is-gray { background: #f2f4f7; color: #667085; }
+
+.admin-dashboard__booking-stats strong {
+  position: absolute;
+  top: 1rem;
+  right: .9rem;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.admin-dashboard__booking-stats p {
+  margin: 0;
+  color: #66758a;
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.admin-dashboard__booking-tabs {
+  display: flex;
+  gap: .35rem;
+  margin: 1.25rem 0 .85rem;
+  overflow-x: auto;
+  border-bottom: 1px solid #dfe7f1;
+}
+
+.admin-dashboard__booking-tabs button {
+  display: flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .45rem;
+  padding: 0 .85rem;
+  border-bottom: 2px solid transparent;
+  color: #66758a;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.admin-dashboard__booking-tabs button > span {
+  color: #98a2b3;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.admin-dashboard__booking-tabs button:hover,
+.admin-dashboard__booking-tabs button.is-active {
+  border-bottom-color: #087dff;
+  color: #087dff;
+}
+
+.admin-dashboard__toolbar--bookings {
+  gap: .65rem;
+  margin-bottom: .65rem;
+}
+
+.admin-dashboard__toolbar--bookings label {
+  width: auto;
+  min-width: min(280px, 100%);
+  flex: 1 1 300px;
+}
+
+.admin-dashboard__toolbar--bookings select {
+  min-width: 140px;
+}
+
+.admin-dashboard__filter-toggle,
+.admin-dashboard__reset-filters {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: 0 .75rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.admin-dashboard__filter-toggle.is-active {
+  border-color: #9dc8ff;
+  background: #edf5ff;
+  color: #087dff;
+}
+
+.admin-dashboard__booking-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
+  margin-bottom: .75rem;
+  padding: 1rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-dashboard__booking-filters label {
+  display: grid;
+  min-width: 0;
+  gap: .35rem;
+  color: #66758a;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.admin-dashboard__booking-filters input,
+.admin-dashboard__booking-filters select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 .6rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  background: #fff;
+  color: #101828;
+  font: inherit;
+}
+
+.admin-dashboard__booking-filters .admin-dashboard__reset-filters {
+  align-self: end;
+}
+
+.admin-dashboard__booking-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin: 0 0 .75rem;
+  color: #66758a;
+  font-size: .78rem;
+}
+
+.admin-dashboard__booking-results .is-priority {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  color: #b42318;
+  font-weight: 700;
+}
+
+.admin-dashboard__booking-row {
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+
+.admin-dashboard__booking-row:hover,
+.admin-dashboard__booking-row:focus-visible {
+  outline: 0;
+  background: #f5f9ff;
+}
+
+.admin-dashboard__booking-row td:nth-child(3) {
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-dashboard__booking-row td:nth-child(6) {
+  text-align: right;
+}
+
+.admin-dashboard__booking-flag {
+  display: block;
+  margin-top: .3rem;
+  color: #b54708 !important;
+  font-size: .68rem !important;
+  font-weight: 700;
+}
+
+.admin-dashboard__modal-backdrop {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.admin-dashboard__booking-modal {
+  width: min(620px, 100%);
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 18px 0 0 18px;
+}
+
+.admin-dashboard__booking-detail-section,
+.admin-dashboard__booking-history {
+  display: grid;
+  gap: .65rem;
+  margin: 0 1.25rem 1.25rem;
+  padding: 1rem;
+  border: 1px solid #e6edf6;
+  border-radius: 14px;
+}
+
+.admin-dashboard__booking-detail-section h3,
+.admin-dashboard__booking-history h3 {
+  margin: 0;
+  font-size: .92rem;
+}
+
+.admin-dashboard__booking-detail-section article {
+  display: grid;
+  gap: .35rem;
+  padding: .75rem;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.admin-dashboard__booking-detail-section article strong {
+  font-size: .85rem;
+}
+
+.admin-dashboard__booking-detail-section article span {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  color: #66758a;
+  font-size: .78rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-dashboard__booking-history ol {
+  display: grid;
+  gap: .75rem;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+}
+
+.admin-dashboard__booking-history li {
+  padding-left: .25rem;
+  color: #475467;
+  font-size: .8rem;
+}
+
+.admin-dashboard__booking-history li strong,
+.admin-dashboard__booking-history li time,
+.admin-dashboard__booking-history li span {
+  display: block;
+}
+
+.admin-dashboard__booking-history li time,
+.admin-dashboard__booking-history li span,
+.admin-dashboard__booking-history > p {
+  margin-top: .2rem;
+  color: #66758a;
+  font-size: .74rem;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-stats article,
+html[data-theme="dark"] .admin-dashboard__booking-filters,
+html[data-theme="dark"] .admin-dashboard__filter-toggle,
+html[data-theme="dark"] .admin-dashboard__booking-detail-section,
+html[data-theme="dark"] .admin-dashboard__booking-history {
+  border-color: #1b2d43;
+  background: #0b1422;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-filters input,
+html[data-theme="dark"] .admin-dashboard__booking-filters select {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #f4f7fb;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-tabs {
+  border-color: #1b2d43;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-row:hover,
+html[data-theme="dark"] .admin-dashboard__booking-row:focus-visible,
+html[data-theme="dark"] .admin-dashboard__booking-detail-section article {
+  background: #10243a;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-modal,
+html[data-theme="dark"] .admin-dashboard__booking-modal > header {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #f4f7fb;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-modal-grid article,
+html[data-theme="dark"] .admin-dashboard__booking-edit,
+html[data-theme="dark"] .admin-dashboard__cancellation-request,
+html[data-theme="dark"] .admin-dashboard__passenger-review {
+  border-color: #1b2d43;
+  background: #101d2b;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-detail-section article,
+html[data-theme="dark"] .admin-dashboard__booking-modal-grid article p,
+html[data-theme="dark"] .admin-dashboard__booking-detail-section article span,
+html[data-theme="dark"] .admin-dashboard__booking-history li,
+html[data-theme="dark"] .admin-dashboard__booking-history li time,
+html[data-theme="dark"] .admin-dashboard__booking-history li span {
+  color: #a9b8cb;
+}
+
+html[data-theme="dark"] .admin-dashboard__booking-edit input,
+html[data-theme="dark"] .admin-dashboard__cancellation-request textarea,
+html[data-theme="dark"] .admin-dashboard__passenger-review textarea {
+  border-color: #1b2d43;
+  background: #0b1422;
+  color: #f4f7fb;
+}
+
+@media (max-width: 1100px) {
+  .admin-dashboard__booking-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .admin-dashboard__booking-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+  .admin-dashboard__booking-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-dashboard__booking-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-dashboard__toolbar--bookings { align-items: stretch; }
+  .admin-dashboard__toolbar--bookings label { flex-basis: 100%; }
+  .admin-dashboard__toolbar--bookings select,
+  .admin-dashboard__toolbar--bookings .admin-dashboard__filter-toggle,
+  .admin-dashboard__toolbar--bookings .admin-dashboard__export { flex: 1; }
+  .admin-dashboard__booking-modal { border-radius: 0; }
+  .admin-dashboard__booking-results { align-items: flex-start; }
+}
+
+@media (max-width: 900px) {
+  .busnet-knowledge__layout { grid-template-columns: minmax(145px, 185px) minmax(0, 1fr); }
+}
+
+@media (max-width: 680px) {
+  .busnet-knowledge__header { flex-direction: column; }
+  .busnet-knowledge__header .busnet-knowledge__primary { width: 100%; }
+  .busnet-knowledge__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .busnet-knowledge__layout { grid-template-columns: minmax(0, 1fr); }
+  .busnet-knowledge__categories {
+    display: flex;
+    overflow-x: auto;
+  }
+  .busnet-knowledge__categories button {
+    min-width: max-content;
+  }
+  .busnet-knowledge__filters { grid-template-columns: minmax(0, 1fr); }
+  .busnet-knowledge__form-grid { grid-template-columns: minmax(0, 1fr); }
+  .busnet-knowledge__form-grid label.is-wide { grid-column: auto; }
+  .busnet-knowledge__evolution { align-items: flex-start; flex-direction: column; }
 }
