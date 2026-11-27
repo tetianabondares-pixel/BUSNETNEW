@@ -42,6 +42,13 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { parseAssistantRequest } from "@/lib/adminAssistantIntent.mjs";
+import {
+  loadAdminPassengerCard,
+  searchAdminPassengers,
+  type AssistantPassenger,
+  type AssistantPassengerCard,
+} from "@/lib/adminPassengerAssistant";
 import { useTheme } from "@/theme";
 import { KnowledgeCenterPanel } from "@/pages/admin/KnowledgeCenterPanel";
 import "./AdminDashboardPage.css";
@@ -261,11 +268,19 @@ type RobotPreferences = {
   draggable: boolean;
 };
 
+type AgentTaskEvent = {
+  id: string;
+  label: string;
+  status: "started" | "completed" | "error";
+  createdAt: string;
+};
+
 type AgentMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
   createdAt: string;
+  events?: AgentTaskEvent[];
 };
 
 type AgentTask = {
@@ -273,7 +288,12 @@ type AgentTask = {
   title: string;
   status: "draft" | "in_progress" | "completed" | "needs_confirmation" | "error";
   createdAt: string;
+  events?: AgentTaskEvent[];
 };
+
+type AgentMessageResult =
+  | { kind: "candidates"; taskId: string; matches: AssistantPassenger[]; totalCount: number }
+  | { kind: "card"; taskId: string; card: AssistantPassengerCard };
 
 type RobotPanelMode = "launcher" | "quick-actions" | "chat" | "workspace";
 type AgentWorkspaceTab = "tasks" | "reports" | "activity" | "capabilities" | "knowledge";
@@ -437,6 +457,17 @@ function readKnowledgeCenter(): KnowledgeCenterState {
   }
 }
 
+function readAgentEvents(value: unknown): AgentTaskEvent[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((event): event is AgentTaskEvent =>
+    !!event && typeof event === "object" &&
+    typeof event.id === "string" &&
+    typeof event.label === "string" &&
+    ["started", "completed", "error"].includes(event.status as string) &&
+    typeof event.createdAt === "string",
+  ).slice(-20);
+}
+
 function readAgentMessages(): AgentMessage[] {
   if (typeof window === "undefined") return [];
   try {
@@ -449,7 +480,7 @@ function readAgentMessages(): AgentMessage[] {
       (item.role === "user" || item.role === "assistant") &&
       typeof item.text === "string" &&
       typeof item.createdAt === "string",
-    ).slice(-100);
+    ).map((item) => ({ ...item, events: readAgentEvents(item.events) })).slice(-100);
   } catch {
     return [];
   }
@@ -467,10 +498,38 @@ function readAgentTasks(): AgentTask[] {
       typeof item.title === "string" &&
       ["draft", "in_progress", "completed", "needs_confirmation", "error"].includes(item.status) &&
       typeof item.createdAt === "string",
-    ).slice(-100);
+    ).map((item) => ({ ...item, events: readAgentEvents(item.events) })).slice(-100);
   } catch {
     return [];
   }
+}
+
+function formatAssistantDate(value: string | null): string {
+  if (!value) return "Не вказано";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Не вказано" : date.toLocaleString();
+}
+
+function formatBookingStatus(status: string): string {
+  const labels: Record<string, string> = {
+    pending: "Очікує",
+    confirmed: "Підтверджене",
+    cancelled: "Скасоване",
+    expired: "Прострочене",
+    refunded: "Статус бронювання: refunded",
+  };
+  return labels[status] ?? status;
+}
+
+function formatTripStatus(status: string | null): string {
+  if (!status) return "Статус рейсу невідомий";
+  const labels: Record<string, string> = {
+    scheduled: "Запланований",
+    active: "Активний",
+    cancelled: "Скасований",
+    completed: "Завершений",
+  };
+  return labels[status] ?? status;
 }
 
 function readRobotPreferences(): RobotPreferences {
@@ -611,7 +670,9 @@ export function AdminDashboardPage() {
   const [agentWorkspaceTab, setAgentWorkspaceTab] = useState<AgentWorkspaceTab>("tasks");
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>(readAgentMessages);
   const [agentTasks, setAgentTasks] = useState<AgentTask[]>(readAgentTasks);
+  const [agentResults, setAgentResults] = useState<Record<string, AgentMessageResult>>({});
   const [agentDraft, setAgentDraft] = useState("");
+  const [agentWorking, setAgentWorking] = useState(false);
   const [knowledgeCenter, setKnowledgeCenter] = useState<KnowledgeCenterState>(readKnowledgeCenter);
   const [knowledgeCategoryFilter, setKnowledgeCategoryFilter] = useState<KnowledgeCategoryFilter>("all");
   const [knowledgeStatusFilter, setKnowledgeStatusFilter] = useState<KnowledgeStatus | "all">("all");
@@ -621,6 +682,7 @@ export function AdminDashboardPage() {
   const [knowledgeDraft, setKnowledgeDraft] = useState<KnowledgeDraft>(EMPTY_KNOWLEDGE_DRAFT);
   const [knowledgeFormError, setKnowledgeFormError] = useState("");
   const agentInputRef = useRef<HTMLTextAreaElement>(null);
+  const agentWorkingRef = useRef(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const hubPanelRef = useRef<HTMLDivElement>(null);
   const robotButtonRef = useRef<HTMLButtonElement>(null);
@@ -700,7 +762,13 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(agentMessages.slice(-100)));
+      const persistedMessages = agentMessages.slice(-100).map((message) => {
+        if (message.role === "user" && parseAssistantRequest(message.text).kind === "passenger_search") {
+          return { ...message, text: "Пошук пасажира" };
+        }
+        return message;
+      });
+      window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(persistedMessages));
       window.localStorage.setItem("busnet_intelligence_tasks", JSON.stringify(agentTasks.slice(-100)));
     } catch (error) {
       console.error("Could not save BUSNET Intelligence workspace history", error);
@@ -1326,26 +1394,242 @@ export function AdminDashboardPage() {
     setActionMessage("Налаштування помічника BUSNET збережено");
   };
 
-  const sendAgentMessage = () => {
+  const appendAgentEvent = (
+    assistantMessageId: string,
+    taskId: string,
+    label: string,
+    status: AgentTaskEvent["status"] = "completed",
+  ) => {
+    const event: AgentTaskEvent = {
+      id: `${taskId}-event-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label,
+      status,
+      createdAt: new Date().toISOString(),
+    };
+    setAgentMessages((current) => current.map((message) =>
+      message.id === assistantMessageId
+        ? { ...message, events: [...(message.events ?? []), event] }
+        : message,
+    ));
+    setAgentTasks((current) => current.map((task) =>
+      task.id === taskId
+        ? { ...task, events: [...(task.events ?? []), event] }
+        : task,
+    ));
+  };
+
+  const beginAgentOperation = () => {
+    if (agentWorkingRef.current) return false;
+    agentWorkingRef.current = true;
+    setAgentWorking(true);
+    return true;
+  };
+
+  const endAgentOperation = () => {
+    agentWorkingRef.current = false;
+    setAgentWorking(false);
+  };
+
+  const updateAgentMessage = (messageId: string, text: string) => {
+    setAgentMessages((current) => current.map((message) =>
+      message.id === messageId ? { ...message, text } : message,
+    ));
+  };
+
+  const updateAgentTaskStatus = (taskId: string, status: AgentTask["status"]) => {
+    setAgentTasks((current) => current.map((task) =>
+      task.id === taskId ? { ...task, status } : task,
+    ));
+  };
+
+  const selectAssistantPassenger = async (
+    assistantMessageId: string,
+    taskId: string,
+    passenger: AssistantPassenger,
+  ) => {
+    if (!beginAgentOperation()) return;
+    updateAgentTaskStatus(taskId, "in_progress");
+    appendAgentEvent(assistantMessageId, taskId, "Викликано admin_get_passenger_assistant_card", "started");
+    try {
+      const card = await loadAdminPassengerCard(passenger.id);
+      setAgentResults((current) => ({
+        ...current,
+        [assistantMessageId]: { kind: "card", taskId, card },
+      }));
+      updateAgentMessage(
+        assistantMessageId,
+        "Картку пасажира та першу сторінку історії завантажено. Персональні дані не зберігаються в історії чату.",
+      );
+      appendAgentEvent(
+        assistantMessageId,
+        taskId,
+        `Картку завантажено; бронювань у профілі: ${card.summary.booking_count}`,
+      );
+      updateAgentTaskStatus(taskId, "completed");
+    } catch (error) {
+      console.error("BUSNET assistant could not load the selected passenger", error);
+      const message = error instanceof Error ? error.message : "Не вдалося завантажити картку пасажира.";
+      updateAgentMessage(assistantMessageId, message);
+      appendAgentEvent(assistantMessageId, taskId, "Завантаження картки завершилося помилкою", "error");
+      updateAgentTaskStatus(taskId, "error");
+    } finally {
+      endAgentOperation();
+    }
+  };
+
+  const loadMoreAssistantPassengerHistory = async (
+    assistantMessageId: string,
+    result: Extract<AgentMessageResult, { kind: "card" }>,
+  ) => {
+    if (!result.card.has_more || !beginAgentOperation()) return;
+    appendAgentEvent(assistantMessageId, result.taskId, "Викликано наступну сторінку історії", "started");
+    try {
+      const nextPage = await loadAdminPassengerCard(
+        result.card.profile.id,
+        result.card.page + 1,
+      );
+      setAgentResults((current) => ({
+        ...current,
+        [assistantMessageId]: {
+          kind: "card",
+          taskId: result.taskId,
+          card: {
+            ...nextPage,
+            bookings: [...result.card.bookings, ...nextPage.bookings],
+          },
+        },
+      }));
+      appendAgentEvent(
+        assistantMessageId,
+        result.taskId,
+        `Додано бронювань до історії: ${nextPage.bookings.length}`,
+      );
+    } catch (error) {
+      console.error("BUSNET assistant could not load more passenger history", error);
+      appendAgentEvent(assistantMessageId, result.taskId, "Завантаження історії завершилося помилкою", "error");
+    } finally {
+      endAgentOperation();
+    }
+  };
+
+  const sendAgentMessage = async () => {
     const text = agentDraft.trim();
-    if (!text) return;
+    if (!text || !beginAgentOperation()) return;
     const now = new Date().toISOString();
     const taskId = `agent-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const assistantMessageId = `${taskId}-assistant`;
+    const request = parseAssistantRequest(text);
+    const taskTitle = request.kind === "passenger_search" || request.kind === "passenger_search_missing_query"
+      ? "Пошук пасажира"
+      : request.kind === "greeting"
+        ? "Відповідь на привітання"
+        : "Запит до помічника";
     setAgentMessages((current): AgentMessage[] => [
       ...current,
       { id: `${taskId}-user`, role: "user" as const, text, createdAt: now },
       {
-        id: `${taskId}-assistant`,
+        id: assistantMessageId,
         role: "assistant" as const,
-        text: "Записала це як чернетку в робочий простір. Поки що я не аналізую базу й не виконую команди — інструменти помічника ще не підключені.",
-        createdAt: new Date(Date.now() + 1).toISOString(),
+        text: "Обробляю запит…",
+        createdAt: new Date().toISOString(),
+        events: [],
       },
     ].slice(-100));
     setAgentTasks((current): AgentTask[] => [
-      { id: taskId, title: text, status: "draft" as const, createdAt: now },
+      { id: taskId, title: taskTitle, status: "in_progress" as const, createdAt: now, events: [] },
       ...current,
     ].slice(0, 100));
     setAgentDraft("");
+    appendAgentEvent(assistantMessageId, taskId, "Запит отримано");
+
+    if (request.kind === "greeting") {
+      appendAgentEvent(assistantMessageId, taskId, "Розпізнано привітання; до бази даних не зверталися");
+      updateAgentMessage(assistantMessageId, "Вітаю! Я можу знайти зареєстрованого пасажира за ім’ям, email або телефоном.");
+      updateAgentTaskStatus(taskId, "completed");
+      endAgentOperation();
+      return;
+    }
+
+    if (request.kind === "unsupported") {
+      appendAgentEvent(assistantMessageId, taskId, "Запит не відповідає доступним діям");
+      updateAgentMessage(assistantMessageId, "Поки що я вмію відповідати на привітання та шукати зареєстрованих пасажирів за ім’ям, email або телефоном.");
+      updateAgentTaskStatus(taskId, "needs_confirmation");
+      endAgentOperation();
+      return;
+    }
+
+    if (request.kind === "passenger_search_missing_query") {
+      appendAgentEvent(assistantMessageId, taskId, "Для пошуку не вказано ім’я, email або телефон");
+      updateAgentMessage(assistantMessageId, "Вкажіть ім’я, email або телефон пасажира, якого потрібно знайти.");
+      updateAgentTaskStatus(taskId, "needs_confirmation");
+      endAgentOperation();
+      return;
+    }
+
+    appendAgentEvent(assistantMessageId, taskId, "Викликано захищений RPC admin_search_passengers", "started");
+    try {
+      const { matches, totalCount } = await searchAdminPassengers(request.query);
+      appendAgentEvent(
+        assistantMessageId,
+        taskId,
+        `Пошук завершено; отримано профілів: ${matches.length} з ${totalCount}`,
+      );
+      if (matches.length > 1 || totalCount > 1) {
+        setAgentResults((current) => ({
+          ...current,
+          [assistantMessageId]: {
+            kind: "candidates",
+            taskId,
+            matches,
+            totalCount,
+          },
+        }));
+        updateAgentMessage(
+          assistantMessageId,
+          `Знайдено ${totalCount} можливих збігів. Оберіть потрібний профіль; персональні дані не зберігаються в історії чату.`,
+        );
+        appendAgentEvent(assistantMessageId, taskId, "Виявлено неоднозначність; очікується вибір профілю");
+        updateAgentTaskStatus(taskId, "needs_confirmation");
+        return;
+      }
+
+      if (!matches.length) {
+        updateAgentMessage(
+          assistantMessageId,
+          "У реєстрі профілів збігів не знайдено. Пошук поки охоплює зареєстровані профілі; пасажирів без профілю не об’єдную з акаунтами.",
+        );
+        appendAgentEvent(assistantMessageId, taskId, "Збігів у реєстрі профілів не знайдено");
+        updateAgentTaskStatus(taskId, "completed");
+        return;
+      }
+
+      appendAgentEvent(assistantMessageId, taskId, "Викликано admin_get_passenger_assistant_card", "started");
+      const card = await loadAdminPassengerCard(matches[0].id);
+      setAgentResults((current) => ({
+        ...current,
+        [assistantMessageId]: { kind: "card", taskId, card },
+      }));
+      updateAgentMessage(
+        assistantMessageId,
+        "Профіль знайдено. Картка та історія завантажені з бази; персональні дані не зберігаються в історії чату.",
+      );
+      appendAgentEvent(
+        assistantMessageId,
+        taskId,
+        `Картку завантажено; бронювань у профілі: ${card.summary.booking_count}`,
+      );
+      updateAgentTaskStatus(taskId, "completed");
+    } catch (error) {
+      console.error("BUSNET assistant passenger lookup failed", error);
+      const message = error instanceof Error
+        ? error.message
+        : "Не вдалося виконати пошук пасажира. Перевірте доступ і з’єднання.";
+      updateAgentMessage(assistantMessageId, message);
+      appendAgentEvent(assistantMessageId, taskId, "Пошук пасажира завершився помилкою", "error");
+      updateAgentTaskStatus(taskId, "error");
+    } finally {
+      endAgentOperation();
+    }
   };
 
   useEffect(() => {
@@ -2110,20 +2394,120 @@ export function AdminDashboardPage() {
                             <div>
                               <strong>BUSNET ПОМІЧНИК</strong>
                               <p>{robotPreferences.greeting}</p>
-                                <p className="is-note">Поки що можу приймати запити й зберігати їх як чернетки. Доступ до реальних даних та операцій ще не підключений.</p>
+                              <p className="is-note">Можу відповісти на привітання або знайти зареєстрований профіль за ім’ям, email чи телефоном. Картка читається лише через адміністративні RPC; картки й пошукові значення не зберігаються в історії браузера.</p>
                             </div>
                           </article>
                         )}
-                        {agentMessages.map((message) => (
-                          <article className={`is-${message.role}`} key={message.id}>
-                            {message.role === "assistant" && <img src="/images/busnet-ai-assistant-robot.png" alt="" />}
-                            <div>
-                              <strong>{message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}</strong>
-                              <p>{message.text}</p>
-                              <time>{new Date(message.createdAt).toLocaleString()}</time>
-                            </div>
-                          </article>
-                        ))}
+                        {agentMessages.map((message) => {
+                          const result = agentResults[message.id];
+                          return (
+                            <article className={`is-${message.role}`} key={message.id}>
+                              {message.role === "assistant" && <img src="/images/busnet-ai-assistant-robot.png" alt="" />}
+                              <div>
+                                <strong>{message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}</strong>
+                                <p>{message.text}</p>
+                                {message.events && message.events.length > 0 && (
+                                  <ol className="busnet-agent-chat__events">
+                                    {message.events.map((event) => (
+                                      <li className={`is-${event.status}`} key={event.id}>
+                                        <span aria-hidden="true" />
+                                        <span>{event.label}</span>
+                                        <time>{new Date(event.createdAt).toLocaleTimeString()}</time>
+                                      </li>
+                                    ))}
+                                  </ol>
+                                )}
+                                {result?.kind === "candidates" && (
+                                  <div className="busnet-agent-chat__candidates">
+                                    {result.matches.map((passenger) => (
+                                      <button
+                                        type="button"
+                                        key={passenger.id}
+                                        disabled={agentWorking}
+                                        onClick={() => void selectAssistantPassenger(message.id, result.taskId, passenger)}
+                                      >
+                                        <strong>{passenger.full_name || "Ім’я не вказане"}</strong>
+                                        <span>{[passenger.email, passenger.phone].filter(Boolean).join(" · ") || "Контакти відсутні"}</span>
+                                        <small>{passenger.booking_count} бронювань · профіль створено {formatAssistantDate(passenger.created_at)}</small>
+                                      </button>
+                                    ))}
+                                    {result.totalCount > result.matches.length && (
+                                      <p className="is-note">Показано {result.matches.length} із {result.totalCount}. Уточніть пошук, якщо потрібного профілю немає.</p>
+                                    )}
+                                  </div>
+                                )}
+                                {result?.kind === "card" && (
+                                  <section className="busnet-agent-passenger-card" aria-label="Картка пасажира">
+                                    <header>
+                                      <h4>{result.card.profile.full_name || "Ім’я не вказане"}</h4>
+                                      <p>{[result.card.profile.email, result.card.profile.phone].filter(Boolean).join(" · ") || "Контакти відсутні"}</p>
+                                      <small>Профіль створено: {formatAssistantDate(result.card.profile.created_at)} · Мова: {result.card.profile.preferred_locale}</small>
+                                    </header>
+                                    <div className="busnet-agent-passenger-card__summary">
+                                      <span>Усього бронювань <strong>{result.card.summary.booking_count}</strong></span>
+                                      <span>Очікують <strong>{result.card.summary.pending_booking_count}</strong></span>
+                                      <span>Підтверджені <strong>{result.card.summary.confirmed_booking_count}</strong></span>
+                                      <span>Скасовані <strong>{result.card.summary.cancelled_booking_count}</strong></span>
+                                      <span>Статус refunded <strong>{result.card.summary.refunded_booking_count}</strong></span>
+                                      <span>Підтверджені бронювання на завершених рейсах <strong>{result.card.summary.completed_trip_record_count}</strong></span>
+                                    </div>
+                                    <p className="is-note">Останній минулий виїзд: {formatAssistantDate(result.card.summary.last_past_departure_at)} · Наступний запланований виїзд: {formatAssistantDate(result.card.summary.next_departure_at)}.</p>
+                                    <p className="is-note">Статус завершеного рейсу не підтверджує присутність пасажира. Окремі факти no-show або перенесення, а також платежі й суми повернень у цій картці не визначаються.</p>
+                                    <h5>Історія бронювань</h5>
+                                    {result.card.bookings.length === 0 ? (
+                                      <p>Бронювань у профілі немає.</p>
+                                    ) : (
+                                      <ol>
+                                        {result.card.bookings.map((booking) => (
+                                          <li key={booking.id}>
+                                            <strong>{booking.booking_number} · {formatBookingStatus(booking.status)}</strong>
+                                            <span>{booking.trip?.from_city || "Маршрут невідомий"} → {booking.trip?.to_city || "Маршрут невідомий"} · {formatAssistantDate(booking.trip?.departure_at ?? null)}</span>
+                                            <span>{formatTripStatus(booking.trip?.status ?? null)} · {booking.trip?.carrier || "Перевізник не вказаний"}</span>
+                                            <span>Сума у бронюванні: {booking.total_amount.toFixed(2)} {booking.currency}</span>
+                                            {booking.booking_passengers.length > 0 && (
+                                              <ul>
+                                                {booking.booking_passengers.map((traveller, index) => (
+                                                  <li key={`${booking.id}-traveller-${index}`}>
+                                                    {traveller.full_name}
+                                                    {traveller.seat_number ? ` · місце ${traveller.seat_number}` : ""}
+                                                    {traveller.email ? ` · ${traveller.email}` : ""}
+                                                    {traveller.phone ? ` · ${traveller.phone}` : ""}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            )}
+                                            {booking.cancellation_requests.length > 0 && (
+                                              <ul>
+                                                {booking.cancellation_requests.map((request, index) => (
+                                                  <li key={`${booking.id}-cancellation-${index}`}>
+                                                    Заявка на скасування: {request.status}
+                                                    {request.resolution ? ` · рішення: ${request.resolution}` : ""}
+                                                    {` · ${formatAssistantDate(request.created_at)}`}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            )}
+                                          </li>
+                                        ))}
+                                      </ol>
+                                    )}
+                                    <p className="is-note">Сума в бронюванні не є підтвердженням фактичної оплати або повернення.</p>
+                                    {result.card.has_more && (
+                                      <button
+                                        type="button"
+                                        disabled={agentWorking}
+                                        onClick={() => void loadMoreAssistantPassengerHistory(message.id, result)}
+                                      >
+                                        {agentWorking ? "Завантаження…" : "Завантажити старіші бронювання"}
+                                      </button>
+                                    )}
+                                  </section>
+                                )}
+                                <time>{new Date(message.createdAt).toLocaleString()}</time>
+                              </div>
+                            </article>
+                          );
+                        })}
                       </div>
                       <div className="busnet-agent-chat__composer">
                         <p><Mic size={14} /> Голосове керування з’явиться на наступному етапі</p>
@@ -2133,13 +2517,13 @@ export function AdminDashboardPage() {
                             value={agentDraft}
                             maxLength={1000}
                             rows={2}
-                            placeholder="Напишіть запит або доручення..."
+                            placeholder="Привітання або пошук пасажира за ім’ям, email чи телефоном..."
                             aria-label="Повідомлення помічнику BUSNET"
                             onChange={(event) => setAgentDraft(event.target.value)}
                             onKeyDown={(event) => {
                               if (event.key === "Enter" && !event.shiftKey) {
                                 event.preventDefault();
-                                sendAgentMessage();
+                                void sendAgentMessage();
                               }
                             }}
                           />
@@ -2153,9 +2537,9 @@ export function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
-                            disabled={!agentDraft.trim()}
+                            disabled={!agentDraft.trim() || agentWorking}
                             aria-label="Надіслати повідомлення"
-                            onClick={sendAgentMessage}
+                            onClick={() => void sendAgentMessage()}
                           >
                             <Send size={18} />
                           </button>
@@ -2188,7 +2572,7 @@ export function AdminDashboardPage() {
                         {agentWorkspaceTab === "tasks" && (
                           <>
                             <div className="busnet-agent-workspace__heading">
-                              <div><h4>Мої завдання</h4><p>Запити з чату, збережені як чернетки</p></div>
+                              <div><h4>Мої завдання</h4><p>Історія виконання збережена лише в цьому браузері</p></div>
                               <span>{agentTasks.length}</span>
                             </div>
                             {agentTasks.length === 0 ? (
@@ -2207,9 +2591,29 @@ export function AdminDashboardPage() {
                               <div className="busnet-agent-workspace__tasks">
                                 {agentTasks.map((task) => (
                                   <article key={task.id}>
-                                    <span className="is-draft">Чернетка · не виконується</span>
+                                    <span className={`is-${task.status}`}>
+                                      {{
+                                        draft: "Чернетка",
+                                        in_progress: "Виконується",
+                                        completed: "Завершено",
+                                        needs_confirmation: "Потрібне уточнення",
+                                        error: "Помилка",
+                                      }[task.status]}
+                                    </span>
                                     <p>{task.title}</p>
                                     <time>{new Date(task.createdAt).toLocaleString()}</time>
+                                    {task.events && task.events.length > 0 && (
+                                      <details>
+                                        <summary>{task.events.length} подій виконання</summary>
+                                        <ol>
+                                          {task.events.map((event) => (
+                                            <li key={event.id}>
+                                              {event.label} · {new Date(event.createdAt).toLocaleTimeString()}
+                                            </li>
+                                          ))}
+                                        </ol>
+                                      </details>
+                                    )}
                                   </article>
                                 ))}
                               </div>
@@ -2240,7 +2644,7 @@ export function AdminDashboardPage() {
                           <div className="busnet-agent-workspace__capabilities">
                             <article><TicketCheck size={17} /><span><strong>Навігація та швидкі дії</strong><small>Підключено до модулів адмінки</small></span><i className="is-ready">Доступно</i></article>
                             <article><Bell size={17} /><span><strong>Вхідні події</strong><small>Існуючі сповіщення та Realtime</small></span><i className="is-ready">Доступно</i></article>
-                            <article><Search size={17} /><span><strong>Пошук BUSNET</strong><small>Пошук серед завантажених записів</small></span><i className="is-ready">Доступно</i></article>
+                            <article><Search size={17} /><span><strong>Пошук пасажирів</strong><small>Профіль та історія через захищені RPC</small></span><i className="is-ready">Доступно</i></article>
                             <article><MessageCircle size={17} /><span><strong>Автоматизація та голос</strong><small>Інтеграція ще не налаштована</small></span><i>Незабаром</i></article>
                           </div>
                         )}
