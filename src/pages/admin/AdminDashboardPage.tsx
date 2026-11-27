@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useDeleteExperience } from "@/components/GlobalDeleteExperience";
 import {
-  ArrowLeft,
   Activity,
   Bell,
   BookOpen,
@@ -19,6 +19,8 @@ import {
   ListTodo,
   Mail,
   LayoutDashboard,
+  LayoutGrid,
+  List,
   LogOut,
   Map as MapIcon,
   Menu,
@@ -45,6 +47,10 @@ import { supabase } from "@/lib/supabase";
 import { askBusnetAssistant, type AssistantChatHistoryMessage } from "@/lib/assistantChat";
 import { parseAssistantRequest } from "@/lib/adminAssistantIntent.mjs";
 import {
+  filterSchedulesForDirectedRoute,
+  getUniqueDepartureWeekdays,
+} from "@/lib/routeScheduleMatching";
+import {
   loadAdminPassengerCard,
   searchAdminPassengers,
   type AssistantPassenger,
@@ -52,6 +58,7 @@ import {
 } from "@/lib/adminPassengerAssistant";
 import { useTheme } from "@/theme";
 import { AssistantCapabilitiesPanel } from "@/pages/admin/AssistantCapabilitiesPanel";
+import { BusiProfilePanel, BusiProfilePeek, useBusiProfileData } from "@/pages/admin/BusiProfile";
 import { KnowledgeCenterPanel } from "@/pages/admin/KnowledgeCenterPanel";
 import "./AdminDashboardPage.css";
 
@@ -155,6 +162,7 @@ type RouteScheduleRow = {
   service_weekday: number;
   active: boolean;
   stops: Array<{
+    location_id: string;
     location_name: string;
     stop_order: number;
     day_offset: number;
@@ -309,7 +317,7 @@ type AgentMessageResult =
   | { kind: "candidates"; taskId: string; matches: AssistantPassenger[]; totalCount: number }
   | { kind: "card"; taskId: string; card: AssistantPassengerCard };
 
-type RobotPanelMode = "launcher" | "quick-actions" | "chat" | "workspace";
+type RobotPanelMode = "profile" | "quick-actions" | "chat" | "workspace";
 type AgentWorkspaceTab = "tasks" | "reports" | "activity" | "capabilities" | "knowledge";
 type KnowledgeCategory =
   | "busnet_knowledge"
@@ -607,6 +615,7 @@ export function AdminDashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { resolved, setMode } = useTheme();
+  const { requestDelete } = useDeleteExperience();
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -648,6 +657,7 @@ export function AdminDashboardPage() {
   const [providerLogs, setProviderLogs] = useState<ProviderLogRow[]>([]);
   const [routes, setRoutes] = useState<RouteRow[]>([]);
   const [routeSearch, setRouteSearch] = useState("");
+  const [routeViewMode, setRouteViewMode] = useState<"list" | "cards">("list");
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [locationSearch, setLocationSearch] = useState("");
   const [editingLocationId, setEditingLocationId] = useState("");
@@ -666,6 +676,12 @@ export function AdminDashboardPage() {
   const [robotPreferences, setRobotPreferences] = useState<RobotPreferences>(readRobotPreferences);
   const [robotSettingsDraft, setRobotSettingsDraft] = useState<RobotPreferences>(robotPreferences);
   const robotPreferencesOnLoadRef = useRef(robotPreferences);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  const [robotGreetingVideoFailed, setRobotGreetingVideoFailed] = useState(false);
   const [robotGreetingOpen, setRobotGreetingOpen] = useState(false);
   const [robotPosition, setRobotPosition] = useState<{ x: number; y: number }>(() => {
     const fallback = {
@@ -692,7 +708,7 @@ export function AdminDashboardPage() {
   });
   const [hubOpen, setHubOpen] = useState(false);
   const [hubQuery, setHubQuery] = useState("");
-  const [robotPanelMode, setRobotPanelMode] = useState<RobotPanelMode>("launcher");
+  const [robotPanelMode, setRobotPanelMode] = useState<RobotPanelMode>("quick-actions");
   const [agentWorkspaceTab, setAgentWorkspaceTab] = useState<AgentWorkspaceTab>("tasks");
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>(readAgentMessages);
   const [agentTasks, setAgentTasks] = useState<AgentTask[]>(readAgentTasks);
@@ -701,6 +717,9 @@ export function AdminDashboardPage() {
   const [agentChatPending, setAgentChatPending] = useState(false);
   const [agentChatMode, setAgentChatMode] = useState<AgentChatMode>("passenger");
   const [agentWorking, setAgentWorking] = useState(false);
+  const [agentLastRequestFailed, setAgentLastRequestFailed] = useState(false);
+  const busiProfileData = useBusiProfileData();
+  const [busiProfilePeekOpen, setBusiProfilePeekOpen] = useState(false);
   const [knowledgeCenter, setKnowledgeCenter] = useState<KnowledgeCenterState>(readKnowledgeCenter);
   const [knowledgeCategoryFilter, setKnowledgeCategoryFilter] = useState<KnowledgeCategoryFilter>("all");
   const [knowledgeStatusFilter, setKnowledgeStatusFilter] = useState<KnowledgeStatus | "all">("all");
@@ -718,6 +737,12 @@ export function AdminDashboardPage() {
   const robotDragRef = useRef(false);
   const robotMovedRef = useRef(false);
   const robotGreetingTimerRef = useRef<number | null>(null);
+  const busiProfilePeekTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (busiProfilePeekTimerRef.current !== null) {
+      window.clearTimeout(busiProfilePeekTimerRef.current);
+    }
+  }, []);
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [bookingEditing, setBookingEditing] = useState(false);
   const [bookingEditDraft, setBookingEditDraft] = useState({
@@ -777,6 +802,14 @@ export function AdminDashboardPage() {
   useEffect(() => {
     setTab(ADMIN_PATHS[location.pathname] ?? "overview");
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setPrefersReducedMotion(motionPreference.matches);
+    motionPreference.addEventListener("change", updateMotionPreference);
+    return () => motionPreference.removeEventListener("change", updateMotionPreference);
+  }, []);
 
   useEffect(() => {
     const preferences = robotPreferencesOnLoadRef.current;
@@ -1176,7 +1209,6 @@ export function AdminDashboardPage() {
         return [location.id, name] as [string, string];
       }),
     );
-    const scheduleCounts = new Map<string, number>();
     const schedulesByRoute = new Map<string, RouteScheduleRow[]>();
     const stopNames = new Map<string, string>(
       (stopLocations ?? []).map((location) => {
@@ -1189,10 +1221,6 @@ export function AdminDashboardPage() {
       }),
     );
     for (const schedule of scheduleRows) {
-      scheduleCounts.set(
-        schedule.provider_route_id,
-        (scheduleCounts.get(schedule.provider_route_id) ?? 0) + 1,
-      );
       schedulesByRoute.set(schedule.provider_route_id, [
         ...(schedulesByRoute.get(schedule.provider_route_id) ?? []),
         {
@@ -1200,6 +1228,7 @@ export function AdminDashboardPage() {
           stops: (stopData ?? [])
             .filter((stop) => stop.schedule_id === schedule.id)
             .map((stop) => ({
+            location_id: stop.location_id,
               location_name: stopNames.get(stop.location_id) ?? stop.location_id,
               stop_order: stop.stop_order,
               day_offset: stop.day_offset,
@@ -1210,17 +1239,22 @@ export function AdminDashboardPage() {
       ]);
     }
 
-    setRoutes(routeRows.map((route) => ({
-      ...route,
-      fromName: names.get(route.from_location_id) ?? route.from_location_id,
-      toName: names.get(route.to_location_id) ?? route.to_location_id,
-      scheduleCount: route.provider_route_id
-        ? scheduleCounts.get(route.provider_route_id) ?? 0
-        : 0,
-      schedules: route.provider_route_id
-        ? schedulesByRoute.get(route.provider_route_id) ?? []
-        : [],
-    })));
+    setRoutes(routeRows.map((route) => {
+      const schedules = route.provider_route_id
+        ? filterSchedulesForDirectedRoute(
+          schedulesByRoute.get(route.provider_route_id) ?? [],
+          route.from_location_id,
+          route.to_location_id,
+        )
+        : [];
+      return {
+        ...route,
+        fromName: names.get(route.from_location_id) ?? route.from_location_id,
+        toName: names.get(route.to_location_id) ?? route.to_location_id,
+        scheduleCount: schedules.length,
+        schedules,
+      };
+    }));
     setLoadErrors((current) => ({ ...current, routes: undefined }));
   };
 
@@ -1423,23 +1457,25 @@ export function AdminDashboardPage() {
     }
     setRobotPreferences(nextPreferences);
     setRobotSettingsDraft(nextPreferences);
-    setActionMessage("Налаштування помічника BUSNET збережено");
+    setActionMessage("Налаштування BUSI збережено");
   };
 
   const clearAgentChat = () => {
     if (agentChatPending || agentWorking || agentMessages.length === 0) return;
-    const confirmed = window.confirm(
-      "Очистити поточну переписку? Вона зберігається лише в цьому браузері. Завдання, налаштування та Knowledge Center не зміняться.",
-    );
-    if (!confirmed) return;
-
-    try {
-      window.localStorage.removeItem("busnet_intelligence_messages");
-      setAgentMessages([]);
-    } catch (error) {
-      console.error("Could not clear BUSNET assistant chat history", error);
-      setActionMessage("Не вдалося очистити локальну історію чату");
-    }
+    requestDelete({
+      objectName: t("admin.deleteExperience.names.assistantChat"),
+      objectType: t("admin.deleteExperience.types.assistantChat"),
+      consequence: t("admin.deleteExperience.consequences.assistantChat"),
+      execute: async () => {
+        try {
+          window.localStorage.removeItem("busnet_intelligence_messages");
+          setAgentMessages([]);
+        } catch (error) {
+          console.error("Could not clear BUSNET assistant chat history", error);
+          throw new Error(t("admin.deleteExperience.chatClearFailed"));
+        }
+      },
+    });
   };
 
   const appendAgentEvent = (
@@ -1469,6 +1505,7 @@ export function AdminDashboardPage() {
   const beginAgentOperation = () => {
     if (agentWorkingRef.current) return false;
     agentWorkingRef.current = true;
+    setAgentLastRequestFailed(false);
     setAgentWorking(true);
     return true;
   };
@@ -1476,6 +1513,64 @@ export function AdminDashboardPage() {
   const endAgentOperation = () => {
     agentWorkingRef.current = false;
     setAgentWorking(false);
+  };
+
+  const openBusiPanel = (mode: RobotPanelMode) => {
+    if (busiProfilePeekTimerRef.current !== null) {
+      window.clearTimeout(busiProfilePeekTimerRef.current);
+      busiProfilePeekTimerRef.current = null;
+    }
+    setBusiProfilePeekOpen(false);
+    setRobotPanelMode(mode);
+    setHubOpen(true);
+  };
+
+  const openBusiProfile = () => {
+    openBusiPanel("profile");
+    void busiProfileData.ensureLoaded();
+  };
+
+  const openBusiWorkspace = () => {
+    setAgentWorkspaceTab("tasks");
+    openBusiPanel("workspace");
+  };
+
+  const showBusiProfilePeek = () => {
+    if (busiProfilePeekTimerRef.current !== null) {
+      window.clearTimeout(busiProfilePeekTimerRef.current);
+      busiProfilePeekTimerRef.current = null;
+    }
+    setBusiProfilePeekOpen(true);
+    void busiProfileData.ensureLoaded();
+  };
+
+  const openBusiProfilePeek = (delay = 220) => {
+    if (hubOpen) return;
+    if (busiProfilePeekTimerRef.current !== null) {
+      window.clearTimeout(busiProfilePeekTimerRef.current);
+    }
+    busiProfilePeekTimerRef.current = window.setTimeout(() => {
+      busiProfilePeekTimerRef.current = null;
+      showBusiProfilePeek();
+    }, delay);
+  };
+
+  const closeBusiProfilePeek = () => {
+    if (busiProfilePeekTimerRef.current !== null) {
+      window.clearTimeout(busiProfilePeekTimerRef.current);
+    }
+    busiProfilePeekTimerRef.current = window.setTimeout(() => {
+      setBusiProfilePeekOpen(false);
+      busiProfilePeekTimerRef.current = null;
+    }, 260);
+  };
+
+  const closeBusiProfilePeekNow = () => {
+    if (busiProfilePeekTimerRef.current !== null) {
+      window.clearTimeout(busiProfilePeekTimerRef.current);
+      busiProfilePeekTimerRef.current = null;
+    }
+    setBusiProfilePeekOpen(false);
   };
 
   const updateAgentMessage = (messageId: string, text: string) => {
@@ -1515,6 +1610,7 @@ export function AdminDashboardPage() {
       );
       updateAgentTaskStatus(taskId, "completed");
     } catch (error) {
+      setAgentLastRequestFailed(true);
       console.error("BUSNET assistant could not load the selected passenger", error);
       const message = error instanceof Error ? error.message : "Не вдалося завантажити картку пасажира.";
       updateAgentMessage(assistantMessageId, message);
@@ -1563,6 +1659,7 @@ export function AdminDashboardPage() {
   const sendAgentMessage = async () => {
     const text = agentDraft.trim();
     if (!text || agentChatPending || agentWorking) return;
+    setAgentLastRequestFailed(false);
     const now = new Date().toISOString();
     const messageId = `agent-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     if (agentChatMode === "knowledge") {
@@ -1590,12 +1687,13 @@ export function AdminDashboardPage() {
           },
         ].slice(-100));
       } catch (error) {
+        setAgentLastRequestFailed(true);
         setAgentMessages((current): AgentMessage[] => [
           ...current,
           {
             id: `${messageId}-error`,
             role: "assistant" as const,
-            text: error instanceof Error ? error.message : "Не вдалося отримати відповідь від помічника.",
+            text: error instanceof Error ? error.message : "Не вдалося отримати відповідь від BUSI.",
             createdAt: new Date().toISOString(),
             isError: true,
             mode: "knowledge" as const,
@@ -1615,7 +1713,7 @@ export function AdminDashboardPage() {
       ? "Пошук пасажира"
       : request.kind === "greeting"
         ? "Відповідь на привітання"
-        : "Запит до помічника";
+        : "Запит до BUSI";
     setAgentMessages((current): AgentMessage[] => [
       ...current,
       { id: `${taskId}-user`, role: "user" as const, text, createdAt: now },
@@ -1707,6 +1805,7 @@ export function AdminDashboardPage() {
       );
       updateAgentTaskStatus(taskId, "completed");
     } catch (error) {
+      setAgentLastRequestFailed(true);
       console.error("BUSNET assistant passenger lookup failed", error);
       const message = error instanceof Error
         ? error.message
@@ -1824,7 +1923,7 @@ export function AdminDashboardPage() {
     const { error } = await supabase.from("popular_routes").delete().eq("id", row.id);
     if (error) {
       setActionMessage(t("admin.actionFailed"));
-      return;
+      throw new Error(error.message || t("admin.actionFailed"));
     }
     setActionMessage(t("admin.saveContentSuccess"));
     await loadPopularRoutes();
@@ -1846,7 +1945,7 @@ export function AdminDashboardPage() {
     const { error } = await supabase.from("public_content").delete().eq("id", row.id);
     if (error) {
       setActionMessage(t("admin.actionFailed"));
-      return;
+      throw new Error(error.message || t("admin.actionFailed"));
     }
     setActionMessage(t("admin.actionSucceeded"));
     await loadPublicContent();
@@ -2214,8 +2313,16 @@ export function AdminDashboardPage() {
   };
 
   const deleteKnowledgeEntry = (entry: KnowledgeEntry) => {
-    if (!window.confirm(`Видалити запис «${entry.title}» з локального прототипу?`)) return;
-    persistKnowledgeEntries(knowledgeCenter.entries.filter((current) => current.id !== entry.id));
+    requestDelete({
+      objectName: entry.title,
+      objectType: t("admin.deleteExperience.types.localKnowledge"),
+      consequence: t("admin.deleteExperience.consequences.localKnowledge"),
+      execute: async () => {
+        if (!persistKnowledgeEntries(knowledgeCenter.entries.filter((current) => current.id !== entry.id))) {
+          throw new Error(t("admin.deleteExperience.localKnowledgeSaveFailed"));
+        }
+      },
+    });
   };
 
   const signOut = async () => {
@@ -2270,6 +2377,78 @@ export function AdminDashboardPage() {
       route.active ? "active" : "inactive",
     ].some((value) => value.toLowerCase().includes(query));
   });
+  const groupedRouteCards = new Map<string, RouteRow>();
+  for (const route of routes) {
+    const key = `${route.from_location_id}:${route.to_location_id}`;
+    const existing = groupedRouteCards.get(key);
+    if (!existing) {
+      groupedRouteCards.set(key, {
+        ...route,
+        provider_route_id: route.provider_route_id,
+        scheduleCount: route.schedules?.length ?? 0,
+        schedules: route.schedules ?? [],
+      });
+      continue;
+    }
+
+    const schedules = new Map(
+      [...(existing.schedules ?? []), ...(route.schedules ?? [])]
+        .map((schedule) => [schedule.id, schedule] as const),
+    );
+    const providerRouteIds = new Set(
+      [existing.provider_route_id, route.provider_route_id]
+        .filter((id): id is string => Boolean(id))
+        .flatMap((id) => id.split(", ")),
+    );
+    existing.provider_route_id = [...providerRouteIds].sort().join(", ") || null;
+    existing.active = existing.active || route.active;
+    existing.schedules = [...schedules.values()];
+    existing.scheduleCount = schedules.size;
+  }
+  const routeCards = [...groupedRouteCards.values()];
+  const filteredRouteCards = routeCards.filter((route) => {
+    const query = routeSearch.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      route.fromName ?? "",
+      route.toName ?? "",
+      route.provider_route_id ?? "",
+      route.active ? "active" : "inactive",
+    ].some((value) => value.toLowerCase().includes(query));
+  });
+  const formatServiceWeekday = (weekday: number) =>
+    new Intl.DateTimeFormat(i18n.language, {
+      weekday: "short",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(2024, 0, weekday)));
+  const renderRouteScheduleDetails = (route: RouteRow) => {
+    const schedules = route.schedules;
+    if (!schedules?.length) return null;
+    return (
+      <details className="admin-dashboard__route-schedule-details">
+        <summary>{t("admin.scheduleDetails")}</summary>
+        {schedules.map((schedule) => (
+          <span key={schedule.id}>
+            {schedule.title} · {schedule.direction} · {t("admin.weekday")}{" "}
+            {getUniqueDepartureWeekdays([schedule], route.from_location_id)
+              .map(formatServiceWeekday)
+              .join(", ") || "—"}
+            {schedule.stops.map((stop) => (
+              <span key={`${schedule.id}-${stop.stop_order}`}>
+                {stop.stop_order + 1}. {stop.location_name} · {stop.departure_time}
+                {stop.day_offset > 0 ? ` (+${stop.day_offset} ${t("admin.dayOffset")})` : ""}
+                {stop.place ? ` · ${stop.place}` : ""}
+              </span>
+            ))}
+          </span>
+        ))}
+      </details>
+    );
+  };
+  const formatRouteServiceWeekdays = (route: RouteRow) =>
+    getUniqueDepartureWeekdays(route.schedules ?? [], route.from_location_id)
+      .map(formatServiceWeekday)
+      .join(", ") || "—";
   const filteredLocations = locations.filter((location) => {
     const query = locationSearch.trim().toLowerCase();
     return !query || [
@@ -2396,86 +2575,76 @@ export function AdminDashboardPage() {
               {hubOpen && (
                 <div
                   ref={hubPanelRef}
+                  id="busi-center-panel"
                   className={[
                     "busnet-hub__panel",
-                    robotPanelMode === "chat" || robotPanelMode === "workspace" ? "is-expanded" : "",
+                    robotPanelMode === "chat" || robotPanelMode === "workspace" || robotPanelMode === "profile"
+                      ? "is-expanded"
+                      : "",
                   ].filter(Boolean).join(" ")}
                   data-side={opensOnLeft ? "left" : "right"}
                   style={{
-                    left: robotPanelMode === "chat" || robotPanelMode === "workspace"
+                    left: robotPanelMode === "chat" || robotPanelMode === "workspace" || robotPanelMode === "profile"
                       ? undefined
                       : !opensOnLeft
                         ? Math.max(16, Math.min(robotPosition.x + 100, window.innerWidth - 390))
                         : undefined,
-                    right: robotPanelMode === "chat" || robotPanelMode === "workspace"
+                    right: robotPanelMode === "chat" || robotPanelMode === "workspace" || robotPanelMode === "profile"
                       ? undefined
                       : opensOnLeft ? window.innerWidth - robotPosition.x + 16 : undefined,
-                    top: robotPanelMode === "chat" || robotPanelMode === "workspace"
+                    top: robotPanelMode === "chat" || robotPanelMode === "workspace" || robotPanelMode === "profile"
                       ? undefined
                       : Math.max(16, Math.min(robotPosition.y - 260, window.innerHeight - 636)),
                   }}
                   role="dialog"
-                  aria-label="Центр BUSNET"
+                  aria-label="Панель BUSI"
                 >
                   <header className="busnet-hub__header">
-                    {robotPanelMode !== "launcher" && (
-                      <button
-                        type="button"
-                        aria-label="Назад до меню"
-                        onClick={() => setRobotPanelMode("launcher")}
-                      >
-                        <ArrowLeft size={17} />
-                      </button>
-                    )}
                     <div>
-                      <p>ЦИФРОВИЙ СПІВРОБІТНИК BUSNET</p>
+                      <p>BUSNET</p>
                       <h3>
-                        {robotPanelMode === "launcher" && "Цифровий співробітник"}
+                        {robotPanelMode === "profile" && "Профіль BUSI"}
                         {robotPanelMode === "quick-actions" && "Швидкі дії"}
-                        {robotPanelMode === "chat" && "Чат із помічником"}
+                        {robotPanelMode === "chat" && "Чат із BUSI"}
                         {robotPanelMode === "workspace" && "Робочий простір"}
                       </h3>
                     </div>
-                    <button type="button" aria-label="Close" onClick={() => setHubOpen(false)}>
+                    <button type="button" aria-label="Закрити панель BUSI" onClick={() => setHubOpen(false)}>
                       <X size={17} />
                     </button>
                   </header>
-
-                  {robotPanelMode === "launcher" && (
-                    <div className="busnet-intelligence__launcher">
-                      <button type="button" onClick={() => setRobotPanelMode("quick-actions")}>
-                        <span className="busnet-intelligence__card-icon"><TicketCheck size={19} /></span>
-                        <span className="busnet-intelligence__card-copy">
-                          <strong>01 · ШВИДКІ ДІЇ</strong>
-                          <small>Швидкий доступ до функцій BUSNET</small>
-                        </span>
-                        {unreadCount > 0 && <span className="busnet-intelligence__count">{unreadCount}</span>}
+                  <nav className="busnet-hub__navigation" aria-label="Розділи BUSI">
+                    {([
+                      ["profile", "Профіль", Star],
+                      ["quick-actions", "Швидкі дії", TicketCheck],
+                      ["chat", "Чат", MessageCircle],
+                      ["workspace", "Робочий простір", ClipboardList],
+                    ] as Array<[RobotPanelMode, string, typeof Star]>).map(([mode, label, Icon]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={robotPanelMode === mode ? "is-active" : ""}
+                        aria-current={robotPanelMode === mode ? "page" : undefined}
+                        onClick={() => {
+                          if (mode === "profile") {
+                            openBusiProfile();
+                          } else if (mode === "workspace") {
+                            openBusiWorkspace();
+                          } else {
+                            openBusiPanel(mode);
+                          }
+                        }}
+                      >
+                        <Icon size={15} aria-hidden="true" />
+                        <span>{label}</span>
                       </button>
-                      <button type="button" onClick={() => setRobotPanelMode("chat")}>
-                        <span className="busnet-intelligence__card-icon"><MessageCircle size={19} /></span>
-                        <span className="busnet-intelligence__card-copy">
-                          <strong>02 · ЧАТ ІЗ ПОМІЧНИКОМ</strong>
-                          <small>Пасажири та база знань BUSNET</small>
-                        </span>
-                      </button>
-                      <button type="button" onClick={() => setRobotPanelMode("workspace")}>
-                        <span className="busnet-intelligence__card-icon"><ClipboardList size={19} /></span>
-                        <span className="busnet-intelligence__card-copy">
-                          <strong>03 · РОБОЧИЙ ПРОСТІР</strong>
-                          <small>Завдання, звіти та можливості</small>
-                        </span>
-                        {agentTasks.length > 0 && <span className="busnet-intelligence__count">{agentTasks.length}</span>}
-                      </button>
-                      <p className="busnet-intelligence__prototype-note">
-                        Пошук пасажирів використовує захищені адміністративні RPC; запитання про BUSNET — окремий режим із перевіреними знаннями.
-                      </p>
-                    </div>
-                  )}
+                    ))}
+                  </nav>
 
                   {robotPanelMode === "chat" && (
                     <section className="busnet-agent-chat">
                       <div className="busnet-agent-chat__toolbar">
-                        <div className="busnet-agent-chat__modes" role="group" aria-label="Режим помічника">
+                        <div className="busnet-agent-chat__modes" role="group" aria-label="Режим BUSI">
                           <button
                             type="button"
                             className={agentChatMode === "passenger" ? "is-active" : ""}
@@ -2506,9 +2675,25 @@ export function AdminDashboardPage() {
                       <div className="busnet-agent-chat__messages" aria-live="polite">
                         {agentMessages.length === 0 && (
                           <article className="is-assistant">
-                            <img src="/images/busnet-ai-assistant-robot.png" alt="" />
+                            {robotPreferences.animated &&
+                            !prefersReducedMotion &&
+                            !robotGreetingVideoFailed ? (
+                              <video
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                preload="metadata"
+                                poster="/images/busnet-ai-assistant-robot.png"
+                                src="/images/busnet-ai-assistant-robot-loop.mp4"
+                                aria-hidden="true"
+                                onError={() => setRobotGreetingVideoFailed(true)}
+                              />
+                            ) : (
+                              <img src="/images/busnet-ai-assistant-robot.png" alt="" />
+                            )}
                             <div>
-                              <strong>BUSNET ПОМІЧНИК</strong>
+                              <strong>BUSI</strong>
                               <p>{robotPreferences.greeting}</p>
                               <p className="is-note">Оберіть пошук пасажирів для адміністративної картки або запитання про BUSNET для відповідей із перевіреної бази знань. Не вводьте персональні дані в режимі знань.</p>
                             </div>
@@ -2520,7 +2705,7 @@ export function AdminDashboardPage() {
                             <article className={`is-${message.role}`} key={message.id}>
                               {message.role === "assistant" && <img src="/images/busnet-ai-assistant-robot.png" alt="" />}
                               <div>
-                                <strong>{message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}</strong>
+                                <strong>{message.role === "assistant" ? "BUSI" : "Ви"}</strong>
                                 <p className={message.isError ? "is-error" : undefined} role={message.isError ? "alert" : undefined}>{message.text}</p>
                                 {message.sources && message.sources.length > 0 && (
                                   <p className="is-sources">
@@ -2631,7 +2816,7 @@ export function AdminDashboardPage() {
                             </article>
                           );
                         })}
-                        {agentChatPending && <p className="is-note" role="status">Помічник перевіряє знання та готує відповідь…</p>}
+                        {agentChatPending && <p className="is-note" role="status">BUSI перевіряє знання та готує відповідь…</p>}
                       </div>
                       <div className="busnet-agent-chat__composer">
                         <p>
@@ -2648,7 +2833,7 @@ export function AdminDashboardPage() {
                             placeholder={agentChatMode === "knowledge"
                               ? "Запитайте про правила та перевірені знання BUSNET..."
                               : "Привітання або пошук пасажира за ім’ям, email чи телефоном..."}
-                            aria-label="Повідомлення помічнику BUSNET"
+                            aria-label="Повідомлення BUSI"
                             onChange={(event) => setAgentDraft(event.target.value)}
                             onKeyDown={(event) => {
                               if (event.key === "Enter" && !event.shiftKey) {
@@ -2680,7 +2865,7 @@ export function AdminDashboardPage() {
 
                   {robotPanelMode === "workspace" && (
                     <section className="busnet-agent-workspace">
-                      <nav aria-label="Робочий простір помічника">
+                      <nav aria-label="Робочий простір BUSI">
                         {([
                           ["tasks", "Мої завдання", ListTodo],
                           ["reports", "Звіти", FileText],
@@ -2708,7 +2893,7 @@ export function AdminDashboardPage() {
                             {agentTasks.length === 0 ? (
                               <div className="busnet-agent-workspace__empty">
                                 <ListTodo size={26} />
-                                <p>Поки немає завдань. Напишіть запит у чаті помічника.</p>
+                                <p>Поки немає завдань. Напишіть запит у чаті BUSI.</p>
                                 <button
                                   type="button"
                                   className="busnet-agent-workspace__chat-cta"
@@ -2761,7 +2946,7 @@ export function AdminDashboardPage() {
                               {[...agentMessages].reverse().map((message) => (
                                 <article key={message.id}>
                                   <span className={message.role === "assistant" ? "is-assistant" : "is-user"}>
-                                    {message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}
+                                    {message.role === "assistant" ? "BUSI" : "Ви"}
                                   </span>
                                   <p>{message.text}</p>
                                   <time>{new Date(message.createdAt).toLocaleString()}</time>
@@ -2777,6 +2962,16 @@ export function AdminDashboardPage() {
 
                       </div>
                     </section>
+                  )}
+
+                  {robotPanelMode === "profile" && (
+                    <div className="busi-profile-view">
+                      <BusiProfilePanel
+                        data={busiProfileData}
+                        busy={agentWorking || agentChatPending}
+                        lastRequestFailed={agentLastRequestFailed}
+                      />
+                    </div>
                   )}
 
                   {robotPanelMode === "quick-actions" && (
@@ -3285,11 +3480,31 @@ export function AdminDashboardPage() {
                 <input value={routeSearch} onChange={(event) => setRouteSearch(event.target.value)} placeholder={t("admin.searchRoutes")} />
               </label>
               <span>{filteredRoutes.length} {t("admin.results")}</span>
+              <div className="admin-dashboard__route-view-toggle" role="group" aria-label={t("admin.routeViewLabel")}>
+                <button
+                  type="button"
+                  className={routeViewMode === "list" ? "is-active" : ""}
+                  aria-pressed={routeViewMode === "list"}
+                  onClick={() => setRouteViewMode("list")}
+                >
+                  <List size={16} aria-hidden="true" />
+                  {t("admin.routeViewList")}
+                </button>
+                <button
+                  type="button"
+                  className={routeViewMode === "cards" ? "is-active" : ""}
+                  aria-pressed={routeViewMode === "cards"}
+                  onClick={() => setRouteViewMode("cards")}
+                >
+                  <LayoutGrid size={16} aria-hidden="true" />
+                  {t("admin.routeViewCards")}
+                </button>
+              </div>
             </div>
             <div className="admin-dashboard__panel">
               {loadErrors.routes ? <p className="admin-dashboard__error" role="alert">{loadErrors.routes}</p> : filteredRoutes.length === 0 ? (
                 <p className="admin-dashboard__empty">{t("admin.noRoutes")}</p>
-              ) : (
+              ) : routeViewMode === "list" ? (
                 <div className="admin-dashboard__table-wrap">
                   <table className="admin-dashboard__table">
                     <thead><tr><th>{t("admin.table.route")}</th><th>{t("admin.table.providerId")}</th><th>{t("admin.table.schedules")}</th><th>{t("admin.table.status")}</th></tr></thead>
@@ -3300,29 +3515,42 @@ export function AdminDashboardPage() {
                           <td>{route.provider_route_id || "—"}</td>
                           <td>
                             {route.scheduleCount ?? 0}
-                            {!!route.schedules?.length && (
-                              <details>
-                                <summary>{t("admin.scheduleDetails")}</summary>
-                                {route.schedules.map((schedule) => (
-                                  <span key={schedule.id}>
-                                    {schedule.title} · {schedule.direction} · {t("admin.weekday")} {schedule.service_weekday}
-                                    {schedule.stops.map((stop) => (
-                                      <span key={`${schedule.id}-${stop.stop_order}`}>
-                                        {stop.stop_order + 1}. {stop.location_name} · {stop.departure_time}
-                                        {stop.day_offset > 0 ? ` (+${stop.day_offset} ${t("admin.dayOffset")})` : ""}
-                                        {stop.place ? ` · ${stop.place}` : ""}
-                                      </span>
-                                    ))}
-                                  </span>
-                                ))}
-                              </details>
-                            )}
+                            {renderRouteScheduleDetails(route)}
                           </td>
                           <td><span className={`admin-dashboard__status ${route.active ? "admin-dashboard__status--confirmed" : "admin-dashboard__status--cancelled"}`}>{route.active ? t("admin.active") : t("admin.inactive")}</span></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+              ) : (
+                <div className="admin-dashboard__route-cards">
+                  {filteredRouteCards.map((route) => (
+                    <article className="admin-dashboard__route-card" key={route.id}>
+                      <header>
+                        <MapIcon size={18} aria-hidden="true" />
+                        <h3>{route.fromName} → {route.toName}</h3>
+                        <span className={`admin-dashboard__status ${route.active ? "admin-dashboard__status--confirmed" : "admin-dashboard__status--cancelled"}`}>
+                          {route.active ? t("admin.active") : t("admin.inactive")}
+                        </span>
+                      </header>
+                      <div className="admin-dashboard__route-card-meta">
+                        <span>
+                          {t("admin.table.providerId")}
+                          <strong>{route.provider_route_id || "—"}</strong>
+                        </span>
+                        <span>
+                          {t("admin.table.schedules")}
+                          <strong>{route.scheduleCount ?? 0}</strong>
+                        </span>
+                        <span>
+                          {t("admin.departureDays")}
+                          <strong>{formatRouteServiceWeekdays(route)}</strong>
+                        </span>
+                      </div>
+                      {renderRouteScheduleDetails(route)}
+                    </article>
+                  ))}
                 </div>
               )}
               <p className="admin-dashboard__schedule-note">{t("admin.scheduleDisclaimer")}</p>
@@ -3434,7 +3662,17 @@ export function AdminDashboardPage() {
                           <td className="admin-dashboard__actions">
                             <button type="button" aria-label={t("admin.moveUp")} onClick={() => void updatePopularOrder(row, -1)}>↑</button>
                             <button type="button" aria-label={t("admin.moveDown")} onClick={() => void updatePopularOrder(row, 1)}>↓</button>
-                            <button type="button" onClick={() => { if (window.confirm(t("admin.confirmDeletePopular"))) void deletePopularRoute(row); }}>{t("admin.delete")}</button>
+                            <button
+                              type="button"
+                              onClick={() => requestDelete({
+                                objectName: `${row.routeName} · ${row.locale.toUpperCase()}`,
+                                objectType: t("admin.deleteExperience.types.popularRoute"),
+                                consequence: t("admin.deleteExperience.consequences.popularRoute"),
+                                execute: () => deletePopularRoute(row),
+                              })}
+                            >
+                              {t("admin.delete")}
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -3487,7 +3725,19 @@ export function AdminDashboardPage() {
                           <td>{row.locale.toUpperCase()}</td>
                           <td>{new Date(row.updated_at).toLocaleString()}</td>
                           <td><button type="button" onClick={() => void togglePublicContent(row)} className={`admin-dashboard__status ${row.active ? "admin-dashboard__status--confirmed" : "admin-dashboard__status--cancelled"}`}>{row.active ? t("admin.active") : t("admin.inactive")}</button></td>
-                          <td><button type="button" onClick={() => { if (window.confirm(t("admin.confirmDeleteContent"))) void deletePublicContent(row); }}>{t("admin.delete")}</button></td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => requestDelete({
+                                objectName: `${row.content_key} · ${row.locale.toUpperCase()}`,
+                                objectType: t("admin.deleteExperience.types.publicContent"),
+                                consequence: t("admin.deleteExperience.consequences.publicContent"),
+                                execute: () => deletePublicContent(row),
+                              })}
+                            >
+                              {t("admin.delete")}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -3567,8 +3817,8 @@ export function AdminDashboardPage() {
               <header>
                 <img src="/images/busnet-ai-assistant-robot.png" alt="" aria-hidden="true" />
                 <div>
-                  <p>BUSNET · ПОМІЧНИК</p>
-                  <h3>Цифровий співробітник</h3>
+                  <p>BUSNET</p>
+                  <h3>BUSI</h3>
                   <span>Візуальний прототип без команд та зовнішніх інтеграцій</span>
                 </div>
               </header>
@@ -3623,6 +3873,29 @@ export function AdminDashboardPage() {
           <div
             className={`busnet-ai-robot${robotPreferences.animated ? " is-animated" : ""}`}
             style={{ left: robotPosition.x, top: robotPosition.y }}
+            onMouseEnter={() => openBusiProfilePeek()}
+            onMouseLeave={(event) => {
+              const nextTarget = event.relatedTarget;
+              if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+                closeBusiProfilePeek();
+              }
+            }}
+            onFocusCapture={() => openBusiProfilePeek(0)}
+            onBlurCapture={(event) => {
+              const nextTarget = event.relatedTarget;
+              if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+                closeBusiProfilePeek();
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                if (busiProfilePeekTimerRef.current !== null) {
+                  window.clearTimeout(busiProfilePeekTimerRef.current);
+                  busiProfilePeekTimerRef.current = null;
+                }
+                setBusiProfilePeekOpen(false);
+              }
+            }}
           >
             <button
               ref={robotButtonRef}
@@ -3633,9 +3906,10 @@ export function AdminDashboardPage() {
                 (stats.providerErrors ?? 0) > 0 ? "has-critical" : "",
               ].filter(Boolean).join(" ")}
               type="button"
-              aria-label="Відкрити центр BUSNET"
-              aria-expanded={hubOpen}
-              title="Центр BUSNET"
+              aria-label="Відкрити BUSI — AI-асистента BUSNET"
+              aria-expanded={hubOpen || busiProfilePeekOpen}
+              aria-controls={hubOpen ? "busi-center-panel" : busiProfilePeekOpen ? "busi-profile-peek-card" : undefined}
+              title="BUSI — AI-асистент BUSNET"
               onPointerDown={(event) => {
                 if (!robotPreferences.draggable) return;
                 robotDragRef.current = true;
@@ -3686,10 +3960,8 @@ export function AdminDashboardPage() {
                 setRobotGreetingOpen(false);
                 if (hubOpen) {
                   setHubOpen(false);
-                } else {
-                  setRobotPanelMode("launcher");
-                  setHubOpen(true);
                 }
+                showBusiProfilePeek();
               }}
             >
               <img src="/images/busnet-ai-assistant-robot.png" alt="" draggable={false} />
@@ -3699,6 +3971,27 @@ export function AdminDashboardPage() {
                 </span>
               )}
             </button>
+            {busiProfilePeekOpen && !hubOpen && (
+              <BusiProfilePeek
+                data={busiProfileData}
+                busy={agentWorking || agentChatPending}
+                lastRequestFailed={agentLastRequestFailed}
+                onClose={closeBusiProfilePeekNow}
+                onOpenProfile={openBusiProfile}
+                onOpenQuickActions={() => openBusiPanel("quick-actions")}
+                onOpenWorkspace={openBusiWorkspace}
+                onOpenChat={() => openBusiPanel("chat")}
+                style={{
+                  left: Math.max(12, Math.min(
+                    robotPosition.x < window.innerWidth / 2
+                      ? robotPosition.x + 96
+                      : robotPosition.x - 368,
+                    window.innerWidth - 368,
+                  )),
+                  top: Math.max(12, Math.min(robotPosition.y - 300, window.innerHeight - 420)),
+                }}
+              />
+            )}
             {robotGreetingOpen && (
               <div
                 className="busnet-ai-robot__greeting"
@@ -3715,7 +4008,7 @@ export function AdminDashboardPage() {
                 }}
               >
                 <header>
-                  <span><i />BUSNET · ЦИФРОВИЙ ПОМІЧНИК</span>
+                  <span><i />BUSI</span>
                   <button
                     type="button"
                     aria-label="Закрити привітання"

@@ -242,6 +242,9 @@
     "providerLogs": "Provider request log",
     "noProviderLogs": "No provider requests yet.",
     "searchRoutes": "Search route",
+    "routeViewLabel": "Route view",
+    "routeViewList": "List",
+    "routeViewCards": "Cards",
     "searchLocations": "Search city or alias",
     "locationsSubtitle": "Cities, localizations and provider IDs",
     "noLocations": "No locations found.",
@@ -250,6 +253,7 @@
     "invalidLocation": "The Ukrainian city name is required.",
     "scheduleDetails": "Show stops",
     "weekday": "Weekday",
+    "departureDays": "Departure days",
     "dayOffset": "days",
     "scheduleDisclaimer": "A weekly schedule is an availability candidate, not confirmation of seats or a final price.",
     "noRoutes": "No routes found.",
@@ -278,6 +282,38 @@
     "delete": "Delete",
     "confirmDeletePopular": "Delete this popular route?",
     "confirmDeleteContent": "Delete this content entry?",
+    "deleteExperience": {
+      "confirmTitle": "Are you sure you want to delete this item?",
+      "deletingTitle": "Deleting item",
+      "errorTitle": "Could not delete",
+      "successTitle": "SUCCESSFULLY DELETED",
+      "successStatus": "Operation completed",
+      "successDescription": "The data has been updated.",
+      "deletingDescription": "Processing the request. Please keep this window open.",
+      "cancel": "Cancel",
+      "close": "Close",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "retry": "Retry",
+      "errorFallback": "Deletion could not be confirmed. The item has not been marked as deleted.",
+      "chatClearFailed": "Could not clear the local chat history.",
+      "localKnowledgeSaveFailed": "Could not save changes to the local prototype.",
+      "types": {
+        "popularRoute": "Popular route",
+        "publicContent": "Public content",
+        "assistantChat": "Assistant chat history",
+        "localKnowledge": "Local Knowledge Center entry"
+      },
+      "names": {
+        "assistantChat": "Current conversation"
+      },
+      "consequences": {
+        "popularRoute": "This entry will be permanently removed from popular routes. Related bookings will not change.",
+        "publicContent": "This language variant will be permanently removed from the public page. Bookings and other languages will not change.",
+        "assistantChat": "The local conversation history will be removed from this browser. Tasks, settings, and Knowledge Center will not change.",
+        "localKnowledge": "This entry will be removed only from the local prototype in this browser."
+      }
+    },
     "unsupportedContentKey": "Choose a supported content key and enter a JSON object.",
     "rejectCancellation": "Reject request",
     "resolutionNote": "Decision note (optional)",

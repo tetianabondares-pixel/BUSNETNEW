@@ -1,0 +1,532 @@
+.global-delete-experience {
+  position: fixed;
+  z-index: 20000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: clamp(14px, 3vw, 44px);
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(12, 88, 136, .25), transparent 54%),
+    rgba(2, 7, 18, .86);
+  backdrop-filter: blur(18px) saturate(125%);
+  animation: global-delete-backdrop-in .3s ease-out both;
+}
+
+.global-delete-experience__dialog {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  width: min(1050px, 100%);
+  min-height: min(620px, calc(100dvh - 48px));
+  overflow: hidden;
+  border: 1px solid rgba(135, 220, 255, .26);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(14, 33, 54, .96), rgba(4, 12, 25, .97) 60%),
+    #07111f;
+  box-shadow:
+    0 42px 130px rgba(0, 0, 0, .6),
+    0 0 65px rgba(0, 179, 255, .12),
+    inset 0 1px rgba(255, 255, 255, .12);
+  color: #eefaff;
+  animation: global-delete-dialog-in .55s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.global-delete-experience__scene {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 100%;
+  place-items: center;
+  overflow: hidden;
+  perspective: 1100px;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 50% 62%, rgba(0, 178, 255, .16), transparent 52%),
+    linear-gradient(160deg, rgba(10, 32, 54, .72), rgba(3, 10, 22, .42));
+}
+
+.global-delete-experience__scene::before,
+.global-delete-experience__scene::after {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(95, 220, 255, .12);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.global-delete-experience__scene::before {
+  width: 82%;
+  aspect-ratio: 1;
+  box-shadow: 0 0 70px rgba(0, 173, 255, .08), inset 0 0 50px rgba(32, 211, 255, .05);
+  animation: global-delete-orbit 22s linear infinite;
+}
+
+.global-delete-experience__scene::after {
+  width: 64%;
+  aspect-ratio: 1;
+  border-color: rgba(165, 133, 255, .12);
+  transform: rotateX(70deg) rotateZ(-20deg);
+  box-shadow: 0 0 38px rgba(141, 91, 255, .08);
+}
+
+.global-delete-experience__stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.global-delete-experience__particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8af3ff;
+  box-shadow: 0 0 7px 2px rgba(59, 219, 255, .75), 0 0 20px rgba(31, 166, 255, .5);
+  animation: global-delete-particle-float 2.8s ease-in-out infinite;
+}
+
+.global-delete-experience__particle:nth-child(3n) {
+  width: 3px;
+  height: 3px;
+  background: #d3a9ff;
+  box-shadow: 0 0 8px rgba(192, 132, 252, .9);
+}
+
+.global-delete-experience__particle:nth-child(5n) {
+  width: 5px;
+  height: 5px;
+  background: #ffe2a8;
+  box-shadow: 0 0 8px rgba(255, 197, 92, .8);
+}
+
+.global-delete-experience__ring {
+  position: absolute;
+  top: 57%;
+  left: 50%;
+  width: min(91%, 440px);
+  aspect-ratio: 2.25;
+  border: 1px solid rgba(60, 223, 255, .68);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 199, 255, .52), inset 0 0 16px rgba(34, 211, 238, .28);
+  transform: translate(-50%, -50%) rotateX(68deg) rotateZ(-12deg);
+  animation: global-delete-ring-spin 8s linear infinite;
+}
+
+.global-delete-experience__ring--inner {
+  width: min(72%, 340px);
+  border-color: rgba(173, 125, 255, .62);
+  box-shadow: 0 0 12px rgba(147, 87, 255, .4), inset 0 0 12px rgba(147, 87, 255, .2);
+  transform: translate(-50%, -50%) rotateX(68deg) rotateZ(18deg);
+  animation-direction: reverse;
+  animation-duration: 11s;
+}
+
+.global-delete-experience__target {
+  position: absolute;
+  z-index: 3;
+  top: 16%;
+  left: 50%;
+  display: grid;
+  max-width: min(76%, 310px);
+  gap: 4px;
+  padding: 10px 15px;
+  border: 1px solid rgba(116, 225, 255, .42);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(17, 48, 73, .9), rgba(7, 21, 38, .92));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .28), 0 0 24px rgba(0, 198, 255, .12);
+  text-align: center;
+  transform: translateX(-50%) translateZ(55px);
+  transition: opacity .4s ease, transform .6s cubic-bezier(.2, .8, .2, 1);
+}
+
+.global-delete-experience__target span {
+  color: #72e7ff;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.global-delete-experience__target strong {
+  overflow: hidden;
+  color: #f2fbff;
+  font-size: clamp(.72rem, 1.5vw, .9rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-delete-experience__bin {
+  position: absolute;
+  z-index: 2;
+  bottom: 1%;
+  left: 50%;
+  width: min(95%, 445px);
+  max-height: 91%;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 26px 34px rgba(0, 0, 0, .56))
+    drop-shadow(0 0 22px rgba(0, 187, 255, .3));
+  transform: translateX(-50%) rotateY(-7deg) rotateX(3deg) translateZ(35px);
+  animation: global-delete-bin-float 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.global-delete-experience__success-wave {
+  position: absolute;
+  z-index: 4;
+  inset: 50% auto auto 50%;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(91, 239, 255, .9);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.global-delete-experience__content {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(24px, 4vw, 52px);
+  border-left: 1px solid rgba(134, 218, 255, .12);
+  background:
+    radial-gradient(ellipse at 100% 0, rgba(0, 183, 255, .09), transparent 44%),
+    rgba(5, 14, 27, .38);
+}
+
+.global-delete-experience__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 20px;
+  color: #9db8c9;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.global-delete-experience__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #28d9ff;
+  box-shadow: 0 0 12px rgba(40, 217, 255, .9);
+}
+
+.global-delete-experience__status.is-deleting .global-delete-experience__status-dot {
+  animation: global-delete-status-pulse .9s ease-in-out infinite alternate;
+}
+
+.global-delete-experience__status.is-error .global-delete-experience__status-dot {
+  background: #ff737d;
+  box-shadow: 0 0 12px rgba(255, 115, 125, .8);
+}
+
+.global-delete-experience__success-mark {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid rgba(74, 222, 128, .65);
+  border-radius: 50%;
+  background: rgba(34, 197, 94, .12);
+  color: #72f2a4;
+  font-size: .85rem;
+}
+
+.global-delete-experience__content h2 {
+  margin: 0;
+  color: #f4fbff;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  font-weight: 850;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+}
+
+.global-delete-experience__object-name {
+  margin: 15px 0 0;
+  overflow-wrap: anywhere;
+  color: #8cecff;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.global-delete-experience__description {
+  margin: 12px 0 0;
+  color: #a7bac9;
+  font-size: .88rem;
+  line-height: 1.65;
+}
+
+.global-delete-experience__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.global-delete-experience__actions button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 20px;
+  border-radius: 12px;
+  color: #eafaff;
+  cursor: pointer;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 800;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.global-delete-experience__actions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.global-delete-experience__actions button:focus-visible {
+  outline: 3px solid rgba(114, 231, 255, .72);
+  outline-offset: 3px;
+}
+
+.global-delete-experience__actions button:disabled {
+  cursor: not-allowed;
+  opacity: .48;
+}
+
+.global-delete-experience__cancel {
+  border: 1px solid rgba(174, 207, 225, .22);
+  background: rgba(255, 255, 255, .035);
+}
+
+.global-delete-experience__cancel:hover:not(:disabled) {
+  border-color: rgba(174, 207, 225, .48);
+  background: rgba(255, 255, 255, .08);
+}
+
+.global-delete-experience__confirm {
+  border: 1px solid rgba(84, 222, 255, .8);
+  background: linear-gradient(135deg, #0cbce8, #167dff 58%, #526cff);
+  box-shadow: 0 8px 26px rgba(0, 166, 255, .28), inset 0 1px rgba(255, 255, 255, .34);
+}
+
+.global-delete-experience__confirm:hover:not(:disabled) {
+  box-shadow: 0 11px 32px rgba(0, 183, 255, .42), inset 0 1px rgba(255, 255, 255, .42);
+}
+
+.global-delete-experience__spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, .35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: global-delete-spin .7s linear infinite;
+}
+
+.global-delete-experience__success-text {
+  margin: 0;
+  color: #72f2a4;
+  font-size: .8rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-shadow: 0 0 18px rgba(74, 222, 128, .46);
+}
+
+.global-delete-experience.is-deleting .global-delete-experience__target {
+  animation: global-delete-target-consume 1.25s .28s cubic-bezier(.35, 0, .75, .1) both;
+}
+
+.global-delete-experience.is-deleting .global-delete-experience__bin {
+  animation: global-delete-bin-absorb 2.25s ease-in-out both;
+}
+
+.global-delete-experience.is-deleting .global-delete-experience__ring--outer {
+  animation-duration: 1.2s;
+  box-shadow: 0 0 22px rgba(0, 225, 255, .86), inset 0 0 22px rgba(34, 211, 238, .52);
+}
+
+.global-delete-experience.is-deleting .global-delete-experience__ring--inner {
+  animation-duration: 1.6s;
+}
+
+.global-delete-experience.is-success .global-delete-experience__target {
+  opacity: 0;
+}
+
+.global-delete-experience.is-success .global-delete-experience__bin {
+  animation: global-delete-bin-dissolve .72s ease-in both;
+}
+
+.global-delete-experience.is-success .global-delete-experience__success-wave {
+  animation: global-delete-success-wave .72s ease-out both;
+}
+
+.global-delete-experience.is-success .global-delete-experience__scene {
+  animation: global-delete-scene-flash .5s ease-out both;
+}
+
+.global-delete-experience.is-error .global-delete-experience__dialog {
+  border-color: rgba(255, 115, 125, .4);
+}
+
+@keyframes global-delete-backdrop-in {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(18px) saturate(125%); }
+}
+
+@keyframes global-delete-dialog-in {
+  from { opacity: 0; transform: translateY(24px) scale(.965); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes global-delete-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes global-delete-ring-spin {
+  to { transform: translate(-50%, -50%) rotateX(68deg) rotateZ(348deg); }
+}
+
+@keyframes global-delete-particle-float {
+  0%, 100% { opacity: .18; transform: translate3d(0, 10px, 0) scale(.72); }
+  50% { opacity: 1; transform: translate3d(8px, -18px, 30px) scale(1.2); }
+}
+
+@keyframes global-delete-bin-float {
+  0%, 100% { transform: translateX(-50%) rotateY(-7deg) rotateX(3deg) translateY(0) translateZ(35px); }
+  50% { transform: translateX(-50%) rotateY(5deg) rotateX(-2deg) translateY(-9px) translateZ(55px); }
+}
+
+@keyframes global-delete-bin-absorb {
+  0%, 100% { filter: drop-shadow(0 26px 34px rgba(0, 0, 0, .56)) drop-shadow(0 0 22px rgba(0, 187, 255, .3)); }
+  48% { transform: translateX(-50%) rotateY(0) rotateX(-5deg) scale(1.06) translateZ(75px); filter: drop-shadow(0 0 42px rgba(0, 225, 255, .95)); }
+}
+
+@keyframes global-delete-target-consume {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1) translateZ(90px); }
+  38% { opacity: 1; transform: translateX(-50%) translateY(90px) scale(.85) translateZ(70px); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(230px) scale(.08) translateZ(0); filter: blur(8px); }
+}
+
+@keyframes global-delete-bin-dissolve {
+  0% { opacity: 1; transform: translateX(-50%) scale(1) rotateY(-7deg); filter: drop-shadow(0 0 28px rgba(0, 202, 255, .6)); }
+  45% { opacity: .8; transform: translateX(-50%) scale(.78) rotateY(20deg); filter: drop-shadow(0 0 48px rgba(96, 235, 255, .92)) blur(1px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(.15) rotateY(95deg) translateY(-30px); filter: blur(12px); }
+}
+
+@keyframes global-delete-success-wave {
+  0% { opacity: .9; transform: translate(-50%, -50%) scale(.3); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(35); }
+}
+
+@keyframes global-delete-scene-flash {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(1.7); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes global-delete-status-pulse {
+  to { opacity: .35; transform: scale(.75); }
+}
+
+@keyframes global-delete-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+  .global-delete-experience {
+    place-items: center;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
+  }
+
+  .global-delete-experience__dialog {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(520px, 100%);
+    max-height: calc(100dvh - 20px);
+    min-height: 0;
+    overflow-y: auto;
+    border-radius: 21px;
+  }
+
+  .global-delete-experience__scene {
+    min-height: clamp(180px, 32dvh, 260px);
+  }
+
+  .global-delete-experience__bin {
+    width: min(76%, 295px);
+  }
+
+  .global-delete-experience__target {
+    top: 9%;
+  }
+
+  .global-delete-experience__content {
+    padding: 18px clamp(16px, 5vw, 24px) 20px;
+    border-top: 1px solid rgba(134, 218, 255, .12);
+    border-left: 0;
+  }
+
+  .global-delete-experience__status {
+    margin-bottom: 12px;
+  }
+
+  .global-delete-experience__actions button {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 12px;
+  }
+
+  .global-delete-experience__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .global-delete-experience.is-deleting .global-delete-experience__actions button,
+  .global-delete-experience.is-success .global-delete-experience__success-text {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 380px) {
+  .global-delete-experience__scene {
+    min-height: 180px;
+  }
+
+  .global-delete-experience__content h2 {
+    font-size: 1.25rem;
+  }
+
+  .global-delete-experience__actions button {
+    padding: 0 8px;
+    font-size: .78rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-delete-experience *,
+  .global-delete-experience *::before,
+  .global-delete-experience *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}

@@ -239,6 +239,9 @@
     "providerLogs": "Registro richieste del fornitore",
     "noProviderLogs": "Nessuna richiesta al fornitore.",
     "searchRoutes": "Cerca tratta",
+    "routeViewLabel": "Visualizzazione tratte",
+    "routeViewList": "Elenco",
+    "routeViewCards": "Schede",
     "searchLocations": "Cerca città o alias",
     "locationsSubtitle": "Città, localizzazioni e ID fornitore",
     "noLocations": "Nessuna località trovata.",
@@ -247,6 +250,7 @@
     "invalidLocation": "Il nome ucraino della città è obbligatorio.",
     "scheduleDetails": "Mostra fermate",
     "weekday": "Giorno",
+    "departureDays": "Giorni di partenza",
     "dayOffset": "giorni",
     "scheduleDisclaimer": "Un orario settimanale è un candidato di disponibilità, non una conferma dei posti o del prezzo finale.",
     "noRoutes": "Nessuna tratta trovata.",
@@ -275,6 +279,38 @@
     "delete": "Elimina",
     "confirmDeletePopular": "Eliminare questa tratta popolare?",
     "confirmDeleteContent": "Eliminare questo contenuto?",
+    "deleteExperience": {
+      "confirmTitle": "Vuoi davvero eliminare questo elemento?",
+      "deletingTitle": "Eliminazione in corso",
+      "errorTitle": "Impossibile eliminare",
+      "successTitle": "ELIMINATO CON SUCCESSO",
+      "successStatus": "Operazione completata",
+      "successDescription": "I dati sono stati aggiornati.",
+      "deletingDescription": "Richiesta in corso. Non chiudere questa finestra.",
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "delete": "Elimina",
+      "deleting": "Eliminazione…",
+      "retry": "Riprova",
+      "errorFallback": "Impossibile confermare l’eliminazione. L’elemento non è stato contrassegnato come eliminato.",
+      "chatClearFailed": "Impossibile cancellare la cronologia locale della chat.",
+      "localKnowledgeSaveFailed": "Impossibile salvare le modifiche nel prototipo locale.",
+      "types": {
+        "popularRoute": "Tratta popolare",
+        "publicContent": "Contenuto pubblico",
+        "assistantChat": "Cronologia chat dell’assistente",
+        "localKnowledge": "Voce locale del Knowledge Center"
+      },
+      "names": {
+        "assistantChat": "Conversazione corrente"
+      },
+      "consequences": {
+        "popularRoute": "La voce verrà rimossa definitivamente dalle tratte popolari. Le prenotazioni correlate non cambieranno.",
+        "publicContent": "Questa variante linguistica verrà rimossa definitivamente dalla pagina pubblica. Prenotazioni e altre lingue non cambieranno.",
+        "assistantChat": "La cronologia locale della conversazione verrà rimossa da questo browser. Attività, impostazioni e Knowledge Center non cambieranno.",
+        "localKnowledge": "La voce verrà rimossa solo dal prototipo locale in questo browser."
+      }
+    },
     "unsupportedContentKey": "Scegli una chiave supportata e inserisci un oggetto JSON.",
     "rejectCancellation": "Rifiuta richiesta",
     "resolutionNote": "Nota decisione (facoltativa)",

@@ -34,7 +34,7 @@ async function functionErrorMessage(error: unknown): Promise<string> {
   }
 
   if (errorCode === "AI_NOT_CONFIGURED") {
-    return "Помічник ще не налаштований: адміністратору потрібно додати AI_API_URL, AI_API_KEY та AI_MODEL у Supabase Edge Function Secrets.";
+    return "BUSI ще не налаштований: адміністратору потрібно додати AI_API_URL, AI_API_KEY та AI_MODEL у Supabase Edge Function Secrets.";
   }
   if (errorCode === "FORBIDDEN") {
     return "Для чату BUSNET потрібен активний обліковий запис адміністратора.";
@@ -48,7 +48,7 @@ async function functionErrorMessage(error: unknown): Promise<string> {
 
   return error instanceof Error
     ? `Не вдалося отримати відповідь: ${error.message}`
-    : "Не вдалося отримати відповідь від помічника.";
+    : "Не вдалося отримати відповідь від BUSI.";
 }
 
 export async function askBusnetAssistant(
@@ -63,7 +63,7 @@ export async function askBusnetAssistant(
 
   const result = asRecord(data);
   if (typeof result?.answer !== "string" || !result.answer.trim()) {
-    throw new Error("Помічник повернув відповідь у невідомому форматі.");
+    throw new Error("BUSI повернув відповідь у невідомому форматі.");
   }
 
   const sources = Array.isArray(result.sources)
