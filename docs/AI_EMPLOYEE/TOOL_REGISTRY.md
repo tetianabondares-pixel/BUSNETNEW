@@ -1,7 +1,7 @@
 # BUSNET Digital Employee — Tool Registry
 
 **Версія:** 0.3 · **Дата:** 2026-11-26 · **Стан:** технічна специфікація
-**Пов’язані документи:** [матриця доступу](./ACCESS_MATRIX.md), [реєстр знань](./KNOWLEDGE_REGISTRY.md), [життєвий цикл задач](./TASK_LIFECYCLE.md)
+**Пов’язані документи:** [архітектура та стан агента](./ARCHITECTURE_ROADMAP.md), [матриця доступу](./ACCESS_MATRIX.md), [реєстр знань](./KNOWLEDGE_REGISTRY.md), [життєвий цикл задач](./TASK_LIFECYCLE.md)
 
 ## Призначення та межі
 
@@ -44,7 +44,7 @@
 | `routes.read`, `provider_logs.read` | Параметри та формат відповіді — **не визначені**; спершу створити обмежений read endpoint з фільтрами й лімітами. | Таблиці з рольовими RLS-політиками; `super_admin`, `admin`, `provider_operator` | Не реєструвати до затвердження контракту та перевірки RLS. |
 | `system.sync_catalog` | `{}` → `importedLocations`, `importedRoutes`, `importedSchedules`, `importedScheduleStops` | Edge Function `altrans-adapter`, `sync-catalog`; `super_admin`, `admin`, `provider_operator` | Запис/зовнішня синхронізація; підтвердження обов’язкове, повтор — після перевірки попереднього результату. |
 
-Підстави для переліку: локальні міграції `20261121100000_admin_dashboard_workflows.sql` і `20261126140000_admin_booking_management.sql`, виклики в `src/pages/admin/AdminDashboardPage.tsx` та перевірка ролі в `supabase/functions/altrans-adapter/index.ts`. Локальні файли не є підтвердженням production-схеми. Поточний чат не має жодного з цих інструментів підключеним.
+Підстави для переліку: локальні міграції `20261121100000_admin_dashboard_workflows.sql` і `20261126140000_admin_booking_management.sql`, виклики в `src/pages/admin/AdminDashboardPage.tsx` та перевірка ролі в `supabase/functions/altrans-adapter/index.ts`. Локальні файли не є підтвердженням production-схеми. Фактично помічник має окремий режим читання профілю пасажира через `admin_search_passengers` і `admin_get_passenger_assistant_card`, а режим знань викликає `assistant-chat` та шукає перевірені спільні записи. Це не вмикає booking writes чи загальне виконання інструментів; доступність AI-провайдера залежить від секретів Edge Function, які не підтверджені цим звітом.
 
 ## Непідключені напрями
 
@@ -94,3 +94,13 @@
 3. Під час виконання перевіряти сесію користувача, активну роль, схему параметрів, ліміти й стан задачі.
 4. Для кожного кроку зберігати ID/версію інструмента, безпечний підсумок входу/виходу, результат і аудит. Не логувати повний документ пасажира чи секрети.
 5. Не повторювати side effect автоматично, якщо handler не має надійного ключа ідемпотентності або результату, за яким можна довести, що дію не виконано.
+
+## Поточна реалізація реєстру можливостей
+
+Production migrations `20261127003430_assistant_capability_engine` and `20261127003500_seed_assistant_capabilities` create four tables: `assistant_capabilities`, `assistant_tool_registry`, `assistant_capability_test_runs`, and `assistant_capability_operational_checks`, then seed 100 planned capabilities. Administrative roles have read access through RLS; direct client writes are revoked. Capability changes use `assistant_update_capability`, which checks for `super_admin` and writes to `audit_logs`.
+
+Дозволені стани можливості: `planned`, `in_development`, `verified`, `operational` і `retired`. `stale_evidence` — лише обчислюваний стан інтерфейсу. `verified` вимагає активний інструмент потрібної версії та успішний тестовий запуск цієї можливості не старіший за 30 днів. `operational` додатково вимагає успішну перевірку реального виконання, прив'язану до того самого тестового запуску і версії інструмента, не старішу за 7 днів. Тестові запуски й перевірки зберігаються як окрема історія. Статус інструмента за замовчуванням зберігається під час оновлення можливості; від'єднання інструмента є явною операцією, а пониження активного інструмента блокується, поки від нього залежать підтверджені можливості.
+
+Функції запису evidence дозволені лише для `service_role`, а панель не приймає ручне введення результатів тестів. Однак довірений CI/test runner та сервіс виконання ще не підключені. Доступ через `service_role` і поле `runner_identity` самі по собі не доводять походження тесту; до появи інтеграції реальні статуси `verified` і `operational` не можна вважати підтвердженням фактичної можливості агента.
+
+Seed `supabase/seeds/busnet_capabilities.sql` додає 100 окремих рядків зі статусом `planned` і використовує conflict-safe вставку. Міграції з версіями `20261127003430` та `20261127003500` уже застосовані в Production; там перевірено 4 таблиці й 100 записів `planned`. Локальні SQL integration tests для Capability Engine проходили з потрібними prerequisites, але повний `supabase db reset` не підтверджений: локальна історія зупиняється на міграції профілю пасажира через відсутню локальну `public.passengers`. Не застосовуйте ці production-міграції повторно й не змінюйте migration ledger вручну. У Production немає активованих assistant tools чи підтверджених operational capability evidence.

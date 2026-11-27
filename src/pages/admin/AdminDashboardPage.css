@@ -896,6 +896,14 @@ html[data-theme="dark"] .busnet-agent-workspace__capabilities article > span {
   color: #d7e0eb;
 }
 
+html[data-theme="dark"] .busnet-agent-chat__messages p.is-error {
+  color: #ff9a9a;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__messages p.is-sources {
+  color: #9fb0c6;
+}
+
 html[data-theme="dark"] .busnet-agent-chat__events,
 html[data-theme="dark"] .busnet-agent-passenger-card,
 html[data-theme="dark"] .busnet-agent-chat__candidates button {
@@ -949,6 +957,31 @@ html[data-theme="dark"] .busnet-agent-chat__composer button:disabled {
   color: #64748b;
 }
 
+html[data-theme="dark"] .busnet-agent-chat__toolbar {
+  border-color: rgba(56, 189, 248, .12);
+  background: rgba(7, 16, 29, .72);
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__toolbar button {
+  border-color: rgba(56, 189, 248, .18);
+  background: rgba(12, 25, 43, .9);
+  color: #a7b4c5;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__toolbar button:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, .4);
+  background: rgba(69, 20, 33, .42);
+  color: #fda4af;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__modes button.is-active,
+html[data-theme="dark"] .busnet-agent-chat__modes button:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, .38);
+  background: rgba(8, 47, 73, .72);
+  color: #67e8f9;
+}
+
 html[data-theme="dark"] .busnet-agent-workspace > nav button.is-active,
 html[data-theme="dark"] .busnet-agent-workspace__heading > span,
 html[data-theme="dark"] .busnet-intelligence__card-icon,
@@ -962,8 +995,9 @@ html[data-theme="dark"] .busnet-knowledge__form,
 html[data-theme="dark"] .busnet-knowledge__categories,
 html[data-theme="dark"] .busnet-knowledge__entry,
 html[data-theme="dark"] .busnet-knowledge__evolution {
-  border-color: #1b2d43;
-  background: rgba(11, 20, 34, .86);
+  border-color: rgba(56, 189, 248, .16);
+  background: linear-gradient(145deg, rgba(12, 25, 43, .96), rgba(7, 15, 27, .96));
+  box-shadow: inset 0 1px rgba(125, 211, 252, .035);
   color: #e2e8f0;
 }
 
@@ -995,9 +1029,31 @@ html[data-theme="dark"] .busnet-knowledge__form textarea,
 html[data-theme="dark"] .busnet-knowledge__filters input,
 html[data-theme="dark"] .busnet-knowledge__filters select,
 html[data-theme="dark"] .busnet-knowledge__entry-actions select {
-  border-color: #1b2d43;
-  background: #07101d;
+  border-color: rgba(56, 189, 248, .14);
+  background: rgba(5, 13, 24, .9);
   color: #f4f7fb;
+}
+
+html[data-theme="dark"] .busnet-knowledge__filters {
+  padding: .42rem;
+  border: 1px solid rgba(56, 189, 248, .12);
+  border-radius: 13px;
+  background: rgba(7, 16, 29, .82);
+  box-shadow: 0 12px 32px rgba(2, 8, 23, .16);
+}
+
+html[data-theme="dark"] .busnet-knowledge__filters > label {
+  border-color: rgba(56, 189, 248, .18);
+  background: linear-gradient(90deg, rgba(8, 22, 38, .95), rgba(7, 15, 27, .95));
+  color: #67e8f9;
+}
+
+html[data-theme="dark"] .busnet-knowledge__filters > label:focus-within,
+html[data-theme="dark"] .busnet-knowledge__filters select:focus,
+html[data-theme="dark"] .busnet-knowledge__filters input:focus {
+  border-color: rgba(34, 211, 238, .55);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .08);
+  outline: 0;
 }
 
 html[data-theme="dark"] .busnet-knowledge__categories button {
@@ -1467,6 +1523,61 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
   padding: .5rem clamp(1rem, 3vw, 2rem) 1rem;
 }
 
+.busnet-agent-chat__toolbar {
+  display: flex;
+  min-height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .35rem clamp(1rem, 3vw, 2rem);
+  border-bottom: 1px solid rgba(207, 219, 234, .55);
+  background: rgba(248, 250, 253, .42);
+  color: #7b8797;
+  font-size: .66rem;
+}
+
+.busnet-agent-chat__toolbar button {
+  display: inline-flex;
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  padding: 0 .6rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .72);
+  color: #66758a;
+  font: inherit;
+  font-weight: 700;
+  transition: border-color .16s ease, color .16s ease, background .16s ease;
+}
+
+.busnet-agent-chat__toolbar button:hover:not(:disabled) {
+  border-color: rgba(220, 38, 38, .28);
+  background: #fff7f7;
+  color: #b42318;
+}
+
+.busnet-agent-chat__toolbar button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.busnet-agent-chat__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.busnet-agent-chat__modes button.is-active,
+.busnet-agent-chat__modes button:hover:not(:disabled) {
+  border-color: rgba(8, 125, 255, .34);
+  background: #eff8ff;
+  color: #175cd3;
+}
+
 .busnet-agent-chat__messages article {
   display: flex;
   max-width: min(760px, 88%);
@@ -1516,6 +1627,15 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
 .busnet-agent-chat__messages p.is-note {
   color: #7b8797;
   font-size: .72rem;
+}
+
+.busnet-agent-chat__messages p.is-error {
+  color: #b42318;
+}
+
+.busnet-agent-chat__messages p.is-sources {
+  color: #66758a;
+  font-size: .68rem;
 }
 
 .busnet-agent-chat__messages time {
@@ -1930,6 +2050,492 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
   color: #079455;
 }
 
+.busnet-capability {
+  display: grid;
+  gap: 1rem;
+  color: #344054;
+}
+
+.busnet-capability__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.busnet-capability__heading > div > span {
+  color: #087dff;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.busnet-capability__heading h4 {
+  margin: .25rem 0;
+  color: #101828;
+  font-size: 1.15rem;
+}
+
+.busnet-capability__heading p {
+  max-width: 720px;
+  margin: 0;
+  color: #7b8797;
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.busnet-capability__heading > button {
+  display: inline-flex;
+  min-height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .4rem;
+  padding: 0 .65rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .7);
+  color: #66758a;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.busnet-capability__heading > button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.busnet-capability__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .6rem;
+}
+
+.busnet-capability__stats article {
+  display: grid;
+  gap: .25rem;
+  padding: .65rem .75rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .65);
+}
+
+.busnet-capability__stats span {
+  color: #7b8797;
+  font-size: .64rem;
+}
+
+.busnet-capability__stats strong {
+  color: #101828;
+  font-size: 1.05rem;
+}
+
+.busnet-capability__stats article.is-warning strong {
+  color: #b42318;
+}
+
+.busnet-capability__notice {
+  padding: .7rem .8rem;
+  border: 1px solid rgba(8, 125, 255, .2);
+  border-radius: 10px;
+  background: rgba(8, 125, 255, .045);
+  color: #66758a;
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+.busnet-capability__filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(145px, .42fr) minmax(145px, .42fr);
+  gap: .5rem;
+}
+
+.busnet-capability__filters > label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .45rem;
+  padding-left: .65rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #7b8797;
+}
+
+.busnet-capability__filters input,
+.busnet-capability__filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  box-sizing: border-box;
+  border: 1px solid #dfe7f1;
+  border-radius: 9px;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+  font-size: .7rem;
+}
+
+.busnet-capability__filters input {
+  padding: 0 .5rem 0 0;
+  border: 0;
+  outline: 0;
+}
+
+.busnet-capability__filters select {
+  padding: 0 .55rem;
+}
+
+.busnet-capability__filters > label:focus-within,
+.busnet-capability__filters select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, .1);
+  outline: 0;
+}
+
+.busnet-capability__list {
+  display: grid;
+  gap: .55rem;
+}
+
+.busnet-capability__item {
+  display: grid;
+  gap: .55rem;
+  min-width: 0;
+  padding: .75rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .66);
+}
+
+.busnet-capability__item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .65rem;
+}
+
+.busnet-capability__item-heading > div {
+  min-width: 0;
+}
+
+.busnet-capability__item-heading > div > span {
+  color: #7b8797;
+  font-size: .6rem;
+  overflow-wrap: anywhere;
+}
+
+.busnet-capability__item h5 {
+  margin: .2rem 0 0;
+  color: #101828;
+  font-size: .78rem;
+}
+
+.busnet-capability__item > p {
+  margin: 0;
+  color: #66758a;
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+.busnet-capability__status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .3rem;
+  padding: .25rem .45rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: .59rem;
+  font-weight: 750;
+}
+
+.busnet-capability__status.is-planned {
+  border-color: #e4e7ec;
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.busnet-capability__status.is-in_development {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #175cd3;
+}
+
+.busnet-capability__status.is-verified {
+  border-color: #a6f4c5;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.busnet-capability__status.is-operational {
+  border-color: #a6f4c5;
+  background: #d1fadf;
+  color: #05603a;
+}
+
+.busnet-capability__status.is-retired {
+  border-color: #e4e7ec;
+  background: #f2f4f7;
+  color: #667085;
+}
+
+.busnet-capability__status.is-stale_evidence {
+  border-color: #fecdca;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.busnet-capability__evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .7rem;
+  padding-top: .5rem;
+  border-top: 1px solid #eef2f6;
+  color: #7b8797;
+  font-size: .6rem;
+  overflow-wrap: anywhere;
+}
+
+.busnet-capability__evidence span {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.busnet-capability__manage {
+  border-top: 1px solid #eef2f6;
+  padding-top: .5rem;
+  color: #475467;
+  font-size: .67rem;
+}
+
+.busnet-capability__manage summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.busnet-capability__manage form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  padding-top: .7rem;
+}
+
+.busnet-capability__manage label {
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+  color: #667085;
+  font-size: .62rem;
+}
+
+.busnet-capability__manage label.busnet-capability__unlink {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: .45rem;
+}
+
+.busnet-capability__manage label.busnet-capability__unlink input {
+  width: auto;
+  min-height: auto;
+  margin: .1rem 0 0;
+}
+
+.busnet-capability__manage input,
+.busnet-capability__manage select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: .4rem .5rem;
+  border: 1px solid #dfe7f1;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+}
+
+.busnet-capability__manage form > p,
+.busnet-capability__manage form > button,
+.busnet-capability__manage form > span {
+  grid-column: 1 / -1;
+}
+
+.busnet-capability__manage form > p {
+  margin: 0;
+  color: #667085;
+  line-height: 1.5;
+}
+
+.busnet-capability__manage form > button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .7rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #175cd3;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.busnet-capability__manage form > button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.busnet-capability__manage .is-error {
+  color: #b42318;
+}
+
+.busnet-capability__manage .is-success {
+  color: #027a48;
+}
+
+.busnet-capability__empty {
+  display: grid;
+  min-height: 170px;
+  place-content: center;
+  justify-items: center;
+  gap: .5rem;
+  padding: 1rem;
+  border: 1px dashed #dfe7f1;
+  border-radius: 12px;
+  color: #98a2b3;
+  text-align: center;
+}
+
+.busnet-capability__empty strong {
+  color: #475467;
+  font-size: .75rem;
+}
+
+.busnet-capability__empty span {
+  max-width: 440px;
+  font-size: .67rem;
+  line-height: 1.5;
+}
+
+.busnet-capability__empty.is-error {
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.busnet-capability__footer {
+  margin: 0;
+  color: #98a2b3;
+  font-size: .62rem;
+  text-align: right;
+}
+
+.busnet-capability .is-spinning {
+  animation: busnet-capability-spin .9s linear infinite;
+}
+
+@keyframes busnet-capability-spin {
+  to { transform: rotate(360deg); }
+}
+
+html[data-theme="dark"] .busnet-capability {
+  color: #d7e0eb;
+}
+
+html[data-theme="dark"] .busnet-capability__heading h4,
+html[data-theme="dark"] .busnet-capability__stats strong,
+html[data-theme="dark"] .busnet-capability__item h5 {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-capability__heading p,
+html[data-theme="dark"] .busnet-capability__stats span,
+html[data-theme="dark"] .busnet-capability__item > p,
+html[data-theme="dark"] .busnet-capability__item-heading > div > span,
+html[data-theme="dark"] .busnet-capability__evidence,
+html[data-theme="dark"] .busnet-capability__footer {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-capability__heading > button,
+html[data-theme="dark"] .busnet-capability__stats article,
+html[data-theme="dark"] .busnet-capability__item {
+  border-color: rgba(56, 189, 248, .15);
+  background: linear-gradient(145deg, rgba(12, 25, 43, .96), rgba(7, 15, 27, .96));
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-capability__notice {
+  border-color: rgba(56, 189, 248, .17);
+  background: rgba(8, 28, 47, .6);
+  color: #a7b4c5;
+}
+
+html[data-theme="dark"] .busnet-capability__filters > label,
+html[data-theme="dark"] .busnet-capability__filters input,
+html[data-theme="dark"] .busnet-capability__filters select {
+  border-color: rgba(56, 189, 248, .16);
+  background: rgba(5, 13, 24, .92);
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-capability__filters input {
+  border: 0;
+}
+
+html[data-theme="dark"] .busnet-capability__item h5 {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-capability__evidence {
+  border-color: rgba(56, 189, 248, .1);
+}
+
+html[data-theme="dark"] .busnet-capability__manage {
+  border-color: rgba(56, 189, 248, .1);
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-capability__manage label,
+html[data-theme="dark"] .busnet-capability__manage form > p {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-capability__manage input,
+html[data-theme="dark"] .busnet-capability__manage select {
+  border-color: rgba(56, 189, 248, .16);
+  background: rgba(5, 13, 24, .92);
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-capability__empty {
+  border-color: rgba(56, 189, 248, .18);
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-capability__empty strong {
+  color: #cbd5e1;
+}
+
+@media (max-width: 680px) {
+  .busnet-capability__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .busnet-capability__filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .busnet-capability__heading {
+    flex-direction: column;
+  }
+
+  .busnet-capability__manage form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .busnet-knowledge {
   display: grid;
   gap: 1rem;
@@ -1973,14 +2579,16 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
   padding: 0 .85rem;
   border: 1px solid #087dff;
   border-radius: 10px;
-  background: #087dff;
+  background: linear-gradient(135deg, #087dff 0%, #246bfd 55%, #7c3aed 100%);
   color: #fff;
   font-size: .72rem;
   font-weight: 750;
+  box-shadow: 0 8px 22px rgba(36, 107, 253, .24), 0 0 18px rgba(124, 58, 237, .12);
 }
 
 .busnet-knowledge__primary:hover {
-  background: #0069df;
+  background: linear-gradient(135deg, #1593ff 0%, #347cff 55%, #8b5cf6 100%);
+  box-shadow: 0 10px 26px rgba(36, 107, 253, .32), 0 0 22px rgba(124, 58, 237, .16);
 }
 
 .busnet-knowledge__prototype-note,
@@ -2209,8 +2817,8 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
 
 .busnet-knowledge__filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 200px);
-  gap: .5rem;
+  grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(130px, .75fr));
+  gap: .45rem;
 }
 
 .busnet-knowledge__filters > label {

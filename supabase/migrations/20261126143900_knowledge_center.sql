@@ -561,7 +561,8 @@ begin
                'source_reference', s.source_reference,
                'source_revision', s.source_revision,
                'evidence', s.evidence,
-               'confidence', s.confidence
+               'confidence', s.confidence,
+               'source_task_id', s.source_task_id
              ) order by s.created_at)
              from public.knowledge_versions v
              join public.knowledge_sources s on s.version_id = v.id

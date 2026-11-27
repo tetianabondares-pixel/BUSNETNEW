@@ -42,6 +42,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { askBusnetAssistant, type AssistantChatHistoryMessage } from "@/lib/assistantChat";
 import { parseAssistantRequest } from "@/lib/adminAssistantIntent.mjs";
 import {
   loadAdminPassengerCard,
@@ -50,6 +51,7 @@ import {
   type AssistantPassengerCard,
 } from "@/lib/adminPassengerAssistant";
 import { useTheme } from "@/theme";
+import { AssistantCapabilitiesPanel } from "@/pages/admin/AssistantCapabilitiesPanel";
 import { KnowledgeCenterPanel } from "@/pages/admin/KnowledgeCenterPanel";
 import "./AdminDashboardPage.css";
 
@@ -280,8 +282,20 @@ type AgentMessage = {
   role: "user" | "assistant";
   text: string;
   createdAt: string;
+  mode?: AgentChatMode;
+  sources?: AgentSource[];
+  isError?: boolean;
   events?: AgentTaskEvent[];
 };
+
+type AgentSource = {
+  id: string;
+  title: string;
+  version: number;
+  reference: string;
+};
+
+type AgentChatMode = "passenger" | "knowledge";
 
 type AgentTask = {
   id: string;
@@ -479,11 +493,23 @@ function readAgentMessages(): AgentMessage[] {
       typeof item.id === "string" &&
       (item.role === "user" || item.role === "assistant") &&
       typeof item.text === "string" &&
-      typeof item.createdAt === "string",
+      typeof item.createdAt === "string" &&
+      (item.isError === undefined || typeof item.isError === "boolean") &&
+      (item.sources === undefined ||
+        (Array.isArray(item.sources) && item.sources.every(isAgentSource))),
     ).map((item) => ({ ...item, events: readAgentEvents(item.events) })).slice(-100);
   } catch {
     return [];
   }
+}
+
+function isAgentSource(value: unknown): value is AgentSource {
+  if (!value || typeof value !== "object") return false;
+  const source = value as Record<string, unknown>;
+  return typeof source.id === "string" &&
+    typeof source.title === "string" &&
+    typeof source.version === "number" &&
+    typeof source.reference === "string";
 }
 
 function readAgentTasks(): AgentTask[] {
@@ -672,6 +698,8 @@ export function AdminDashboardPage() {
   const [agentTasks, setAgentTasks] = useState<AgentTask[]>(readAgentTasks);
   const [agentResults, setAgentResults] = useState<Record<string, AgentMessageResult>>({});
   const [agentDraft, setAgentDraft] = useState("");
+  const [agentChatPending, setAgentChatPending] = useState(false);
+  const [agentChatMode, setAgentChatMode] = useState<AgentChatMode>("passenger");
   const [agentWorking, setAgentWorking] = useState(false);
   const [knowledgeCenter, setKnowledgeCenter] = useState<KnowledgeCenterState>(readKnowledgeCenter);
   const [knowledgeCategoryFilter, setKnowledgeCategoryFilter] = useState<KnowledgeCategoryFilter>("all");
@@ -762,13 +790,17 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     try {
-      const persistedMessages = agentMessages.slice(-100).map((message) => {
-        if (message.role === "user" && parseAssistantRequest(message.text).kind === "passenger_search") {
-          return { ...message, text: "Пошук пасажира" };
-        }
-        return message;
-      });
-      window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(persistedMessages));
+      if (agentMessages.length === 0) {
+        window.localStorage.removeItem("busnet_intelligence_messages");
+      } else {
+        const persistedMessages = agentMessages.slice(-100).map((message) => {
+          if (message.role === "user" && parseAssistantRequest(message.text).kind === "passenger_search") {
+            return { ...message, text: "Пошук пасажира" };
+          }
+          return message;
+        });
+        window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(persistedMessages));
+      }
       window.localStorage.setItem("busnet_intelligence_tasks", JSON.stringify(agentTasks.slice(-100)));
     } catch (error) {
       console.error("Could not save BUSNET Intelligence workspace history", error);
@@ -1394,6 +1426,22 @@ export function AdminDashboardPage() {
     setActionMessage("Налаштування помічника BUSNET збережено");
   };
 
+  const clearAgentChat = () => {
+    if (agentChatPending || agentWorking || agentMessages.length === 0) return;
+    const confirmed = window.confirm(
+      "Очистити поточну переписку? Вона зберігається лише в цьому браузері. Завдання, налаштування та Knowledge Center не зміняться.",
+    );
+    if (!confirmed) return;
+
+    try {
+      window.localStorage.removeItem("busnet_intelligence_messages");
+      setAgentMessages([]);
+    } catch (error) {
+      console.error("Could not clear BUSNET assistant chat history", error);
+      setActionMessage("Не вдалося очистити локальну історію чату");
+    }
+  };
+
   const appendAgentEvent = (
     assistantMessageId: string,
     taskId: string,
@@ -1514,8 +1562,52 @@ export function AdminDashboardPage() {
 
   const sendAgentMessage = async () => {
     const text = agentDraft.trim();
-    if (!text || !beginAgentOperation()) return;
+    if (!text || agentChatPending || agentWorking) return;
     const now = new Date().toISOString();
+    const messageId = `agent-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    if (agentChatMode === "knowledge") {
+      const history: AssistantChatHistoryMessage[] = agentMessages
+        .filter((message) => message.mode === "knowledge" && !message.isError)
+        .slice(-8)
+        .map(({ role, text: messageText }) => ({ role, text: messageText }));
+      setAgentMessages((current): AgentMessage[] => [
+        ...current,
+        { id: `${messageId}-user`, role: "user" as const, text, createdAt: now, mode: "knowledge" as const },
+      ].slice(-100));
+      setAgentDraft("");
+      setAgentChatPending(true);
+      try {
+        const reply = await askBusnetAssistant(text, history);
+        setAgentMessages((current): AgentMessage[] => [
+          ...current,
+          {
+            id: `${messageId}-assistant`,
+            role: "assistant" as const,
+            text: reply.answer,
+            createdAt: new Date().toISOString(),
+            sources: reply.sources,
+            mode: "knowledge" as const,
+          },
+        ].slice(-100));
+      } catch (error) {
+        setAgentMessages((current): AgentMessage[] => [
+          ...current,
+          {
+            id: `${messageId}-error`,
+            role: "assistant" as const,
+            text: error instanceof Error ? error.message : "Не вдалося отримати відповідь від помічника.",
+            createdAt: new Date().toISOString(),
+            isError: true,
+            mode: "knowledge" as const,
+          },
+        ].slice(-100));
+      } finally {
+        setAgentChatPending(false);
+      }
+      return;
+    }
+
+    if (!beginAgentOperation()) return;
     const taskId = `agent-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const assistantMessageId = `${taskId}-assistant`;
     const request = parseAssistantRequest(text);
@@ -1577,12 +1669,7 @@ export function AdminDashboardPage() {
       if (matches.length > 1 || totalCount > 1) {
         setAgentResults((current) => ({
           ...current,
-          [assistantMessageId]: {
-            kind: "candidates",
-            taskId,
-            matches,
-            totalCount,
-          },
+          [assistantMessageId]: { kind: "candidates", taskId, matches, totalCount },
         }));
         updateAgentMessage(
           assistantMessageId,
@@ -2368,7 +2455,7 @@ export function AdminDashboardPage() {
                         <span className="busnet-intelligence__card-icon"><MessageCircle size={19} /></span>
                         <span className="busnet-intelligence__card-copy">
                           <strong>02 · ЧАТ ІЗ ПОМІЧНИКОМ</strong>
-                          <small>Спілкування та чернетки завдань</small>
+                          <small>Пасажири та база знань BUSNET</small>
                         </span>
                       </button>
                       <button type="button" onClick={() => setRobotPanelMode("workspace")}>
@@ -2380,13 +2467,42 @@ export function AdminDashboardPage() {
                         {agentTasks.length > 0 && <span className="busnet-intelligence__count">{agentTasks.length}</span>}
                       </button>
                       <p className="busnet-intelligence__prototype-note">
-                        Чат і задачі зберігаються в цьому браузері. Реальне виконання доручень поки не підключене.
+                        Пошук пасажирів використовує захищені адміністративні RPC; запитання про BUSNET — окремий режим із перевіреними знаннями.
                       </p>
                     </div>
                   )}
 
                   {robotPanelMode === "chat" && (
                     <section className="busnet-agent-chat">
+                      <div className="busnet-agent-chat__toolbar">
+                        <div className="busnet-agent-chat__modes" role="group" aria-label="Режим помічника">
+                          <button
+                            type="button"
+                            className={agentChatMode === "passenger" ? "is-active" : ""}
+                            disabled={agentWorking || agentChatPending}
+                            onClick={() => setAgentChatMode("passenger")}
+                          >
+                            Пошук пасажирів
+                          </button>
+                          <button
+                            type="button"
+                            className={agentChatMode === "knowledge" ? "is-active" : ""}
+                            disabled={agentWorking || agentChatPending}
+                            onClick={() => setAgentChatMode("knowledge")}
+                          >
+                            Запитання про BUSNET
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearAgentChat}
+                          disabled={agentMessages.length === 0 || agentChatPending || agentWorking}
+                          aria-label="Очистити поточну переписку"
+                        >
+                          <Trash2 size={14} />
+                          Очистити чат
+                        </button>
+                      </div>
                       <div className="busnet-agent-chat__messages" aria-live="polite">
                         {agentMessages.length === 0 && (
                           <article className="is-assistant">
@@ -2394,7 +2510,7 @@ export function AdminDashboardPage() {
                             <div>
                               <strong>BUSNET ПОМІЧНИК</strong>
                               <p>{robotPreferences.greeting}</p>
-                              <p className="is-note">Можу відповісти на привітання або знайти зареєстрований профіль за ім’ям, email чи телефоном. Картка читається лише через адміністративні RPC; картки й пошукові значення не зберігаються в історії браузера.</p>
+                              <p className="is-note">Оберіть пошук пасажирів для адміністративної картки або запитання про BUSNET для відповідей із перевіреної бази знань. Не вводьте персональні дані в режимі знань.</p>
                             </div>
                           </article>
                         )}
@@ -2405,7 +2521,14 @@ export function AdminDashboardPage() {
                               {message.role === "assistant" && <img src="/images/busnet-ai-assistant-robot.png" alt="" />}
                               <div>
                                 <strong>{message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}</strong>
-                                <p>{message.text}</p>
+                                <p className={message.isError ? "is-error" : undefined} role={message.isError ? "alert" : undefined}>{message.text}</p>
+                                {message.sources && message.sources.length > 0 && (
+                                  <p className="is-sources">
+                                    Джерела: {message.sources.map((source) =>
+                                      `${source.title} (v${source.version})${source.reference ? ` — ${source.reference}` : ""}`
+                                    ).join("; ")}
+                                  </p>
+                                )}
                                 {message.events && message.events.length > 0 && (
                                   <ol className="busnet-agent-chat__events">
                                     {message.events.map((event) => (
@@ -2508,16 +2631,23 @@ export function AdminDashboardPage() {
                             </article>
                           );
                         })}
+                        {agentChatPending && <p className="is-note" role="status">Помічник перевіряє знання та готує відповідь…</p>}
                       </div>
                       <div className="busnet-agent-chat__composer">
-                        <p><Mic size={14} /> Голосове керування з’явиться на наступному етапі</p>
+                        <p>
+                          {agentChatMode === "knowledge"
+                            ? "Повідомлення та відповідні перевірені знання передаються налаштованому AI-провайдеру. Не вводьте персональні дані пасажирів."
+                            : "Пошук читає зареєстровані профілі через адміністративні RPC; запити пошуку не зберігаються в історії."}
+                        </p>
                         <div>
                           <textarea
                             ref={agentInputRef}
                             value={agentDraft}
                             maxLength={1000}
                             rows={2}
-                            placeholder="Привітання або пошук пасажира за ім’ям, email чи телефоном..."
+                            placeholder={agentChatMode === "knowledge"
+                              ? "Запитайте про правила та перевірені знання BUSNET..."
+                              : "Привітання або пошук пасажира за ім’ям, email чи телефоном..."}
                             aria-label="Повідомлення помічнику BUSNET"
                             onChange={(event) => setAgentDraft(event.target.value)}
                             onKeyDown={(event) => {
@@ -2537,7 +2667,7 @@ export function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
-                            disabled={!agentDraft.trim() || agentWorking}
+                            disabled={!agentDraft.trim() || agentChatPending || agentWorking}
                             aria-label="Надіслати повідомлення"
                             onClick={() => void sendAgentMessage()}
                           >
@@ -2572,7 +2702,7 @@ export function AdminDashboardPage() {
                         {agentWorkspaceTab === "tasks" && (
                           <>
                             <div className="busnet-agent-workspace__heading">
-                              <div><h4>Мої завдання</h4><p>Історія виконання збережена лише в цьому браузері</p></div>
+                              <div><h4>Мої завдання</h4><p>Пошук пасажирів зберігається тут лише в цьому браузері; запитання про знання задач не створюють.</p></div>
                               <span>{agentTasks.length}</span>
                             </div>
                             {agentTasks.length === 0 ? (
@@ -2641,12 +2771,7 @@ export function AdminDashboardPage() {
                           )
                         )}
                         {agentWorkspaceTab === "capabilities" && (
-                          <div className="busnet-agent-workspace__capabilities">
-                            <article><TicketCheck size={17} /><span><strong>Навігація та швидкі дії</strong><small>Підключено до модулів адмінки</small></span><i className="is-ready">Доступно</i></article>
-                            <article><Bell size={17} /><span><strong>Вхідні події</strong><small>Існуючі сповіщення та Realtime</small></span><i className="is-ready">Доступно</i></article>
-                            <article><Search size={17} /><span><strong>Пошук пасажирів</strong><small>Профіль та історія через захищені RPC</small></span><i className="is-ready">Доступно</i></article>
-                            <article><MessageCircle size={17} /><span><strong>Автоматизація та голос</strong><small>Інтеграція ще не налаштована</small></span><i>Незабаром</i></article>
-                          </div>
+                          <AssistantCapabilitiesPanel role={role} />
                         )}
                         {agentWorkspaceTab === "knowledge" && <KnowledgeCenterPanel role={role} />}
 
