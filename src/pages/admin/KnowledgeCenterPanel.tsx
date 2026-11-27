@@ -639,7 +639,7 @@ export function KnowledgeCenterPanel({ role }: Props) {
               <input
                 value={filters.query}
                 onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))}
-                placeholder="Пошук у перевірених та доступних записах"
+                placeholder="Пошук у базі знань"
                 aria-label="Пошук у базі знань"
               />
             </label>
@@ -651,8 +651,6 @@ export function KnowledgeCenterPanel({ role }: Props) {
               <option value="all">Усі доступні статуси</option>
               {KNOWLEDGE_STATUSES.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}
             </select>
-          </div>
-          <div className="busnet-knowledge__filters busnet-knowledge__filters--module">
             <select
               value={filters.module}
               onChange={(event) => setFilters((current) => ({ ...current, module: event.target.value }))}

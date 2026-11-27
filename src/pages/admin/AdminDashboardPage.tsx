@@ -42,7 +42,9 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { askBusnetAssistant, type AssistantChatHistoryMessage } from "@/lib/assistantChat";
 import { useTheme } from "@/theme";
+import { AssistantCapabilitiesPanel } from "@/pages/admin/AssistantCapabilitiesPanel";
 import { KnowledgeCenterPanel } from "@/pages/admin/KnowledgeCenterPanel";
 import "./AdminDashboardPage.css";
 
@@ -266,6 +268,15 @@ type AgentMessage = {
   role: "user" | "assistant";
   text: string;
   createdAt: string;
+  sources?: AgentSource[];
+  isError?: boolean;
+};
+
+type AgentSource = {
+  id: string;
+  title: string;
+  version: number;
+  reference: string;
 };
 
 type AgentTask = {
@@ -448,11 +459,23 @@ function readAgentMessages(): AgentMessage[] {
       typeof item.id === "string" &&
       (item.role === "user" || item.role === "assistant") &&
       typeof item.text === "string" &&
-      typeof item.createdAt === "string",
+      typeof item.createdAt === "string" &&
+      (item.isError === undefined || typeof item.isError === "boolean") &&
+      (item.sources === undefined ||
+        (Array.isArray(item.sources) && item.sources.every(isAgentSource))),
     ).slice(-100);
   } catch {
     return [];
   }
+}
+
+function isAgentSource(value: unknown): value is AgentSource {
+  if (!value || typeof value !== "object") return false;
+  const source = value as Record<string, unknown>;
+  return typeof source.id === "string" &&
+    typeof source.title === "string" &&
+    typeof source.version === "number" &&
+    typeof source.reference === "string";
 }
 
 function readAgentTasks(): AgentTask[] {
@@ -612,6 +635,7 @@ export function AdminDashboardPage() {
   const [agentMessages, setAgentMessages] = useState<AgentMessage[]>(readAgentMessages);
   const [agentTasks, setAgentTasks] = useState<AgentTask[]>(readAgentTasks);
   const [agentDraft, setAgentDraft] = useState("");
+  const [agentChatPending, setAgentChatPending] = useState(false);
   const [knowledgeCenter, setKnowledgeCenter] = useState<KnowledgeCenterState>(readKnowledgeCenter);
   const [knowledgeCategoryFilter, setKnowledgeCategoryFilter] = useState<KnowledgeCategoryFilter>("all");
   const [knowledgeStatusFilter, setKnowledgeStatusFilter] = useState<KnowledgeStatus | "all">("all");
@@ -700,7 +724,11 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(agentMessages.slice(-100)));
+      if (agentMessages.length > 0) {
+        window.localStorage.setItem("busnet_intelligence_messages", JSON.stringify(agentMessages.slice(-100)));
+      } else {
+        window.localStorage.removeItem("busnet_intelligence_messages");
+      }
       window.localStorage.setItem("busnet_intelligence_tasks", JSON.stringify(agentTasks.slice(-100)));
     } catch (error) {
       console.error("Could not save BUSNET Intelligence workspace history", error);
@@ -1326,26 +1354,65 @@ export function AdminDashboardPage() {
     setActionMessage("Налаштування помічника BUSNET збережено");
   };
 
-  const sendAgentMessage = () => {
+  const clearAgentChat = () => {
+    if (agentChatPending || agentMessages.length === 0) return;
+    const confirmed = window.confirm(
+      "Очистити поточну переписку? Вона зберігається лише в цьому браузері. Завдання, налаштування та Knowledge Center не зміняться.",
+    );
+    if (!confirmed) return;
+
+    try {
+      window.localStorage.removeItem("busnet_intelligence_messages");
+      setAgentMessages([]);
+    } catch (error) {
+      console.error("Could not clear BUSNET assistant chat history", error);
+      setActionMessage("Не вдалося очистити локальну історію чату");
+    }
+  };
+
+  const sendAgentMessage = async () => {
     const text = agentDraft.trim();
-    if (!text) return;
+    if (!text || agentChatPending) return;
     const now = new Date().toISOString();
-    const taskId = `agent-task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const messageId = `agent-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const history: AssistantChatHistoryMessage[] = agentMessages
+      .filter((message) => !message.isError)
+      .slice(-8)
+      .map(({ role, text: messageText }) => ({ role, text: messageText }));
     setAgentMessages((current): AgentMessage[] => [
       ...current,
-      { id: `${taskId}-user`, role: "user" as const, text, createdAt: now },
-      {
-        id: `${taskId}-assistant`,
-        role: "assistant" as const,
-        text: "Записала це як чернетку в робочий простір. Поки що я не аналізую базу й не виконую команди — інструменти помічника ще не підключені.",
-        createdAt: new Date(Date.now() + 1).toISOString(),
-      },
+      { id: `${messageId}-user`, role: "user" as const, text, createdAt: now },
     ].slice(-100));
-    setAgentTasks((current): AgentTask[] => [
-      { id: taskId, title: text, status: "draft" as const, createdAt: now },
-      ...current,
-    ].slice(0, 100));
     setAgentDraft("");
+    setAgentChatPending(true);
+    try {
+      const reply = await askBusnetAssistant(text, history);
+      setAgentMessages((current): AgentMessage[] => [
+        ...current,
+        {
+          id: `${messageId}-assistant`,
+          role: "assistant" as const,
+          text: reply.answer,
+          createdAt: new Date().toISOString(),
+          sources: reply.sources,
+        },
+      ].slice(-100));
+    } catch (error) {
+      setAgentMessages((current): AgentMessage[] => [
+        ...current,
+        {
+          id: `${messageId}-error`,
+          role: "assistant" as const,
+          text: error instanceof Error
+            ? error.message
+            : "Не вдалося отримати відповідь від помічника.",
+          createdAt: new Date().toISOString(),
+          isError: true,
+        },
+      ].slice(-100));
+    } finally {
+      setAgentChatPending(false);
+    }
   };
 
   useEffect(() => {
@@ -2084,7 +2151,7 @@ export function AdminDashboardPage() {
                         <span className="busnet-intelligence__card-icon"><MessageCircle size={19} /></span>
                         <span className="busnet-intelligence__card-copy">
                           <strong>02 · ЧАТ ІЗ ПОМІЧНИКОМ</strong>
-                          <small>Спілкування та чернетки завдань</small>
+                          <small>Відповіді на основі перевірених знань</small>
                         </span>
                       </button>
                       <button type="button" onClick={() => setRobotPanelMode("workspace")}>
@@ -2096,13 +2163,25 @@ export function AdminDashboardPage() {
                         {agentTasks.length > 0 && <span className="busnet-intelligence__count">{agentTasks.length}</span>}
                       </button>
                       <p className="busnet-intelligence__prototype-note">
-                        Чат і задачі зберігаються в цьому браузері. Реальне виконання доручень поки не підключене.
+                        Відповіді використовують лише перевірені спільні знання. Перегляд бронювань і виконання дій ще не підключені.
                       </p>
                     </div>
                   )}
 
                   {robotPanelMode === "chat" && (
                     <section className="busnet-agent-chat">
+                      <div className="busnet-agent-chat__toolbar">
+                        <span>Переписка зберігається в цьому браузері</span>
+                        <button
+                          type="button"
+                          onClick={clearAgentChat}
+                          disabled={agentMessages.length === 0 || agentChatPending}
+                          aria-label="Очистити поточну переписку"
+                        >
+                          <Trash2 size={14} />
+                          Очистить чат
+                        </button>
+                      </div>
                       <div className="busnet-agent-chat__messages" aria-live="polite">
                         {agentMessages.length === 0 && (
                           <article className="is-assistant">
@@ -2110,7 +2189,7 @@ export function AdminDashboardPage() {
                             <div>
                               <strong>BUSNET ПОМІЧНИК</strong>
                               <p>{robotPreferences.greeting}</p>
-                                <p className="is-note">Поки що можу приймати запити й зберігати їх як чернетки. Доступ до реальних даних та операцій ще не підключений.</p>
+                                <p className="is-note">Відповідаю на основі перевірених спільних знань. Якщо відповіді в базі немає — скажу про це. Дані бронювань та дії ще не підключені.</p>
                             </div>
                           </article>
                         )}
@@ -2119,14 +2198,22 @@ export function AdminDashboardPage() {
                             {message.role === "assistant" && <img src="/images/busnet-ai-assistant-robot.png" alt="" />}
                             <div>
                               <strong>{message.role === "assistant" ? "BUSNET ПОМІЧНИК" : "Ви"}</strong>
-                              <p>{message.text}</p>
+                              <p className={message.isError ? "is-error" : undefined} role={message.isError ? "alert" : undefined}>{message.text}</p>
+                              {message.sources && message.sources.length > 0 && (
+                                <p className="is-sources">
+                                  Джерела: {message.sources.map((source) =>
+                                    `${source.title} (v${source.version})${source.reference ? ` — ${source.reference}` : ""}`
+                                  ).join("; ")}
+                                </p>
+                              )}
                               <time>{new Date(message.createdAt).toLocaleString()}</time>
                             </div>
                           </article>
                         ))}
+                        {agentChatPending && <p className="is-note" role="status">Помічник перевіряє знання та готує відповідь…</p>}
                       </div>
                       <div className="busnet-agent-chat__composer">
-                        <p><Mic size={14} /> Голосове керування з’явиться на наступному етапі</p>
+                        <p>Відповіді передаються налаштованому AI-провайдеру разом із відповідними перевіреними знаннями. Не вводьте персональні дані пасажирів.</p>
                         <div>
                           <textarea
                             ref={agentInputRef}
@@ -2139,7 +2226,7 @@ export function AdminDashboardPage() {
                             onKeyDown={(event) => {
                               if (event.key === "Enter" && !event.shiftKey) {
                                 event.preventDefault();
-                                sendAgentMessage();
+                                void sendAgentMessage();
                               }
                             }}
                           />
@@ -2153,9 +2240,9 @@ export function AdminDashboardPage() {
                           </button>
                           <button
                             type="button"
-                            disabled={!agentDraft.trim()}
+                            disabled={!agentDraft.trim() || agentChatPending}
                             aria-label="Надіслати повідомлення"
-                            onClick={sendAgentMessage}
+                            onClick={() => void sendAgentMessage()}
                           >
                             <Send size={18} />
                           </button>
@@ -2188,7 +2275,7 @@ export function AdminDashboardPage() {
                         {agentWorkspaceTab === "tasks" && (
                           <>
                             <div className="busnet-agent-workspace__heading">
-                              <div><h4>Мої завдання</h4><p>Запити з чату, збережені як чернетки</p></div>
+                              <div><h4>Мої завдання</h4><p>Виконання робочих задач ще не підключене; запитання з чату не створюють їх автоматично.</p></div>
                               <span>{agentTasks.length}</span>
                             </div>
                             {agentTasks.length === 0 ? (
@@ -2237,12 +2324,7 @@ export function AdminDashboardPage() {
                           )
                         )}
                         {agentWorkspaceTab === "capabilities" && (
-                          <div className="busnet-agent-workspace__capabilities">
-                            <article><TicketCheck size={17} /><span><strong>Навігація та швидкі дії</strong><small>Підключено до модулів адмінки</small></span><i className="is-ready">Доступно</i></article>
-                            <article><Bell size={17} /><span><strong>Вхідні події</strong><small>Існуючі сповіщення та Realtime</small></span><i className="is-ready">Доступно</i></article>
-                            <article><Search size={17} /><span><strong>Пошук BUSNET</strong><small>Пошук серед завантажених записів</small></span><i className="is-ready">Доступно</i></article>
-                            <article><MessageCircle size={17} /><span><strong>Автоматизація та голос</strong><small>Інтеграція ще не налаштована</small></span><i>Незабаром</i></article>
-                          </div>
+                          <AssistantCapabilitiesPanel role={role} />
                         )}
                         {agentWorkspaceTab === "knowledge" && <KnowledgeCenterPanel role={role} />}
 
