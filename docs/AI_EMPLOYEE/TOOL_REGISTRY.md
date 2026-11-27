@@ -44,7 +44,7 @@
 | `routes.read`, `provider_logs.read` | Параметри та формат відповіді — **не визначені**; спершу створити обмежений read endpoint з фільтрами й лімітами. | Таблиці з рольовими RLS-політиками; `super_admin`, `admin`, `provider_operator` | Не реєструвати до затвердження контракту та перевірки RLS. |
 | `system.sync_catalog` | `{}` → `importedLocations`, `importedRoutes`, `importedSchedules`, `importedScheduleStops` | Edge Function `altrans-adapter`, `sync-catalog`; `super_admin`, `admin`, `provider_operator` | Запис/зовнішня синхронізація; підтвердження обов’язкове, повтор — після перевірки попереднього результату. |
 
-Підстави для переліку: локальні міграції `20261121100000_admin_dashboard_workflows.sql` і `20261126140000_admin_booking_management.sql`, виклики в `src/pages/admin/AdminDashboardPage.tsx` та перевірка ролі в `supabase/functions/altrans-adapter/index.ts`. Локальні файли не є підтвердженням production-схеми. Поточний чат не має жодного з цих інструментів підключеним.
+Підстави для переліку: локальні міграції `20261121100000_admin_dashboard_workflows.sql` і `20261126140000_admin_booking_management.sql`, виклики в `src/pages/admin/AdminDashboardPage.tsx` та перевірка ролі в `supabase/functions/altrans-adapter/index.ts`. Локальні файли не є підтвердженням production-схеми. Фактично помічник має окремий режим читання профілю пасажира через `admin_search_passengers` і `admin_get_passenger_assistant_card`, а режим знань викликає `assistant-chat` та шукає перевірені спільні записи. Це не вмикає booking writes чи загальне виконання інструментів; доступність AI-провайдера залежить від секретів Edge Function, які не підтверджені цим звітом.
 
 ## Непідключені напрями
 
