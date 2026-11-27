@@ -904,6 +904,43 @@ html[data-theme="dark"] .busnet-agent-chat__messages p.is-sources {
   color: #9fb0c6;
 }
 
+html[data-theme="dark"] .busnet-agent-chat__events,
+html[data-theme="dark"] .busnet-agent-passenger-card,
+html[data-theme="dark"] .busnet-agent-chat__candidates button {
+  border-color: #1b2d43;
+  background: #0c1929;
+  color: #d7e0eb;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__candidates button:hover,
+html[data-theme="dark"] .busnet-agent-passenger-card > button {
+  border-color: #1d4e89;
+  background: #10243a;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__events time,
+html[data-theme="dark"] .busnet-agent-chat__candidates small,
+html[data-theme="dark"] .busnet-agent-passenger-card small,
+html[data-theme="dark"] .busnet-agent-passenger-card .is-note {
+  color: #8b9aaf;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__events li,
+html[data-theme="dark"] .busnet-agent-chat__candidates button span,
+html[data-theme="dark"] .busnet-agent-passenger-card header p,
+html[data-theme="dark"] .busnet-agent-passenger-card > p,
+html[data-theme="dark"] .busnet-agent-passenger-card p,
+html[data-theme="dark"] .busnet-agent-passenger-card__summary span,
+html[data-theme="dark"] .busnet-agent-passenger-card > ol > li,
+html[data-theme="dark"] .busnet-agent-passenger-card ul li {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .busnet-agent-passenger-card > ol > li > strong {
+  color: #e2e8f0;
+}
+
 html[data-theme="dark"] .busnet-agent-chat__composer {
   border-color: #1b2d43;
   background: rgba(11, 20, 34, .88);
@@ -936,6 +973,13 @@ html[data-theme="dark"] .busnet-agent-chat__toolbar button:hover:not(:disabled) 
   border-color: rgba(248, 113, 113, .4);
   background: rgba(69, 20, 33, .42);
   color: #fda4af;
+}
+
+html[data-theme="dark"] .busnet-agent-chat__modes button.is-active,
+html[data-theme="dark"] .busnet-agent-chat__modes button:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, .38);
+  background: rgba(8, 47, 73, .72);
+  color: #67e8f9;
 }
 
 html[data-theme="dark"] .busnet-agent-workspace > nav button.is-active,
@@ -1521,6 +1565,19 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
   cursor: not-allowed;
 }
 
+.busnet-agent-chat__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.busnet-agent-chat__modes button.is-active,
+.busnet-agent-chat__modes button:hover:not(:disabled) {
+  border-color: rgba(8, 125, 255, .34);
+  background: #eff8ff;
+  color: #175cd3;
+}
+
 .busnet-agent-chat__messages article {
   display: flex;
   max-width: min(760px, 88%);
@@ -1586,6 +1643,181 @@ html[data-theme="dark"] .busnet-knowledge__entry-actions > button.is-danger {
   margin-top: .45rem;
   color: #98a2b3;
   font-size: .62rem;
+}
+
+.busnet-agent-chat__events {
+  display: grid;
+  gap: .35rem;
+  margin: .65rem 0 0;
+  padding: .6rem .7rem;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+  background: rgba(247, 250, 253, .8);
+  list-style: none;
+}
+
+.busnet-agent-chat__events li {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .45rem;
+  color: #536174;
+  font-size: .68rem;
+  line-height: 1.4;
+}
+
+.busnet-agent-chat__events li > span:first-child {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #087dff;
+}
+
+.busnet-agent-chat__events li.is-started > span:first-child { background: #f0a000; }
+.busnet-agent-chat__events li.is-error > span:first-child { background: #e5484d; }
+
+.busnet-agent-chat__events time {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.busnet-agent-chat__candidates {
+  display: grid;
+  gap: .5rem;
+  margin-top: .65rem;
+}
+
+.busnet-agent-chat__candidates button {
+  display: grid;
+  gap: .2rem;
+  width: 100%;
+  padding: .65rem .75rem;
+  border: 1px solid #dce6f1;
+  border-radius: 10px;
+  background: #fff;
+  color: #344054;
+  text-align: left;
+  cursor: pointer;
+}
+
+.busnet-agent-chat__candidates button:hover:not(:disabled) {
+  border-color: #87baff;
+  background: #f3f8ff;
+}
+
+.busnet-agent-chat__candidates button:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.busnet-agent-chat__candidates button strong {
+  font-size: .78rem;
+}
+
+.busnet-agent-chat__candidates button span {
+  color: #536174;
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+
+.busnet-agent-chat__candidates small {
+  color: #7b8797;
+  font-size: .65rem;
+}
+
+.busnet-agent-passenger-card {
+  display: grid;
+  gap: .55rem;
+  margin-top: .7rem;
+  padding: .8rem;
+  border: 1px solid #dce6f1;
+  border-radius: 12px;
+  background: rgba(247, 250, 253, .8);
+}
+
+.busnet-agent-passenger-card header h4,
+.busnet-agent-passenger-card h5 {
+  margin: 0;
+  color: #087dff;
+  font-size: .82rem;
+}
+
+.busnet-agent-passenger-card header p,
+.busnet-agent-passenger-card > p,
+.busnet-agent-passenger-card p {
+  margin: .2rem 0 0;
+  color: #536174;
+  font-size: .7rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.busnet-agent-passenger-card small {
+  color: #7b8797;
+  font-size: .65rem;
+}
+
+.busnet-agent-passenger-card__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: .4rem;
+}
+
+.busnet-agent-passenger-card__summary span {
+  display: flex;
+  justify-content: space-between;
+  gap: .35rem;
+  padding: .4rem .5rem;
+  border: 1px solid rgba(135, 186, 255, .3);
+  border-radius: 8px;
+  color: #536174;
+  font-size: .64rem;
+}
+
+.busnet-agent-passenger-card__summary strong {
+  color: #087dff;
+}
+
+.busnet-agent-passenger-card > ol,
+.busnet-agent-passenger-card ul {
+  display: grid;
+  gap: .45rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.busnet-agent-passenger-card > ol > li,
+.busnet-agent-passenger-card ul li {
+  color: #536174;
+  font-size: .68rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.busnet-agent-passenger-card > ol > li > span {
+  display: block;
+}
+
+.busnet-agent-passenger-card > ol > li > strong {
+  color: #344054;
+  font-size: .7rem;
+}
+
+.busnet-agent-passenger-card > button {
+  width: fit-content;
+  padding: .45rem .65rem;
+  border: 1px solid #b8d5fa;
+  border-radius: 8px;
+  background: #edf5ff;
+  color: #0756a6;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.busnet-agent-passenger-card > button:disabled {
+  cursor: wait;
+  opacity: .7;
 }
 
 .busnet-agent-chat__composer {
